@@ -18,6 +18,16 @@ import java.nio.ByteBuffer;
 
 public class Cproto implements Binding {
 
+    static final long CPROTO_MAGIC = 0xEEDD1132L;
+
+    static final int CPROTO_VERSION = 0x101;
+
+    static final int CPROTO_HDR_LEN = 16;
+
+    static final int CPROTO_VERSION_COMPRESSION_FLAG = 1 << 10;
+
+    static final int CPROTO_VERSION_MASK = 0x3FF;
+
     private enum OperationType {
         READ, WRITE
     }
@@ -68,7 +78,7 @@ public class Cproto implements Binding {
         NamespaceDef namespaceDef = new NamespaceDef(storageOpts, namespace);
 
         String json = toJson(namespaceDef);
-        RPCResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.OPEN_NAMESPACE,
+        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.OPEN_NAMESPACE,
                 ByteBuffer.wrap(json.getBytes()));
 
         if (!error.isOk()) {
@@ -86,7 +96,7 @@ public class Cproto implements Binding {
     @SneakyThrows
     @Override
     public void addIndex(String namespace, IndexDef index) {
-        RPCResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.ADD_INDEX, namespace, toJson(index));
+        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.ADD_INDEX, namespace, toJson(index));
 
         if (!error.isOk()) {
             throw new ReindexerException(error.getMessage());
@@ -101,8 +111,12 @@ public class Cproto implements Binding {
             //TODO
             throw new UnimplementedException();
         }
-        rpcCallNoResults(OperationType.WRITE, Command.MODIFY_ITEM, namespace, format, ByteBuffer.wrap(data), mode,
-                packedPercepts, stateToken, 0);
+        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.MODIFY_ITEM, namespace, format,
+                ByteBuffer.wrap(data), mode, packedPercepts, stateToken, 0);
+
+        if (!error.isOk()) {
+            throw new RuntimeException(error.getMessage());
+        }
     }
 
     @Override
@@ -115,13 +129,13 @@ public class Cproto implements Binding {
         rpcCallNoResults(OperationType.WRITE, Command.CLOSE_NAMESPACE, namespace);
     }
 
-    private RPCResult.Error rpcCallNoResults(OperationType operationType, int command, Object... args) {
-        RPCResult result = rpcCall(operationType, command, args);
+    private RpcResult.Error rpcCallNoResults(OperationType operationType, int command, Object... args) {
+        RpcResult result = rpcCall(operationType, command, args);
         return result.getError();
     }
 
 
-    private RPCResult rpcCall(OperationType operationType, int command, Object... args) {
+    private RpcResult rpcCall(OperationType operationType, int command, Object... args) {
         return connection.rpcCall(command, args);
     }
 

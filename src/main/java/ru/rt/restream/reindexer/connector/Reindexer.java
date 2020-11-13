@@ -6,17 +6,17 @@ import com.google.gson.GsonBuilder;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.connector.binding.Binding;
 import ru.rt.restream.reindexer.connector.binding.Consts;
-import ru.rt.restream.reindexer.connector.binding.def.IndexDef;
-import ru.rt.restream.reindexer.connector.binding.cproto.ByteArraySerializer;
 import ru.rt.restream.reindexer.connector.binding.cproto.Serializer;
+import ru.rt.restream.reindexer.connector.binding.def.IndexDef;
 import ru.rt.restream.reindexer.connector.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.connector.exceptions.NsExistsException;
 import ru.rt.restream.reindexer.connector.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.connector.exceptions.UnimplementedException;
-import ru.rt.restream.reindexer.connector.options.NamespaceOptions;
 import ru.rt.restream.reindexer.connector.options.IndexOptions;
+import ru.rt.restream.reindexer.connector.options.NamespaceOptions;
 import ru.rt.restream.reindexer.util.Pair;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
@@ -36,7 +36,7 @@ public class Reindexer {
         this.binding = binding;
     }
 
-    public<T> void openNamespace(String namespace, NamespaceOptions options, Class<T> clazz) {
+    public <T> void openNamespace(String namespace, NamespaceOptions options, Class<T> clazz) {
         registerNamespace(namespace, options, clazz);
         Namespace<T> ns = getNs(namespace, clazz);
         try {
@@ -67,7 +67,7 @@ public class Reindexer {
         return new Query<>();
     }
 
-    private<T> Namespace<T> getNs(String namespace, Class<T> clazz) {
+    private <T> Namespace<T> getNs(String namespace, Class<T> clazz) {
         String name = namespace.toLowerCase();
         Namespace<?> ns = namespaceMap.get(name);
         if (ns.getClazz() != clazz) {
@@ -77,7 +77,7 @@ public class Reindexer {
         return (Namespace<T>) ns;
     }
 
-    private<T> void registerNamespace(String namespace, NamespaceOptions options, Class<T> clazz) {
+    private <T> void registerNamespace(String namespace, NamespaceOptions options, Class<T> clazz) {
 
         String name = namespace.toLowerCase();
         Namespace<T> ns = new Namespace<>(name, clazz);
@@ -95,8 +95,8 @@ public class Reindexer {
         return new ArrayList<>(indexDefs);
     }
 
-    private<T> List<IndexDef> parse(Class<T> clazz, boolean subArray, String aReindexBasePath,
-                                 String aJsonBasePath, Map<String, int[]> joined) {
+    private <T> List<IndexDef> parse(Class<T> clazz, boolean subArray, String aReindexBasePath,
+                                     String aJsonBasePath, Map<String, int[]> joined) {
         String jsonBasePath = aJsonBasePath;
         if (jsonBasePath.length() != 0 && !jsonBasePath.endsWith(".")) {
             jsonBasePath += ".";
@@ -278,17 +278,17 @@ public class Reindexer {
             }*/
         } else {
             res.format = Consts.FORMAT_JSON;
-            ser.write(ByteBuffer.wrap(sJson.getBytes()));
+            ser.writeBytes(sJson.getBytes());
         }
         return res;
     }
 
     private <T> void modifyItem(Namespace<T> ns, T item, ByteBuffer json, int mode, String... precepts) {
+        Serializer serializer = new Serializer();
+        PackItemResult pack = packItem(ns, item, json, serializer);
 
-        Serializer ser = ByteArraySerializer.newSerializer();
-        PackItemResult pack = packItem(ns, item, json, ser);
-
-        binding.modifyItem(ns.hashCode(), ns.getName(), pack.format, ser.bytes(), mode, precepts, pack.stateToken);
+        binding.modifyItem(ns.hashCode(), ns.getName(), pack.format, serializer.bytes(), mode,
+                precepts, pack.stateToken);
     }
 
     private String toJson(Object object) {

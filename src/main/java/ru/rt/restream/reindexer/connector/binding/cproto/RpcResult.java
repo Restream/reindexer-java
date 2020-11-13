@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-public class RPCResult {
+public class RpcResult {
 
     private final Error error;
 

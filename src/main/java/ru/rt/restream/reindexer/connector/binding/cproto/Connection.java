@@ -1,6 +1,7 @@
 package ru.rt.restream.reindexer.connector.binding.cproto;
 
 import ru.rt.restream.reindexer.connector.exceptions.NetworkException;
+import sun.misc.IOUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -8,6 +9,9 @@ import java.io.IOException;
 import java.net.Socket;
 
 public class Connection implements AutoCloseable {
+
+    private final RpcEncoder encoder = new RpcEncoder();
+    private final RpcDecoder decoder = new RpcDecoder();
 
     private final Socket clientSocket;
     private final DataOutputStream out;
@@ -24,8 +28,7 @@ public class Connection implements AutoCloseable {
         }
     }
 
-    public RPCResult rpcCall(int command, Object... args) {
-        RPCEncoder encoder = new RPCEncoder();
+    public RpcResult rpcCall(int command, Object... args) {
         try {
             byte[] bytes = encoder.encode(command, seq, args);
             out.write(bytes);
@@ -36,9 +39,9 @@ public class Connection implements AutoCloseable {
         }
     }
 
-    private RPCResult readReply(DataInputStream inFromServer) {
+    private RpcResult readReply(DataInputStream inFromServer) {
         try {
-            return new RPCEncoder().decode(inFromServer);
+            return decoder.decode(inFromServer);
         } catch (IOException e) {
             throw new NetworkException(e);
         }

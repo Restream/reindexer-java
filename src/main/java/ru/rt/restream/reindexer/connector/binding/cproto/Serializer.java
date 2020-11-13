@@ -1,35 +1,112 @@
 package ru.rt.restream.reindexer.connector.binding.cproto;
 
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
-public interface Serializer {
-    byte[] bytes();
+public class Serializer {
 
-    int getUInt16();
+    private static final float DEFAULT_EXPAND_FACTOR = 1.5f;
 
-    long getUInt32();
+    private static final int DEFAULT_INITIAL_CAPACITY = 16;
 
-    Serializer putUInt16(int input);
+    private final float expandFactor;
 
-    Serializer putUInt32(long input);
+    private byte[] buffer;
 
-    void writeIntBits(long input, int sz);
+    private int position = 0;
 
-    Serializer putVarUInt(long input);
+    public Serializer() {
+        this(DEFAULT_EXPAND_FACTOR, DEFAULT_INITIAL_CAPACITY);
+    }
 
-    Serializer putVarInt(long input);
+    public Serializer(float expandFactor, int initialCapacity) {
+        this.expandFactor = expandFactor;
+        buffer = new byte[initialCapacity];
+    }
 
-    Serializer putVString(String input);
+    public Serializer writeUnsignedShort(int value) {
+        writeIntBits(value, Short.BYTES);
+        return this;
+    }
 
-    long getVarUInt();
+    public Serializer writeUnsignedInt(long value) {
+        writeIntBits(value, Integer.BYTES);
+        return this;
+    }
 
-    long getVarInt();
+    private void writeIntBits(long input, int size) {
+        grow(size);
+        byte[] buffer = new byte[size];
+        for (int i = 0; i < size; i++) {
+            buffer[i] = (byte) input;
+            input = input >> 8;
+        }
+        System.arraycopy(buffer, 0, this.buffer, position, buffer.length);
+        position = position + buffer.length;
+    }
 
-    String getVString();
+    public Serializer writeUnsignedVarInt(long value) {
+        grow(10);
+        byte[] buffer = new byte[10];
+        int valueBytes = writeValueToBuffer(buffer, value);
+        System.arraycopy(buffer, 0, this.buffer, position, valueBytes);
+        position = position + valueBytes;
+        return this;
+    }
 
-    Double getDouble();
+    private int writeValueToBuffer(byte[] buffer, long value) {
+        int i = 0;
+        while (value >= 0x80) {
+            buffer[i] = (byte)(value | 0x80);
+            value >>= 7;
+            i++;
+        }
+        buffer[i] = (byte)value;
+        return i + 1;
+    }
 
-    Serializer putVBytes(ByteBuffer input);
+    public Serializer writeVarInt(int value) {
+        return writeUnsignedVarInt((value << 1) ^ (value >> 31));
+    }
 
-    Serializer write(ByteBuffer input);
+    public Serializer writeString(String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        int length = bytes.length;
+        writeUnsignedVarInt(length);
+        grow(length);
+        System.arraycopy(bytes, 0, this.buffer, position, length);
+        position = position + bytes.length;
+        return this;
+    }
+
+    public Serializer write(byte[] value) {
+        int length = value.length;
+        writeUnsignedVarInt(length);
+        writeBytes(value);
+        return this;
+    }
+
+    public Serializer writeBytes(byte[] value) {
+        grow(value.length);
+        System.arraycopy(value, 0, this.buffer, position, value.length);
+        position = position + value.length;
+        return this;
+    }
+
+    public byte[] bytes() {
+        return Arrays.copyOf(buffer, position);
+    }
+
+    private void grow(int need) {
+        if (buffer.length - position < need) {
+            int newCapacity = (int) (buffer.length * expandFactor);
+            while (newCapacity < (buffer.length + need)) {
+                newCapacity *= expandFactor;
+            }
+            byte[] expanded = new byte[newCapacity];
+            System.arraycopy(buffer, 0, expanded, 0, position);
+            buffer = expanded;
+        }
+    }
+
 }
