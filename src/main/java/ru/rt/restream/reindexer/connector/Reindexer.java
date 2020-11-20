@@ -6,7 +6,7 @@ import com.google.gson.GsonBuilder;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.connector.binding.Binding;
 import ru.rt.restream.reindexer.connector.binding.Consts;
-import ru.rt.restream.reindexer.connector.binding.cproto.Serializer;
+import ru.rt.restream.reindexer.connector.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.connector.binding.def.IndexDef;
 import ru.rt.restream.reindexer.connector.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.connector.exceptions.NsExistsException;
@@ -16,10 +16,8 @@ import ru.rt.restream.reindexer.connector.options.IndexOptions;
 import ru.rt.restream.reindexer.connector.options.NamespaceOptions;
 import ru.rt.restream.reindexer.util.Pair;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,8 +61,8 @@ public class Reindexer {
         modifyItem(ns, item, null, Consts.MODE_UPSERT, precepts);
     }
 
-    public Query<?> query(String namespace) {
-        return new Query<>();
+    public<T> Query<T> query(String namespace, Class<T> clazz) {
+        return new Query<>(binding, namespace, clazz);
     }
 
     private <T> Namespace<T> getNs(String namespace, Class<T> clazz) {
@@ -202,7 +200,10 @@ public class Reindexer {
             }
         }
 
-        return new Pair<>(optionsBuilder.build(), newIdxSettingsBuf);
+        return Pair.<IndexOptions, List<String>>builder()
+                .first(optionsBuilder.build())
+                .second(newIdxSettingsBuf)
+                .build();
     }
 
     private List<String> splitOptions(String indexOptions) {
@@ -246,7 +247,7 @@ public class Reindexer {
         int stateToken = 0;
     }
 
-    private <T> PackItemResult packItem(Namespace<T> ns, T item, ByteBuffer json, Serializer ser) {
+    private <T> PackItemResult packItem(Namespace<T> ns, T item, ByteBuffer json, ByteBuffer buffer) {
 
         if (!ns.getClazz().equals(item.getClass())) {
             throw new IllegalArgumentException(); // TODO ErrWrongType
@@ -278,13 +279,13 @@ public class Reindexer {
             }*/
         } else {
             res.format = Consts.FORMAT_JSON;
-            ser.writeBytes(sJson.getBytes());
+            buffer.writeBytes(sJson.getBytes());
         }
         return res;
     }
 
     private <T> void modifyItem(Namespace<T> ns, T item, ByteBuffer json, int mode, String... precepts) {
-        Serializer serializer = new Serializer();
+        ByteBuffer serializer = new ByteBuffer();
         PackItemResult pack = packItem(ns, item, json, serializer);
 
         binding.modifyItem(ns.hashCode(), ns.getName(), pack.format, serializer.bytes(), mode,

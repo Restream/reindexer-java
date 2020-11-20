@@ -3,30 +3,19 @@ package ru.rt.restream.reindexer.connector.binding.cproto;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import lombok.SneakyThrows;
+import ru.rt.restream.reindexer.connector.StorageOpts;
 import ru.rt.restream.reindexer.connector.binding.Binding;
-import ru.rt.restream.reindexer.connector.binding.Command;
+import ru.rt.restream.reindexer.connector.binding.Consts;
+import ru.rt.restream.reindexer.connector.binding.QueryResult;
 import ru.rt.restream.reindexer.connector.binding.def.IndexDef;
 import ru.rt.restream.reindexer.connector.binding.def.NamespaceDef;
 import ru.rt.restream.reindexer.connector.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.connector.exceptions.UnimplementedException;
-import ru.rt.restream.reindexer.connector.StorageOpts;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 
 public class Cproto implements Binding {
-
-    static final long CPROTO_MAGIC = 0xEEDD1132L;
-
-    static final int CPROTO_VERSION = 0x101;
-
-    static final int CPROTO_HDR_LEN = 16;
-
-    static final int CPROTO_VERSION_COMPRESSION_FLAG = 1 << 10;
-
-    static final int CPROTO_VERSION_MASK = 0x3FF;
 
     private enum OperationType {
         READ, WRITE
@@ -69,7 +58,7 @@ public class Cproto implements Binding {
     }
 
     private void login() {
-        connection.rpcCall(Command.LOGIN, user, password, database);
+        connection.rpcCall(LOGIN, user, password, database);
     }
 
     @Override
@@ -78,12 +67,7 @@ public class Cproto implements Binding {
         NamespaceDef namespaceDef = new NamespaceDef(storageOpts, namespace);
 
         String json = toJson(namespaceDef);
-        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.OPEN_NAMESPACE,
-                ByteBuffer.wrap(json.getBytes()));
-
-        if (!error.isOk()) {
-            throw new ReindexerException(error.getMessage());
-        }
+        rpcCallNoResults(OperationType.WRITE, OPEN_NAMESPACE, json);
     }
 
     private String toJson(Object object) {
@@ -93,50 +77,76 @@ public class Cproto implements Binding {
         return gson.toJson(object);
     }
 
-    @SneakyThrows
     @Override
     public void addIndex(String namespace, IndexDef index) {
-        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.ADD_INDEX, namespace, toJson(index));
-
-        if (!error.isOk()) {
-            throw new ReindexerException(error.getMessage());
-        }
+        rpcCallNoResults(OperationType.WRITE, ADD_INDEX, namespace, toJson(index));
     }
 
     @Override
-    public void modifyItem(int nsHash, String namespace, int format,
-                                byte[] data, int mode, String[] percepts, int stateToken) {
-        ByteBuffer packedPercepts = ByteBuffer.allocate(0);
+    public void modifyItem(int nsHash, String namespace, int format, byte[] data, int mode, String[] percepts,
+                           int stateToken) {
+        byte[] packedPercepts = new byte[0];
         if (percepts.length > 0) {
-            //TODO
             throw new UnimplementedException();
         }
-        RpcResult.Error error = rpcCallNoResults(OperationType.WRITE, Command.MODIFY_ITEM, namespace, format,
-                ByteBuffer.wrap(data), mode, packedPercepts, stateToken, 0);
-
-        if (!error.isOk()) {
-            throw new RuntimeException(error.getMessage());
-        }
+        rpcCallNoResults(OperationType.WRITE, MODIFY_ITEM, namespace, format, data, mode,
+                packedPercepts, stateToken, 0);
     }
 
     @Override
     public void dropNamespace(String namespace) {
-        rpcCallNoResults(OperationType.WRITE, Command.DROP_NAMESPACE, namespace);
+        rpcCallNoResults(OperationType.WRITE, DROP_NAMESPACE, namespace);
     }
 
     @Override
     public void closeNamespace(String namespace) {
-        rpcCallNoResults(OperationType.WRITE, Command.CLOSE_NAMESPACE, namespace);
+        rpcCallNoResults(OperationType.WRITE, CLOSE_NAMESPACE, namespace);
     }
 
-    private RpcResult.Error rpcCallNoResults(OperationType operationType, int command, Object... args) {
-        RpcResult result = rpcCall(operationType, command, args);
-        return result.getError();
+    @Override
+    public QueryResult selectQuery(byte[] queryData, boolean asJson, int fetchCount) {
+        int flags = 0;
+        if (asJson) {
+            flags = Consts.RESULTS_JSON;
+        } else {
+            flags |= Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+            throw new UnimplementedException();
+        }
+
+        if (fetchCount <= 0) {
+            fetchCount = Integer.MAX_VALUE;
+        }
+
+        RpcResponse rpcResponse = rpcCall(OperationType.READ, SELECT, queryData, flags,
+                fetchCount, new byte[]{0});
+
+
+        byte[] queryResultData = new byte[0];
+        int requestId = -1;
+        Object[] responseArguments = rpcResponse.getArguments();
+        if (responseArguments.length > 0) {
+            queryResultData = (byte[]) responseArguments[0];
+        }
+        if (responseArguments.length > 1) {
+            requestId = (int) responseArguments[1];
+        }
+
+        return new QueryResult(requestId, queryResultData);
+    }
+
+    private void rpcCallNoResults(OperationType operationType, int command, Object... args) {
+        rpcCall(operationType, command, args);
     }
 
 
-    private RpcResult rpcCall(OperationType operationType, int command, Object... args) {
-        return connection.rpcCall(command, args);
+    private RpcResponse rpcCall(OperationType operationType, int command, Object... args) {
+        RpcResponse response = connection.rpcCall(command, args);
+
+        if (response.hasError()) {
+            throw new ReindexerException(response.getErrorMessage());
+        }
+
+        return response;
     }
 
 }

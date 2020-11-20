@@ -1,11 +1,11 @@
 package ru.rt.restream.reindexer.util;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 
-@AllArgsConstructor
-@Getter
-public class Pair<FIRST, SECOND> {
-    private FIRST first;
-    private SECOND second;
+@Data
+@Builder
+public final class Pair<FIRST, SECOND> {
+    private final FIRST first;
+    private final SECOND second;
 }

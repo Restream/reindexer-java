@@ -10,8 +10,10 @@ import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.io.entity.S
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +28,9 @@ import ru.rt.restream.reindexer.connector.options.NamespaceOptions;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.List;
+import java.util.*;
+
+import static ru.rt.restream.reindexer.connector.binding.Consts.*;
 
 @Testcontainers
 public class ReindexerTest {
@@ -37,17 +41,19 @@ public class ReindexerTest {
 
     private Reindexer db;
 
+    private String restApiPort = "9088";
+    private String rpcPort = "6534";
+
     @BeforeEach
     public void setUp() {
+        //restApiPort = String.valueOf(reindexer.getMappedPort(9088));
+        //rpcPort = String.valueOf(reindexer.getMappedPort(6534));
         CreateDatabase createDatabase = new CreateDatabase();
         createDatabase.setName("test_items");
-
         post("/db", createDatabase);
 
-        Integer mappedPort = reindexer.getMappedPort(6534);
-        String port = String.valueOf(mappedPort);
         this.db = Configuration.builder()
-                .url("cproto://" + "localhost:" + port + "/test_items")
+                .url("cproto://" + "localhost:" + rpcPort + "/test_items")
                 .getReindexer();
     }
 
@@ -59,7 +65,7 @@ public class ReindexerTest {
 
         NamespaceResponse namespaceResponse = get("/db/test_items/namespaces/items", NamespaceResponse.class);
         MatcherAssert.assertThat(namespaceResponse.name, Matchers.is(namespaceName));
-        MatcherAssert.assertThat(namespaceResponse.indexes.size(), Matchers.is(2));
+        MatcherAssert.assertThat(namespaceResponse.indexes.size(), Matchers.is(3));
         List<NamespaceResponse.IndexResponse> indexes = namespaceResponse.indexes;
         NamespaceResponse.IndexResponse idIdx = indexes.get(0);
         MatcherAssert.assertThat(idIdx.isPk, Matchers.is(true));
@@ -89,11 +95,65 @@ public class ReindexerTest {
         MatcherAssert.assertThat(responseItem.id, Matchers.is(testItem.id));
     }
 
-    private void post(String path, Object body) {
-        Integer mappedPort = reindexer.getMappedPort(9088);
-        String port = String.valueOf(mappedPort);
+    @Test
+    public void testSelectOneItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
 
-        HttpPost httpPost = new HttpPost("http://localhost:" + port + "/api/v1" + path);
+        //Выбрать из БД элементы с id 77
+         Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        MatcherAssert.assertThat(iterator.hasNext(), Matchers.is(true));
+
+        TestItem next = iterator.next();
+        MatcherAssert.assertThat(next.id, Matchers.is(77));
+        MatcherAssert.assertThat(next.name, Matchers.is("TestName77"));
+        MatcherAssert.assertThat(next.value, Matchers.is("77Value"));
+
+        MatcherAssert.assertThat(iterator.hasNext(), Matchers.is(false));
+
+    }
+
+    @Test
+    public void testSelectItemList() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+
+        Set<TestItem> expectedItems = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        //Выбрать из БД элементы с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .execute();
+
+        while (iterator.hasNext()) {
+            TestItem responseItem = iterator.next();
+            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+        }
+
+        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(0));
+    }
+
+    private void post(String path, Object body) {
+        HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
 
 
         try (CloseableHttpClient client = HttpClients.createDefault()) {
@@ -109,10 +169,7 @@ public class ReindexerTest {
     }
 
     private <T> T get(String path, Class<T> clazz) {
-        Integer mappedPort = reindexer.getMappedPort(9088);
-        String port = String.valueOf(mappedPort);
-
-        HttpGet httpGet = new HttpGet("http://localhost:" + port + "/api/v1" + path);
+        HttpGet httpGet = new HttpGet("http://localhost:" + restApiPort + "/api/v1" + path);
 
         try (CloseableHttpClient client = HttpClients.createDefault();
              CloseableHttpResponse response = client.execute(httpGet)) {
@@ -136,11 +193,15 @@ public class ReindexerTest {
 
     @Getter
     @Setter
+    @ToString
+    @EqualsAndHashCode
     public static class TestItem {
         @Reindex("id,,pk")
         private Integer id;
         @Reindex("name")
         private String name;
+        @Reindex("value")
+        private String value;
     }
 
     @Getter
