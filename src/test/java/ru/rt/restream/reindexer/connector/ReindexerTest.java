@@ -14,8 +14,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
@@ -30,11 +28,10 @@ import ru.rt.restream.reindexer.annotations.Reindex;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
+import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.Matchers.is;
 import static ru.rt.restream.reindexer.Index.Option.PK;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
@@ -70,18 +67,18 @@ public class ReindexerTest {
         db.openNamespace(namespaceName, TestItem.class);
 
         NamespaceResponse namespaceResponse = get("/db/test_items/namespaces/items", NamespaceResponse.class);
-        MatcherAssert.assertThat(namespaceResponse.name, Matchers.is(namespaceName));
-        MatcherAssert.assertThat(namespaceResponse.indexes.size(), Matchers.is(3));
-        MatcherAssert.assertThat(namespaceResponse.storage.enabled, Matchers.is(true));
+        assertThat(namespaceResponse.name, is(namespaceName));
+        assertThat(namespaceResponse.indexes.size(), is(3));
+        assertThat(namespaceResponse.storage.enabled, is(true));
         List<NamespaceResponse.IndexResponse> indexes = namespaceResponse.indexes;
         NamespaceResponse.IndexResponse idIdx = indexes.get(0);
-        MatcherAssert.assertThat(idIdx.isPk, Matchers.is(true));
-        MatcherAssert.assertThat(idIdx.name, Matchers.is("id"));
-        MatcherAssert.assertThat(idIdx.fieldType, Matchers.is("int"));
+        assertThat(idIdx.isPk, is(true));
+        assertThat(idIdx.name, is("id"));
+        assertThat(idIdx.fieldType, is("int"));
         NamespaceResponse.IndexResponse nameIdx = indexes.get(1);
-        MatcherAssert.assertThat(nameIdx.isPk, Matchers.is(false));
-        MatcherAssert.assertThat(nameIdx.name, Matchers.is("name"));
-        MatcherAssert.assertThat(nameIdx.fieldType, Matchers.is("string"));
+        assertThat(nameIdx.isPk, is(false));
+        assertThat(nameIdx.name, is("name"));
+        assertThat(nameIdx.fieldType, is("string"));
     }
 
     @Test
@@ -96,10 +93,10 @@ public class ReindexerTest {
         db.upsert(namespaceName, testItem);
 
         ItemsResponse itemsResponse = get("/db/test_items/namespaces/items/items", ItemsResponse.class);
-        MatcherAssert.assertThat(itemsResponse.totalItems, Matchers.is(1));
+        assertThat(itemsResponse.totalItems, is(1));
         TestItem responseItem = itemsResponse.items.get(0);
-        MatcherAssert.assertThat(responseItem.name, Matchers.is(testItem.name));
-        MatcherAssert.assertThat(responseItem.id, Matchers.is(testItem.id));
+        assertThat(responseItem.name, is(testItem.name));
+        assertThat(responseItem.id, is(testItem.id));
     }
 
     @Test
@@ -120,14 +117,14 @@ public class ReindexerTest {
                 .where("id", EQ, 77)
                 .execute();
 
-        MatcherAssert.assertThat(iterator.hasNext(), Matchers.is(true));
+        assertThat(iterator.hasNext(), is(true));
 
         TestItem next = iterator.next();
-        MatcherAssert.assertThat(next.id, Matchers.is(77));
-        MatcherAssert.assertThat(next.name, Matchers.is("TestName77"));
-        MatcherAssert.assertThat(next.value, Matchers.is("77Value"));
+        assertThat(next.id, is(77));
+        assertThat(next.name, is("TestName77"));
+        assertThat(next.value, is("77Value"));
 
-        MatcherAssert.assertThat(iterator.hasNext(), Matchers.is(false));
+        assertThat(iterator.hasNext(), is(false));
 
     }
 
@@ -152,10 +149,10 @@ public class ReindexerTest {
 
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
-            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+            assertThat(expectedItems.remove(responseItem), is(true));
         }
 
-        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(0));
+        assertThat(expectedItems.size(), is(0));
     }
 
     @Test
@@ -181,10 +178,10 @@ public class ReindexerTest {
 
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
-            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+            assertThat(expectedItems.remove(responseItem), is(true));
         }
 
-        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(90));
+        assertThat(expectedItems.size(), is(90));
     }
 
     @Test
@@ -209,15 +206,79 @@ public class ReindexerTest {
 
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
-            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+            assertThat(expectedItems.remove(responseItem), is(true));
         }
 
-        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(50));
+        assertThat(expectedItems.size(), is(50));
         Integer maxId = expectedItems.stream()
                 .map(TestItem::getId)
                 .max(Integer::compareTo)
                 .orElseThrow(() -> new IllegalStateException("Not items in query response"));
-        MatcherAssert.assertThat(maxId, Matchers.is(49));
+        assertThat(maxId, is(49));
+    }
+
+    @Test
+    public void testSelectItemWithDescSortOrder() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+
+        List<TestItem> expectedItems = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .sort("id", true)
+                .execute();
+
+        List<TestItem> resultItems = new ArrayList<>();
+        while (iterator.hasNext()) {
+            resultItems.add(iterator.next());
+        }
+
+        for (int i = 0; i < expectedItems.size(); i++) {
+            assertThat(expectedItems.get(i).equals(resultItems.get(resultItems.size() - 1 - i)), is(true));
+        }
+    }
+
+    @Test
+    public void testSelectItemWithDescSortOrderWithTopValues() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+
+        List<TestItem> expectedItems = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .sort("id", false, 99, 98, 97)
+                .execute();
+
+        List<TestItem> resultItems = new ArrayList<>();
+        while (iterator.hasNext()) {
+            resultItems.add(iterator.next());
+        }
+
+        for (int i = 0; i < expectedItems.size(); i++) {
+            if (i < 3) {
+                assertThat(resultItems.get(i), is(expectedItems.get(expectedItems.size() - 1 - i)));
+            } else {
+                assertThat(expectedItems.get(i - 3).equals(resultItems.get(i)), is(true));
+            }
+        }
     }
 
     @Test
@@ -242,10 +303,10 @@ public class ReindexerTest {
 
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
-            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+            assertThat(expectedItems.remove(responseItem), is(true));
         }
 
-        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(0));
+        assertThat(expectedItems.size(), is(0));
     }
 
     private void post(String path, Object body) {
