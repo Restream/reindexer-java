@@ -109,7 +109,17 @@ public interface Binding {
      *
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param asJson     format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
-     * @param fetchCount items count to fetch within a select request
+     * @param fetchCount items count to fetch within a query request
      */
     QueryResult selectQuery(byte[] queryData, boolean asJson, int fetchCount);
+
+    /**
+     * Fetch query result by requestId.
+     *
+     * @param requestId query request id
+     * @param asJson format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
+     * @param offset query result offset
+     * @param limit items count to fetch within a query request
+     * */
+    QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit);
 }

@@ -147,8 +147,35 @@ public class ReindexerTest {
             expectedItems.add(testItem);
         }
 
-        //Выбрать из БД элементы с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .execute();
+
+        while (iterator.hasNext()) {
+            TestItem responseItem = iterator.next();
+            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+        }
+
+        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(0));
+    }
+
+    @Test
+    public void testSelectItemListWithFetchCount_1() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+
+        Set<TestItem> expectedItems = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .fetchCount(1)
                 .execute();
 
         while (iterator.hasNext()) {

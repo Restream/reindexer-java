@@ -174,6 +174,35 @@ public class Cproto implements Binding {
         return new QueryResult(requestId, queryResultData);
     }
 
+    @Override
+    public QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit) {
+        int flags = 0;
+        if (asJson) {
+            flags = Consts.RESULTS_JSON;
+        } else {
+            flags |= Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+            throw new UnimplementedException();
+        }
+
+        int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
+
+        //TODO: timeout
+        RpcResponse rpcResponse = rpcCall(OperationType.READ, FETCH_RESULTS, requestId, flags, offset,
+                fetchCount);
+
+
+        byte[] queryResultData = new byte[0];
+        Object[] responseArguments = rpcResponse.getArguments();
+        if (responseArguments.length > 0) {
+            queryResultData = (byte[]) responseArguments[0];
+        }
+        if (responseArguments.length > 1) {
+            requestId = (int) responseArguments[1];
+        }
+
+        return new QueryResult(requestId, queryResultData);
+    }
+
     private void rpcCallNoResults(OperationType operationType, int command, Object... args) {
         rpcCall(operationType, command, args);
     }
