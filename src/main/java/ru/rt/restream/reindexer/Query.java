@@ -54,15 +54,15 @@ public class Query<T> {
     }
 
     public Query<T> where(String index, Condition condition, Object... values) {
-        buffer.PutVarUInt32(Consts.QUERY_CONDITION)
+        buffer.putVarUInt32(Consts.QUERY_CONDITION)
                 .putVString(index)
-                .PutVarUInt32(nextOperation)
-                .PutVarUInt32(condition.code);
+                .putVarUInt32(nextOperation)
+                .putVarUInt32(condition.code);
 
         this.nextOperation = OP_AND;
 
         if (values != null && values.length > 0) {
-            buffer.PutVarUInt32(values.length);
+            buffer.putVarUInt32(values.length);
             for (Object key : values) {
                 putValue(key);
             }
@@ -71,9 +71,19 @@ public class Query<T> {
         return this;
     }
 
+    public Query<T> limit(int limit) {
+        if (limit > 0) {
+            buffer.putVarUInt32(Consts.QUERY_LIMIT)
+                    .putVarUInt32(limit);
+        }
+        return this;
+    }
+
     /**
      * FetchCount sets the number of items that will be fetched by one operation
      * When fetchCount <= 0 query will fetch all results in one operation
+     *
+     * @param fetchCount items count to fetch
      */
     public Query<T> fetchCount(int fetchCount) {
         this.fetchCount = fetchCount;
@@ -82,16 +92,16 @@ public class Query<T> {
 
     private void putValue(Object value) {
         if (value instanceof Integer) {
-            buffer.PutVarUInt32(Consts.VALUE_INT)
+            buffer.putVarUInt32(Consts.VALUE_INT)
                     .putVarInt64((Integer) value);
         } else if (value instanceof String) {
-            buffer.PutVarUInt32(Consts.VALUE_STRING)
+            buffer.putVarUInt32(Consts.VALUE_STRING)
                     .putVString((String) value);
         }
     }
 
     public Iterator<T> execute() {
-        buffer.PutVarUInt32(Consts.QUERY_END);
+        buffer.putVarUInt32(Consts.QUERY_END);
 
         QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
 

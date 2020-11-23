@@ -137,25 +137,25 @@ public class Connection implements AutoCloseable {
 
     private byte[] encodeArgs(Object[] args) {
         ByteBuffer buffer = new ByteBuffer();
-        buffer.PutVarUInt32(args.length);
+        buffer.putVarUInt32(args.length);
         for (Object arg : args) {
             if (arg instanceof Boolean) {
-                buffer.PutVarUInt32(Consts.VALUE_BOOL)
-                        .PutVarUInt32((Boolean) arg ? 1L : 0L);
+                buffer.putVarUInt32(Consts.VALUE_BOOL)
+                        .putVarUInt32((Boolean) arg ? 1L : 0L);
             } else if (arg instanceof Short) {
-                buffer.PutVarUInt32(Consts.VALUE_INT)
+                buffer.putVarUInt32(Consts.VALUE_INT)
                         .putVarInt64(((Short) arg));
             } else if (arg instanceof Integer) {
-                buffer.PutVarUInt32(Consts.VALUE_INT)
+                buffer.putVarUInt32(Consts.VALUE_INT)
                         .putVarInt64(((Integer) arg));
             } else if (arg instanceof Long) {
-                buffer.PutVarUInt32(Consts.VALUE_INT)
+                buffer.putVarUInt32(Consts.VALUE_INT)
                         .putVarInt64((Long) arg);
             } else if (arg instanceof String) {
-                buffer.PutVarUInt32(Consts.VALUE_STRING)
+                buffer.putVarUInt32(Consts.VALUE_STRING)
                         .putVString((String) arg);
             } else if (arg instanceof byte[]) {
-                buffer.PutVarUInt32(Consts.VALUE_STRING)
+                buffer.putVarUInt32(Consts.VALUE_STRING)
                         .putVBytes(((byte[]) arg));
             } else {
                 throw new IllegalArgumentException("Unsupported data type " + arg.getClass());
