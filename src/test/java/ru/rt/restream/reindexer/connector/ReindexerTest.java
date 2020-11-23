@@ -22,15 +22,21 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.Reindexer;
+import ru.rt.restream.reindexer.annotations.Namespace;
 import ru.rt.restream.reindexer.annotations.Reindex;
-import ru.rt.restream.reindexer.connector.options.NamespaceOptions;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
-import static ru.rt.restream.reindexer.connector.binding.Consts.*;
+import static ru.rt.restream.reindexer.Index.Option.PK;
+import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
 @Testcontainers
 public class ReindexerTest {
@@ -46,8 +52,8 @@ public class ReindexerTest {
 
     @BeforeEach
     public void setUp() {
-        //restApiPort = String.valueOf(reindexer.getMappedPort(9088));
-        //rpcPort = String.valueOf(reindexer.getMappedPort(6534));
+        restApiPort = String.valueOf(reindexer.getMappedPort(9088));
+        rpcPort = String.valueOf(reindexer.getMappedPort(6534));
         CreateDatabase createDatabase = new CreateDatabase();
         createDatabase.setName("test_items");
         post("/db", createDatabase);
@@ -61,11 +67,12 @@ public class ReindexerTest {
     public void testOpenNamespace() {
         String namespaceName = "items";
 
-        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+        db.openNamespace(namespaceName, TestItem.class);
 
         NamespaceResponse namespaceResponse = get("/db/test_items/namespaces/items", NamespaceResponse.class);
         MatcherAssert.assertThat(namespaceResponse.name, Matchers.is(namespaceName));
         MatcherAssert.assertThat(namespaceResponse.indexes.size(), Matchers.is(3));
+        MatcherAssert.assertThat(namespaceResponse.storage.enabled, Matchers.is(true));
         List<NamespaceResponse.IndexResponse> indexes = namespaceResponse.indexes;
         NamespaceResponse.IndexResponse idIdx = indexes.get(0);
         MatcherAssert.assertThat(idIdx.isPk, Matchers.is(true));
@@ -80,7 +87,7 @@ public class ReindexerTest {
     @Test
     public void testUpsertItem() {
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+        db.openNamespace(namespaceName, TestItem.class);
 
         TestItem testItem = new TestItem();
         testItem.setId(123);
@@ -99,7 +106,7 @@ public class ReindexerTest {
     public void testSelectOneItem() {
         //Вставить 100 элементов
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+        db.openNamespace(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
@@ -108,8 +115,8 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элементы с id 77
-         Iterator<TestItem> iterator = db.query("items", TestItem.class)
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .execute();
 
@@ -128,7 +135,7 @@ public class ReindexerTest {
     public void testSelectItemList() {
         //Вставить 100 элементов
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.DEFAULT, TestItem.class);
+        db.openNamespace(namespaceName, TestItem.class);
 
         Set<TestItem> expectedItems = new HashSet<>();
         for (int i = 0; i < 100; i++) {
@@ -195,12 +202,13 @@ public class ReindexerTest {
     @Setter
     @ToString
     @EqualsAndHashCode
+    @Namespace
     public static class TestItem {
-        @Reindex("id,,pk")
+        @Reindex(options = PK)
         private Integer id;
-        @Reindex("name")
+        @Reindex(name = "name")
         private String name;
-        @Reindex("value")
+        @Reindex(name = "value")
         private String value;
     }
 
