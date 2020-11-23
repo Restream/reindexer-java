@@ -88,6 +88,29 @@ public class Query<T> {
     }
 
     /**
+     * Apply sort order to returned from query items. If values argument specified, then items equal to values, if found
+     * will be placed in the top positions. For composite indexes values must be []interface{}, with value of each
+     * subindex
+     */
+    public Query<T> sort(String index, boolean desc, Object... values) {
+
+        buffer.putVarUInt32(Consts.QUERY_SORT_INDEX)
+                .putVString(index);
+        if (desc) {
+            buffer.putVarUInt32(1);
+        } else {
+            buffer.putVarUInt32(0);
+        }
+
+        buffer.putVarUInt32(values.length);
+        for (Object value : values) {
+            putValue(value);
+        }
+
+        return this;
+    }
+
+    /**
      * FetchCount sets the number of items that will be fetched by one operation
      * When fetchCount <= 0 query will fetch all results in one operation
      *
