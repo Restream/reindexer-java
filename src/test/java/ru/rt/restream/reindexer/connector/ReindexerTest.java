@@ -188,6 +188,39 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testSelectItemWithOffset() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+
+        Set<TestItem> expectedItems = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .offset(50)
+                .execute();
+
+        while (iterator.hasNext()) {
+            TestItem responseItem = iterator.next();
+            MatcherAssert.assertThat(expectedItems.remove(responseItem), Matchers.is(true));
+        }
+
+        MatcherAssert.assertThat(expectedItems.size(), Matchers.is(50));
+        Integer maxId = expectedItems.stream()
+                .map(TestItem::getId)
+                .max(Integer::compareTo)
+                .orElseThrow(() -> new IllegalStateException("Not items in query response"));
+        MatcherAssert.assertThat(maxId, Matchers.is(49));
+    }
+
+    @Test
     public void testSelectItemListWithFetchCount_1() {
         //Вставить 100 элементов
         String namespaceName = "items";

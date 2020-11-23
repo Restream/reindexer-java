@@ -79,6 +79,14 @@ public class Query<T> {
         return this;
     }
 
+    public Query<T> offset(int offset) {
+        if (offset > 0) {
+            buffer.putVarUInt32(Consts.QUERY_OFFSET)
+                    .putVarUInt32(offset);
+        }
+        return this;
+    }
+
     /**
      * FetchCount sets the number of items that will be fetched by one operation
      * When fetchCount <= 0 query will fetch all results in one operation
