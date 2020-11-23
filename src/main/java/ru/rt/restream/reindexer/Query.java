@@ -12,6 +12,8 @@ import static ru.rt.restream.reindexer.binding.Consts.OP_AND;
 
 public class Query<T> {
 
+    private static final int DEFAULT_FETCH_COUNT = 100;
+
     public enum Condition {
         ANY(0),
         EQ(1),
@@ -39,7 +41,7 @@ public class Query<T> {
 
     private final Namespace<T> namespace;
 
-    private int count;
+    private int fetchCount = DEFAULT_FETCH_COUNT;
 
     public Query(Binding binding, Namespace<T> namespace) {
         this.binding = binding;
@@ -58,7 +60,6 @@ public class Query<T> {
                 .PutVarUInt32(condition.code);
 
         this.nextOperation = OP_AND;
-        count++;
 
         if (values != null && values.length > 0) {
             buffer.PutVarUInt32(values.length);
@@ -67,6 +68,15 @@ public class Query<T> {
             }
         }
 
+        return this;
+    }
+
+    /**
+     * FetchCount sets the number of items that will be fetched by one operation
+     * When fetchCount <= 0 query will fetch all results in one operation
+     */
+    public Query<T> fetchCount(int fetchCount) {
+        this.fetchCount = fetchCount;
         return this;
     }
 
@@ -83,9 +93,12 @@ public class Query<T> {
     public Iterator<T> execute() {
         buffer.PutVarUInt32(Consts.QUERY_END);
 
-        QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, Integer.MAX_VALUE);
+        QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
 
         return CprotoIterator.<T>builder()
+                .asJson(true)
+                .binding(binding)
+                .fetchCount(fetchCount)
                 .namespace(namespace)
                 .queryResult(queryResult)
                 .build();

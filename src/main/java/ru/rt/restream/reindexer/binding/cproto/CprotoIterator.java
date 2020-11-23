@@ -2,11 +2,15 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import lombok.Builder;
 import ru.rt.restream.reindexer.Namespace;
+import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
 import java.util.Iterator;
+
+import static ru.rt.restream.reindexer.binding.Binding.*;
 
 /**
  * An iterator over a query result.
@@ -20,7 +24,11 @@ public class CprotoIterator<T> implements Iterator<T> {
 
     private final Namespace<T> namespace;
 
-    private final Connection connection;
+    private final Binding binding;
+
+    private final boolean asJson;
+
+    private final int fetchCount;
 
     private ItemReader<T> itemReader;
 
@@ -39,11 +47,15 @@ public class CprotoIterator<T> implements Iterator<T> {
     private int position;
 
     @Builder
-    public CprotoIterator(Connection connection,
+    public CprotoIterator(Binding binding,
                           Namespace<T> namespace,
-                          QueryResult queryResult) {
-        this.connection = connection;
+                          QueryResult queryResult,
+                          boolean asJson,
+                          int fetchCount) {
+        this.binding = binding;
         this.namespace = namespace;
+        this.asJson = asJson;
+        this.fetchCount = fetchCount;
         parseQueryResult(queryResult);
     }
 
@@ -56,7 +68,7 @@ public class CprotoIterator<T> implements Iterator<T> {
             this.flags = buffer.getVarUInt();
             this.totalCount = buffer.getVarUInt();
             this.qCount = buffer.getVarUInt();
-            this.count = buffer.getVarUInt();
+            this.count += buffer.getVarUInt();
             long tag = buffer.getVarUInt();
             if ((flags & RESULTS_FORMAT_MASK) == RESULT_JSON) {
                 itemReader = new JsonItemReader<>(namespace);
@@ -68,7 +80,7 @@ public class CprotoIterator<T> implements Iterator<T> {
 
     @Override
     public boolean hasNext() {
-        return position < count;
+        return position < qCount;
     }
 
     /**
@@ -81,6 +93,10 @@ public class CprotoIterator<T> implements Iterator<T> {
             throw new IllegalStateException("No data to read");
         }
 
+        if (needFetch()) {
+            fetchResults();
+        }
+
         T item = itemReader.readItem(buffer);
 
         position++;
@@ -88,5 +104,15 @@ public class CprotoIterator<T> implements Iterator<T> {
         return item;
 
     }
+
+    private boolean needFetch() {
+        return this.position == count;
+    }
+
+    private void fetchResults() {
+        QueryResult queryResult = binding.fetchResults(requestId, asJson, position, fetchCount);
+        parseQueryResult(queryResult);
+    }
+
 
 }
