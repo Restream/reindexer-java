@@ -121,7 +121,7 @@ public class ByteBuffer {
      *
      * @param value value to encode
      */
-    public ByteBuffer PutVarUInt32(long value) {
+    public ByteBuffer putVarUInt32(long value) {
         if (value < 0) {
             throw new IllegalArgumentException();
         }
@@ -146,7 +146,7 @@ public class ByteBuffer {
      */
     public ByteBuffer putVarInt64(long value) {
         // Great trick from http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
-        return PutVarUInt32((value << 1) ^ (value >> 63));
+        return putVarUInt32((value << 1) ^ (value >> 63));
     }
 
     private int putUVariant(byte[] buffer, long value) {
@@ -182,7 +182,7 @@ public class ByteBuffer {
      */
     public ByteBuffer putVBytes(byte[] value) {
         int length = value.length;
-        PutVarUInt32(length);
+        putVarUInt32(length);
         writeBytes(value);
         return this;
     }
