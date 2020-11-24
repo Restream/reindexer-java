@@ -129,6 +129,89 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testDeleteOneItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Удалить из БД элемент с id 77
+        long delete = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .delete();
+
+        assertThat(delete, is(1L));
+
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testDeleteListItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Удалить из БД элементы с id 77, 17, 7
+        long delete = db.query("items", TestItem.class)
+                .where("id", EQ, 77, 17, 7)
+                .delete();
+
+        assertThat(delete, is(3L));
+
+        //Выбрать из БД элементы с id 77, 17, 7
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77, 17, 7)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testDeleteAllItems() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Удалить из БД элементы с id 77, 17, 7
+        long delete = db.query("items", TestItem.class)
+                .delete();
+
+        assertThat(delete, is(100L));
+
+        //Выбрать из БД элементы с id 77, 17, 7
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
     public void testSelectItemList() {
         //Вставить 100 элементов
         String namespaceName = "items";

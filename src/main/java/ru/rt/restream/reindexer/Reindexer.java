@@ -106,8 +106,7 @@ public class Reindexer {
         ItemWriter<T> itemWriter = new JsonItemWriter<>(namespace);
         itemWriter.writeItem(buffer, item);
 
-        binding.modifyItem(namespace.hashCode(), namespace.getName(), format, buffer.bytes(), mode,
-                percepts, stateToken);
+        binding.modifyItem(namespace.getName(), format, buffer.bytes(), mode, percepts, stateToken);
     }
 
 }

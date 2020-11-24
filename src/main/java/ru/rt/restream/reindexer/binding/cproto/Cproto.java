@@ -114,7 +114,7 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(int namespaceHash, String namespaceName, int format, byte[] data, int mode, String[] percepts,
+    public void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] percepts,
                            int stateToken) {
         byte[] packedPercepts = new byte[0];
         if (percepts.length > 0) {
@@ -157,21 +157,13 @@ public class Cproto implements Binding {
             fetchCount = Integer.MAX_VALUE;
         }
 
-        RpcResponse rpcResponse = rpcCall(OperationType.READ, SELECT, queryData, flags,
-                fetchCount, new byte[]{0});
+        return rpcCallQuery(OperationType.READ, SELECT, queryData, flags, fetchCount, new byte[]{0});
+    }
 
-
-        byte[] queryResultData = new byte[0];
-        int requestId = -1;
-        Object[] responseArguments = rpcResponse.getArguments();
-        if (responseArguments.length > 0) {
-            queryResultData = (byte[]) responseArguments[0];
-        }
-        if (responseArguments.length > 1) {
-            requestId = (int) responseArguments[1];
-        }
-
-        return new QueryResult(requestId, queryResultData);
+    @Override
+    public long deleteQuery(byte[] queryData) {
+        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, DELETE_QUERY, (Object) queryData);
+        return queryResult.getCount();
     }
 
     @Override
@@ -186,21 +178,35 @@ public class Cproto implements Binding {
 
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
 
-        //TODO: timeout
-        RpcResponse rpcResponse = rpcCall(OperationType.READ, FETCH_RESULTS, requestId, flags, offset,
-                fetchCount);
+        return rpcCallQuery(OperationType.READ, FETCH_RESULTS, requestId, flags, offset, fetchCount);
+    }
 
+    private QueryResult rpcCallQuery(OperationType operationType, int command, Object... args) {
+        RpcResponse rpcResponse = rpcCall(operationType, command, args);
 
-        byte[] queryResultData = new byte[0];
+        byte[] rawQueryResult = new byte[0];
+        int requestId = -1;
         Object[] responseArguments = rpcResponse.getArguments();
         if (responseArguments.length > 0) {
-            queryResultData = (byte[]) responseArguments[0];
+            rawQueryResult = (byte[]) responseArguments[0];
         }
         if (responseArguments.length > 1) {
             requestId = (int) responseArguments[1];
         }
 
-        return new QueryResult(requestId, queryResultData);
+        ByteBuffer buffer = new ByteBuffer(rawQueryResult);
+        buffer.rewind();
+        long flags = buffer.getVarUInt();
+        boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULT_JSON;
+
+        return QueryResult.builder()
+                .requestId(requestId)
+                .isJson(isJson)
+                .totalCount(buffer.getVarUInt())
+                .qCount(buffer.getVarUInt())
+                .count(buffer.getVarUInt())
+                .buffer(new ByteBuffer(buffer.getBytes()).rewind())
+                .build();
     }
 
     private void rpcCallNoResults(OperationType operationType, int command, Object... args) {
