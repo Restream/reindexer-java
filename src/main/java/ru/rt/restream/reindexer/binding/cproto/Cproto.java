@@ -166,6 +166,13 @@ public class Cproto implements Binding {
         return queryResult.getCount();
     }
 
+
+    @Override
+    public long updateQuery(byte[] queryData) {
+        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, UPDATE_QUERY, (Object) queryData);
+        return queryResult.getCount();
+    }
+
     @Override
     public QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit) {
         int flags = 0;
@@ -194,8 +201,7 @@ public class Cproto implements Binding {
             requestId = (int) responseArguments[1];
         }
 
-        ByteBuffer buffer = new ByteBuffer(rawQueryResult);
-        buffer.rewind();
+        ByteBuffer buffer = new ByteBuffer(rawQueryResult).rewind();
         long flags = buffer.getVarUInt();
         boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULT_JSON;
 

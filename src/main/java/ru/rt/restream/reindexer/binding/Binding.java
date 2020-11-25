@@ -46,6 +46,8 @@ public interface Binding {
 
     int DELETE_QUERY = 34;
 
+    int UPDATE_QUERY = 35;
+
     int SELECT = 48;
 
     int SELECT_SQL = 49;
@@ -121,6 +123,13 @@ public interface Binding {
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      */
     long deleteQuery(byte[] queryData);
+
+    /**
+     * Invoke update query.
+     *
+     * @param queryData encoded query data (selected indexes, predicates, etc)
+     */
+    long updateQuery(byte[] queryData);
 
     /**
      * Fetch query result by requestId.

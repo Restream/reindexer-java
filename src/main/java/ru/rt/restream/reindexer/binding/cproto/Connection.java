@@ -64,8 +64,7 @@ public class Connection implements AutoCloseable {
         try {
             byte[] header = new byte[CPROTO_HDR_LEN];
             inputStream.readFully(header);
-            ByteBuffer deserializer = new ByteBuffer(header);
-            deserializer.rewind();
+            ByteBuffer deserializer = new ByteBuffer(header).rewind();
 
             long magic = deserializer.getUInt32();
             int version = deserializer.getUInt16();
@@ -86,8 +85,7 @@ public class Connection implements AutoCloseable {
             byte[] body = new byte[size];
             inputStream.readFully(body);
 
-            deserializer = new ByteBuffer(body);
-            deserializer.rewind();
+            deserializer = new ByteBuffer(body).rewind();
             int code = (int) deserializer.getVarUInt();
             String message = deserializer.getVString();
             int argsCount = (int) deserializer.getVarUInt();

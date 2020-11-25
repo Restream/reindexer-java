@@ -51,6 +51,7 @@ public class Consts {
     public static final int QUERY_EXPLAIN = 12;
     public static final int QUERY_EQUAL_POSITION = 13;
     public static final int QUERY_UPDATE_FIELD = 14;
+    public static final int QUERY_UPDATE_FIELD_V2 = 25;
 
     public static final int LEFT_JOIN = 0;
     public static final int INNER_JOIN = 1;
