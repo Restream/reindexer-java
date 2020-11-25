@@ -6,9 +6,10 @@ import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 
+import java.util.Collection;
 import java.util.Iterator;
 
-import static ru.rt.restream.reindexer.binding.Consts.OP_AND;
+import static ru.rt.restream.reindexer.binding.Consts.*;
 
 public class Query<T> {
 
@@ -122,7 +123,9 @@ public class Query<T> {
     }
 
     private void putValue(Object value) {
-        if (value instanceof Integer) {
+        if (value == null) {
+            buffer.putVarUInt32(VALUE_NULL);
+        } else if (value instanceof Integer) {
             buffer.putVarUInt32(Consts.VALUE_INT)
                     .putVarInt64((Integer) value);
         } else if (value instanceof String) {
@@ -154,9 +157,60 @@ public class Query<T> {
      * Will execute query, and delete items, matches query
      *
      * @return number of deleted elements
-     * */
+     */
     public long delete() {
         return binding.deleteQuery(buffer.bytes());
     }
 
+    /**
+     * Adds update field request for update query
+     *
+     * @param index index name
+     * @param value updated value
+     */
+    public Query<T> set(String index, Object value) {
+        int cmd = QUERY_UPDATE_FIELD;
+        if (value instanceof Collection<?>) { //Not tested
+            Collection<?> values = (Collection<?>) value;
+            if (values.size() <= 0) {
+                cmd = QUERY_UPDATE_FIELD_V2;
+                buffer.putVarUInt32(0); //isArray
+            }
+            buffer.putVarUInt32(cmd);
+            buffer.putVString(index);
+            buffer.putVarUInt32(values.size());
+            for (Object v : values) {
+                putValue(v);
+            }
+        } else if (value.getClass().isArray()) { //not tested
+            Object[] values = (Object[]) value;
+            if (values.length <= 0) {
+                cmd = QUERY_UPDATE_FIELD_V2;
+                buffer.putVarUInt32(0); //isArray
+            }
+            buffer.putVarUInt32(cmd);
+            buffer.putVString(index);
+            buffer.putVarUInt32(values.length);
+            for (Object v : values) {
+                putValue(v);
+            }
+        } else {
+            buffer.putVarUInt32(cmd);
+            buffer.putVString(index);
+            buffer.putVarUInt32(1); //size
+            buffer.putVarUInt32(0); //function/value flag
+            putValue(value);
+        }
+
+        return this;
+    }
+
+    /**
+     * Will execute query, and update fields in items, which matches query
+     *
+     * @return number of deleted elements
+     */
+    public long update() {
+        return binding.updateQuery(buffer.bytes());
+    }
 }

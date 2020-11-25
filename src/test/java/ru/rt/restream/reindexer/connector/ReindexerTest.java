@@ -28,9 +28,13 @@ import ru.rt.restream.reindexer.annotations.Reindex;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
-import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static ru.rt.restream.reindexer.Index.Option.PK;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
@@ -123,6 +127,61 @@ public class ReindexerTest {
         assertThat(next.id, is(77));
         assertThat(next.name, is("TestName77"));
         assertThat(next.value, is("77Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testSelectOneItemByThreePredicates() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .where("name", EQ, "TestName77")
+                .where("value", EQ, "77Value")
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem next = iterator.next();
+        assertThat(next.id, is(77));
+        assertThat(next.name, is("TestName77"));
+        assertThat(next.value, is("77Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testSelectOneItemByThreePredicatesWhenOneFieldIsNotMatching() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .where("name", EQ, "TestName77")
+                .where("value", EQ, "notEquals")
+                .execute();
 
         assertThat(iterator.hasNext(), is(false));
 
@@ -390,6 +449,147 @@ public class ReindexerTest {
         }
 
         assertThat(expectedItems.size(), is(0));
+    }
+
+    @Test
+    public void testUpdateOneItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Обновить поле объекта с id 77
+        final String updatedName = "updated";
+        long updated = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("name", updatedName)
+                .update();
+
+        assertThat(updated, is(1L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("name", EQ, updatedName)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+        assertThat(updatedItem.name, is(updatedName));
+    }
+
+    @Test
+    public void testUpdateItemList() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Обновить поля объектов с id 77, 17, 7
+        final String updatedName = "updated";
+        long updated = db.query("items", TestItem.class)
+                .where("id", EQ, 77, 17, 7)
+                .set("name", updatedName)
+                .update();
+
+        assertThat(updated, is(3L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("name", EQ, updatedName)
+                .execute();
+
+        int updateCount = 0;
+        while (iterator.hasNext()) {
+            TestItem updatedItem = iterator.next();
+            assertThat(updatedItem.name, is(updatedName));
+            updateCount++;
+        }
+
+        assertThat(updateCount, is(3));
+    }
+
+    @Test
+    public void testUpdateAllItems() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        final String updatedName = "updated";
+        long updated = db.query("items", TestItem.class)
+                .set("name", updatedName)
+                .update();
+
+        assertThat(updated, is(100L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("name", EQ, updatedName)
+                .execute();
+
+        int updateCount = 0;
+        while (iterator.hasNext()) {
+            TestItem updatedItem = iterator.next();
+            assertThat(updatedItem.name, is(updatedName));
+            updateCount++;
+        }
+
+        assertThat(updateCount, is(100));
+    }
+
+    @Test
+    public void testUpdateTwoFieldsOnOneItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        String updatedName = "updatedName";
+        String updatedValue = "updatedValue";
+
+        long updated = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("name", updatedName)
+                .set("value", updatedValue)
+                .update();
+
+        assertThat(updated, is(1L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("name", EQ, updatedName)
+                .where("value", EQ, updatedValue)
+                .execute();
+
+        int updateCount = 0;
+        while (iterator.hasNext()) {
+            TestItem updatedItem = iterator.next();
+            assertThat(updatedItem.name, is(updatedName));
+            assertThat(updatedItem.value, is(updatedValue));
+            updateCount++;
+        }
+
+        assertThat(updateCount, is(1));
     }
 
     private void post(String path, Object body) {
