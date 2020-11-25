@@ -131,6 +131,11 @@ public class Query<T> {
         }
     }
 
+    /**
+     * Will execute query, and return slice of items.
+     *
+     * @return an iterator over a query result
+     */
     public Iterator<T> execute() {
         buffer.putVarUInt32(Consts.QUERY_END);
 
@@ -143,6 +148,15 @@ public class Query<T> {
                 .namespace(namespace)
                 .queryResult(queryResult)
                 .build();
+    }
+
+    /**
+     * Will execute query, and delete items, matches query
+     *
+     * @return number of deleted elements
+     * */
+    public long delete() {
+        return binding.deleteQuery(buffer.bytes());
     }
 
 }

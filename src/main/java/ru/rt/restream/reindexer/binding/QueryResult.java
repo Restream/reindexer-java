@@ -1,22 +1,32 @@
 package ru.rt.restream.reindexer.binding;
 
+import lombok.Builder;
 import lombok.Data;
+import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
 /**
  * Result of a query.
  */
 @Data
+@Builder
 public class QueryResult {
 
     /**
-     * Uniquer request id. Used to fetch query data.
+     * Used to fetch query data.
      */
     private final long requestId;
 
+    private final long totalCount;
+
+    private final long qCount;
+
+    private final long count;
+
+    private final boolean isJson;
+
     /**
-     * Encoded query result data. Can be decoded with a {@link ru.rt.restream.reindexer.binding.cproto.ByteBuffer}
-     * methods
+     * Encoded query result data.
      */
-    private final byte[] queryData;
+    private final ByteBuffer buffer;
 
 }

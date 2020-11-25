@@ -352,8 +352,9 @@ public class ByteBuffer {
     /**
      * Sets current buffer position at the beginning of the backed array.
      */
-    public void rewind() {
+    public ByteBuffer rewind() {
         position = 0;
+        return this;
     }
 
     private void grow(int need) {

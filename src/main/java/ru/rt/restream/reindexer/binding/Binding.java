@@ -62,6 +62,10 @@ public interface Binding {
 
     int CODE_MAX = 128;
 
+    int RESULTS_FORMAT_MASK = 0xF;
+
+    int RESULT_JSON = 0x3;
+
     /**
      * Open or create a new namespace and indexes based on passed definition.
      *
@@ -79,7 +83,6 @@ public interface Binding {
     /**
      * Modifies namespace item data.
      *
-     * @param namespaceHash must be same to the same namespaces
      * @param namespaceName name of a namespace item belongs to
      * @param format item encoding format (CJSON, JSON)
      * @param data item data
@@ -87,8 +90,7 @@ public interface Binding {
      * @param percepts
      * @param stateToken
      */
-    void modifyItem(int namespaceHash, String namespaceName, int format, byte[] data, int mode, String[] percepts,
-                    int stateToken);
+    void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] percepts, int stateToken);
 
     /**
      * Drop a namespace by name.
@@ -105,13 +107,20 @@ public interface Binding {
     void closeNamespace(String namespaceName);
 
     /**
-     * Invoke select query to database.
+     * Invoke select query.
      *
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param asJson     format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
      * @param fetchCount items count to fetch within a query request
      */
     QueryResult selectQuery(byte[] queryData, boolean asJson, int fetchCount);
+
+    /**
+     * Invoke delete query.
+     *
+     * @param queryData  encoded query data (selected indexes, predicates, etc)
+     */
+    long deleteQuery(byte[] queryData);
 
     /**
      * Fetch query result by requestId.

@@ -18,10 +18,6 @@ import static ru.rt.restream.reindexer.binding.Binding.*;
  */
 public class CprotoIterator<T> implements Iterator<T> {
 
-    private static final int RESULTS_FORMAT_MASK = 0xF;
-
-    private static final int RESULT_JSON = 0x3;
-
     private final Namespace<T> namespace;
 
     private final Binding binding;
@@ -35,10 +31,6 @@ public class CprotoIterator<T> implements Iterator<T> {
     private ByteBuffer buffer;
 
     private long requestId;
-
-    private long flags;
-
-    private long totalCount;
 
     private long qCount;
 
@@ -61,20 +53,14 @@ public class CprotoIterator<T> implements Iterator<T> {
 
     private void parseQueryResult(QueryResult queryResult) {
         this.requestId = queryResult.getRequestId();
-        byte[] queryData = queryResult.getQueryData();
-        if (queryData.length > 0) {
-            buffer = new ByteBuffer(queryData);
-            buffer.rewind();
-            this.flags = buffer.getVarUInt();
-            this.totalCount = buffer.getVarUInt();
-            this.qCount = buffer.getVarUInt();
-            this.count += buffer.getVarUInt();
-            long tag = buffer.getVarUInt();
-            if ((flags & RESULTS_FORMAT_MASK) == RESULT_JSON) {
-                itemReader = new JsonItemReader<>(namespace);
-            } else {
-                throw new UnimplementedException();
-            }
+        buffer = queryResult.getBuffer();
+        qCount = queryResult.getQCount();
+        count += queryResult.getCount();
+        long tag = buffer.getVarUInt();
+        if (queryResult.isJson()) {
+            itemReader = new JsonItemReader<>(namespace);
+        } else {
+            throw new UnimplementedException();
         }
     }
 
