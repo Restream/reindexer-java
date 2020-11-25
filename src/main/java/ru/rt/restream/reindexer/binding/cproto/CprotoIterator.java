@@ -3,14 +3,11 @@ package ru.rt.restream.reindexer.binding.cproto;
 import lombok.Builder;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
 import java.util.Iterator;
-
-import static ru.rt.restream.reindexer.binding.Binding.*;
 
 /**
  * An iterator over a query result.
@@ -58,7 +55,7 @@ public class CprotoIterator<T> implements Iterator<T> {
         count += queryResult.getCount();
         long tag = buffer.getVarUInt();
         if (queryResult.isJson()) {
-            itemReader = new JsonItemReader<>(namespace);
+            itemReader = new JsonItemReader<>(namespace.getItemClass());
         } else {
             throw new UnimplementedException();
         }

@@ -36,6 +36,7 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.Index.Option.PK;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
@@ -93,6 +94,7 @@ public class ReindexerTest {
         TestItem testItem = new TestItem();
         testItem.setId(123);
         testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
 
         db.upsert(namespaceName, testItem);
 
@@ -483,6 +485,68 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testUpdateFieldToNullItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            testItem.setNonIndex("nonIndex" + i);
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Обновить поле объекта с id 77
+        long updated = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("nonIndex", null)
+                .update();
+
+        assertThat(updated, is(1L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+        assertThat(updatedItem.nonIndex, is(nullValue()));
+    }
+
+    @Test
+    public void testDropFieldToNullItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            testItem.setNonIndex("nonIndex" + i);
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Удалить поле объекта с id 77
+        long updated = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .drop("nonIndex")
+                .update();
+
+        assertThat(updated, is(1L));
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+        assertThat(updatedItem.nonIndex, is(nullValue()));
+    }
+
+    @Test
     public void testUpdateItemList() {
         //Вставить 100 элементов
         String namespaceName = "items";
@@ -643,6 +707,7 @@ public class ReindexerTest {
         private String name;
         @Reindex(name = "value")
         private String value;
+        private String nonIndex;
     }
 
     @Getter

@@ -54,9 +54,16 @@ public class Query<T> {
         return null;
     }
 
-    public Query<T> where(String index, Condition condition, Object... values) {
+    /**
+     * Queries are possible only on the indexed fields, marked with reindex annotation.
+     *
+     * @param indexName index name
+     * @param condition condition value {@link Condition}
+     * @param values    values to match
+     */
+    public Query<T> where(String indexName, Condition condition, Object... values) {
         buffer.putVarUInt32(Consts.QUERY_CONDITION)
-                .putVString(index)
+                .putVString(indexName)
                 .putVarUInt32(nextOperation)
                 .putVarUInt32(condition.code);
 
@@ -165,10 +172,10 @@ public class Query<T> {
     /**
      * Adds update field request for update query
      *
-     * @param index index name
-     * @param value updated value
+     * @param fieldName field name
+     * @param value     updated value
      */
-    public Query<T> set(String index, Object value) {
+    public Query<T> set(String fieldName, Object value) {
         int cmd = QUERY_UPDATE_FIELD;
         if (value instanceof Collection<?>) { //Not tested
             Collection<?> values = (Collection<?>) value;
@@ -177,31 +184,42 @@ public class Query<T> {
                 buffer.putVarUInt32(0); //isArray
             }
             buffer.putVarUInt32(cmd);
-            buffer.putVString(index);
+            buffer.putVString(fieldName);
             buffer.putVarUInt32(values.size());
             for (Object v : values) {
                 putValue(v);
             }
-        } else if (value.getClass().isArray()) { //not tested
+        } else if (value != null && value.getClass().isArray()) { //not tested
             Object[] values = (Object[]) value;
             if (values.length <= 0) {
                 cmd = QUERY_UPDATE_FIELD_V2;
                 buffer.putVarUInt32(0); //isArray
             }
             buffer.putVarUInt32(cmd);
-            buffer.putVString(index);
+            buffer.putVString(fieldName);
             buffer.putVarUInt32(values.length);
             for (Object v : values) {
                 putValue(v);
             }
         } else {
             buffer.putVarUInt32(cmd);
-            buffer.putVString(index);
+            buffer.putVString(fieldName);
             buffer.putVarUInt32(1); //size
             buffer.putVarUInt32(0); //function/value flag
             putValue(value);
         }
 
+        return this;
+    }
+
+    /**
+     * Drop removes field from item within Update statement.
+     *
+     * @param field field to drop
+     */
+    public Query<T> drop(String field) {
+        buffer.putVarUInt32(QUERY_DROP_FIELD);
+        buffer.putVString(field);
         return this;
     }
 

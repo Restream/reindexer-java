@@ -103,7 +103,7 @@ public class Reindexer {
 
         ByteBuffer buffer = new ByteBuffer();
         buffer.putVarInt64(format);
-        ItemWriter<T> itemWriter = new JsonItemWriter<>(namespace);
+        ItemWriter<T> itemWriter = new JsonItemWriter<>();
         itemWriter.writeItem(buffer, item);
 
         binding.modifyItem(namespace.getName(), format, buffer.bytes(), mode, percepts, stateToken);

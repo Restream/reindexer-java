@@ -68,6 +68,7 @@ public class NamespaceAnnotationScanner implements NamespaceScanner {
 
     private List<Index> parseIndexes(String namespaceName, Class<?> itemClass) {
         return BeanPropertyUtils.getInheritedFields(itemClass).stream()
+                .filter(field -> field.getAnnotationsByType(Reindex.class).length > 0)
                 .map(field -> toFieldPair(namespaceName, field))
                 .filter(this::indexNotIgnored)
                 .map(this::toIndexConfiguration)
