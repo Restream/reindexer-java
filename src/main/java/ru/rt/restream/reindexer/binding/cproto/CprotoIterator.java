@@ -1,19 +1,18 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
 import lombok.Builder;
+import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
-import java.util.Iterator;
-
 /**
  * An iterator over a query result.
  * Maintains a cursor pointing to its current row of data. Initially the cursor is positioned before the first row.
  */
-public class CprotoIterator<T> implements Iterator<T> {
+public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private final Namespace<T> namespace;
 
@@ -34,6 +33,8 @@ public class CprotoIterator<T> implements Iterator<T> {
     private long count;
 
     private int position;
+
+    private boolean closed;
 
     @Builder
     public CprotoIterator(Binding binding,
@@ -70,8 +71,13 @@ public class CprotoIterator<T> implements Iterator<T> {
      * Read next item. Moves the cursor to the next row.
      *
      * @return read item
+     * @throws IllegalStateException if the iterator is closed or there is no data to read
      */
     public T next() {
+        if (closed) {
+            throw new IllegalStateException("Iterator is closed");
+        }
+
         if (!hasNext()) {
             throw new IllegalStateException("No data to read");
         }
@@ -97,5 +103,20 @@ public class CprotoIterator<T> implements Iterator<T> {
         parseQueryResult(queryResult);
     }
 
+    /**
+     * Closes query results if needed (i.e query request id is not -1).
+     */
+    @Override
+    public void close() {
+        if (needClose()) {
+            binding.closeResults(requestId);
+            requestId = -1L;
+            closed = true;
+        }
+    }
+
+    private boolean needClose() {
+        return requestId != -1L;
+    }
 
 }
