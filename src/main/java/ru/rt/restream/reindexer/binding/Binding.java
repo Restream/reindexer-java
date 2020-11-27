@@ -140,4 +140,12 @@ public interface Binding {
      * @param limit items count to fetch within a query request
      * */
     QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit);
+
+    /**
+     * Closes query results by requestId.
+     *
+     * @param requestId query request id
+     */
+    void closeResults(long requestId);
+
 }

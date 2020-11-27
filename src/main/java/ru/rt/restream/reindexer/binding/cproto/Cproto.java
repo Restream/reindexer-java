@@ -4,6 +4,8 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.SneakyThrows;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
@@ -18,6 +20,8 @@ import java.net.URI;
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
  */
 public class Cproto implements Binding {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Cproto.class);
 
     private enum OperationType {
         READ, WRITE
@@ -186,6 +190,14 @@ public class Cproto implements Binding {
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
 
         return rpcCallQuery(OperationType.READ, FETCH_RESULTS, requestId, flags, offset, fetchCount);
+    }
+
+    @Override
+    public void closeResults(long requestId) {
+        RpcResponse rpcResponse = connection.rpcCall(CLOSE_RESULTS, requestId);
+        if (rpcResponse.hasError()) {
+            LOGGER.error("rx: query close error: {}", rpcResponse.getErrorMessage());
+        }
     }
 
     private QueryResult rpcCallQuery(OperationType operationType, int command, Object... args) {

@@ -7,7 +7,6 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 
 import java.util.Collection;
-import java.util.Iterator;
 
 import static ru.rt.restream.reindexer.binding.Consts.*;
 
@@ -146,7 +145,7 @@ public class Query<T> {
      *
      * @return an iterator over a query result
      */
-    public Iterator<T> execute() {
+    public CloseableIterator<T> execute() {
         buffer.putVarUInt32(Consts.QUERY_END);
 
         QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
