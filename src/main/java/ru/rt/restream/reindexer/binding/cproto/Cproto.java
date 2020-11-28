@@ -14,8 +14,6 @@ import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
-import java.net.URI;
-
 /**
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
  */
@@ -28,66 +26,19 @@ public class Cproto implements Binding {
     }
 
     /**
-     * Reindexer instance host.
+     * The connection pool.
      */
-    private final String host;
-
-    /**
-     * Reindexer instance port.
-     */
-    private final int port;
-
-    /**
-     * Name of a database to connect.
-     */
-    private final String database;
-
-    /**
-     * Reindexer users login.
-     */
-    private final String user;
-
-    /**
-     * Reindexer users password.
-     */
-    private final String password;
-
-    /**
-     * Connection with a specific database.
-     */
-    private final Connection connection;
+    private final ConnectionPool pool;
 
     /**
      * Construct binding instance to the given database URL.
      *
      * @param url  a database url of the form cproto://host:port/database_name
+     * @param connectionPoolSize the connection pool size
+     * @param connectionTimeout  the connection timeout
      * */
-    @SneakyThrows
-    public Cproto(String url) {
-        URI uri = new URI(url);
-        host = uri.getHost();
-        port = uri.getPort();
-        database = uri.getPath().substring(1);
-        String userInfo = uri.getUserInfo();
-        if (userInfo != null) {
-            String[] userInfoArray = userInfo.split(":");
-            if (userInfoArray.length == 2) {
-                this.user = userInfoArray[0];
-                this.password = userInfoArray[1];
-            } else {
-                throw new IllegalArgumentException();
-            }
-        } else {
-            this.user = "";
-            this.password = "";
-        }
-
-        connection = new Connection(host, port);
-        login();
-    }
-
-    private void login() {
-        connection.rpcCall(LOGIN, user, password, database);
+    public Cproto(String url, int connectionPoolSize, long connectionTimeout) {
+        pool = new ConnectionPool(url, connectionPoolSize, connectionTimeout);
     }
 
     /**
@@ -194,10 +145,18 @@ public class Cproto implements Binding {
 
     @Override
     public void closeResults(long requestId) {
-        RpcResponse rpcResponse = connection.rpcCall(CLOSE_RESULTS, requestId);
+        RpcResponse rpcResponse = rpcCall(CLOSE_RESULTS, requestId);
         if (rpcResponse.hasError()) {
             LOGGER.error("rx: query close error: {}", rpcResponse.getErrorMessage());
         }
+    }
+
+    /**
+     * Closes the connection pool.
+     */
+    @Override
+    public void close() {
+        pool.close();
     }
 
     private QueryResult rpcCallQuery(OperationType operationType, int command, Object... args) {
@@ -233,13 +192,19 @@ public class Cproto implements Binding {
 
 
     private RpcResponse rpcCall(OperationType operationType, int command, Object... args) {
-        RpcResponse response = connection.rpcCall(command, args);
-
+        RpcResponse response = rpcCall(command, args);
         if (response.hasError()) {
             throw new ReindexerException(response.getErrorMessage());
         }
 
         return response;
+    }
+
+    @SneakyThrows
+    private RpcResponse rpcCall(int command, Object... args) {
+        try (Connection connection = pool.getConnection()) {
+            return connection.rpcCall(command, args);
+        }
     }
 
 }

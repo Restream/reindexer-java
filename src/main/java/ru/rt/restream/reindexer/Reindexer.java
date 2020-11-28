@@ -35,6 +35,10 @@ public class Reindexer {
         this.binding = binding;
     }
 
+    public void close() {
+        binding.close();
+    }
+
     public <T> void openNamespace(String name, Class<T> itemClass) {
         Namespace<T> namespace = namespaceScanner.scanClassNamespace(name, itemClass);
         registerNamespace(itemClass, namespace);

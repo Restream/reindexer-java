@@ -14,6 +14,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
@@ -62,7 +63,16 @@ public class ReindexerTest {
 
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
+                .connectionPoolSize(1)
+                .connectionTimeout(30L)
                 .getReindexer();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (db != null) {
+            db.close();
+        }
     }
 
     @Test
