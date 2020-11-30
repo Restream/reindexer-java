@@ -148,4 +148,9 @@ public interface Binding {
      */
     void closeResults(long requestId);
 
+    /**
+     * Closes binding to Reindexer instance.
+     */
+    void close();
+
 }
