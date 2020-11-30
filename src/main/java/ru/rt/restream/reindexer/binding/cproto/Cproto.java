@@ -3,7 +3,6 @@ package ru.rt.restream.reindexer.binding.cproto;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
@@ -174,16 +173,19 @@ public class Cproto implements Binding {
 
         ByteBuffer buffer = new ByteBuffer(rawQueryResult).rewind();
         long flags = buffer.getVarUInt();
-        boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULT_JSON;
+        boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULTS_JSON;
+        boolean withRank = (flags & RESULTS_WITH_RANK) == 64;
 
-        return QueryResult.builder()
-                .requestId(requestId)
-                .isJson(isJson)
-                .totalCount(buffer.getVarUInt())
-                .qCount(buffer.getVarUInt())
-                .count(buffer.getVarUInt())
-                .buffer(new ByteBuffer(buffer.getBytes()).rewind())
-                .build();
+        QueryResult queryResult = new QueryResult();
+        queryResult.setRequestId(requestId);
+        queryResult.setJson(isJson);
+        queryResult.setWithRank(withRank);
+        queryResult.setTotalCount(buffer.getVarUInt());
+        queryResult.setqCount(buffer.getVarUInt());
+        queryResult.setCount(buffer.getVarUInt());
+        queryResult.setBuffer(new ByteBuffer(buffer.getBytes()).rewind());
+
+        return queryResult;
     }
 
     private void rpcCallNoResults(OperationType operationType, int command, Object... args) {
@@ -200,10 +202,11 @@ public class Cproto implements Binding {
         return response;
     }
 
-    @SneakyThrows
     private RpcResponse rpcCall(int command, Object... args) {
         try (Connection connection = pool.getConnection()) {
             return connection.rpcCall(command, args);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

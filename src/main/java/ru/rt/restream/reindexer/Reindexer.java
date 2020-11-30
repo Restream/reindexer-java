@@ -1,6 +1,6 @@
 package ru.rt.restream.reindexer;
 
-import ru.rt.restream.reindexer.annotations.NamespaceAnnotationScanner;
+import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
@@ -8,10 +8,12 @@ import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemWriter;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
+import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.NamespaceExistsException;
 import ru.rt.restream.reindexer.util.Pair;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,9 +29,9 @@ public class Reindexer {
 
     private final Binding binding;
 
-    private final NamespaceScanner namespaceScanner = new NamespaceAnnotationScanner();
+    private final ReindexScanner reindexScanner = new ReindexAnnotationScanner();
 
-    private final Map<Pair<String, Class<?>>, Namespace<?>> namespaceMap = new ConcurrentHashMap<>();
+    private final Map<Pair<String, Class<?>>, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
 
     Reindexer(Binding binding) {
         this.binding = binding;
@@ -39,12 +41,23 @@ public class Reindexer {
         binding.close();
     }
 
-    public <T> void openNamespace(String name, Class<T> itemClass) {
-        Namespace<T> namespace = namespaceScanner.scanClassNamespace(name, itemClass);
+    public <T> void openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
+        List<ReindexerIndex> indexes = reindexScanner.parseIndexes(itemClass);
+        ReindexerNamespace<T> namespace = new ReindexerNamespace<>();
+        namespace.setName(name);
+        namespace.setEnableStorage(options.isEnableStorage());
+        namespace.setCreateStorageIfMissing(options.isCreateStorageIfMissing());
+        namespace.setDisableObjCache(options.isDisableObjCache());
+        namespace.setDropOnIndexConflict(options.isDropOnIndexesConflict());
+        namespace.setDropStorageOnFileFormatError(options.isDropOnFileFormatError());
+        namespace.setItemClass(itemClass);
+        namespace.setObjCacheItemsCount(options.getObjCacheItemsCount());
+        namespace.setIndexes(indexes);
+
         registerNamespace(itemClass, namespace);
         try {
             binding.openNamespace(NamespaceDefinition.fromNamespace(namespace));
-            for (Index index : namespace.getIndices()) {
+            for (ReindexerIndex index : namespace.getIndexes()) {
                 IndexDefinition indexDefinition = IndexDefinition.fromIndex(index);
                 binding.addIndex(name, indexDefinition);
             }
@@ -63,33 +76,27 @@ public class Reindexer {
 
     public<T> void upsert(String namespaceName, T item) {
         Class<T> itemClass = (Class<T>) item.getClass();
-        Namespace<T> namespace = getNamespace(namespaceName, itemClass);
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         modifyItem(namespace, item, MODE_UPSERT);
     }
 
     public <T> Query<T> query(String namespaceName, Class<T> clazz) {
-        Namespace<T> namespace = getNamespace(namespaceName, clazz);
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
         return new Query<>(binding, namespace);
     }
 
-    private <T> Namespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
-        Pair<String, Class<?>> key = Pair.<String, Class<?>>builder()
-                .first(namespaceName)
-                .second(itemClass)
-                .build();
-        Namespace<?> namespace = namespaceMap.get(key);
+    private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
+        Pair<String, Class<?>> key = new Pair<>(namespaceName, itemClass);
+        ReindexerNamespace<?> namespace = namespaceMap.get(key);
 
         if (namespace.getItemClass() != itemClass) {
             throw new RuntimeException("Wrong namespace item type");
         }
-        return (Namespace<T>) namespace;
+        return (ReindexerNamespace<T>) namespace;
     }
 
-    private <T> void registerNamespace(Class<T> itemClass, Namespace<T> namespace) {
-        Pair<String, Class<?>> key = Pair.<String, Class<?>>builder()
-                .first(namespace.getName())
-                .second(itemClass)
-                .build();
+    private <T> void registerNamespace(Class<T> itemClass, ReindexerNamespace<T> namespace) {
+        Pair<String, Class<?>> key = new Pair<>(namespace.getName(), itemClass);
         if (namespaceMap.containsKey(key)) {
             throw new NamespaceExistsException();
         }
@@ -97,7 +104,7 @@ public class Reindexer {
         namespaceMap.put(key, namespace);
     }
 
-    private <T> void modifyItem(Namespace<T> namespace, T item, int mode) {
+    private <T> void modifyItem(ReindexerNamespace<T> namespace, T item, int mode) {
         //TODO: percepts
         String[] percepts = new String[0];
         //TODO: cjson

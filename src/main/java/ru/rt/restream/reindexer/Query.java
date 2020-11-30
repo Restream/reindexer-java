@@ -8,7 +8,11 @@ import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 
 import java.util.Collection;
 
-import static ru.rt.restream.reindexer.binding.Consts.*;
+import static ru.rt.restream.reindexer.binding.Consts.OP_AND;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_DROP_FIELD;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD_V2;
+import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 
 public class Query<T> {
 
@@ -39,11 +43,11 @@ public class Query<T> {
 
     private int nextOperation = OP_AND;
 
-    private final Namespace<T> namespace;
+    private final ReindexerNamespace<T> namespace;
 
     private int fetchCount = DEFAULT_FETCH_COUNT;
 
-    public Query(Binding binding, Namespace<T> namespace) {
+    public Query(Binding binding, ReindexerNamespace<T> namespace) {
         this.binding = binding;
         this.namespace = namespace;
         buffer.putVString(namespace.getName());
@@ -75,6 +79,18 @@ public class Query<T> {
             }
         }
 
+        return this;
+    }
+
+    /**
+     * Add where condition to DB query with interface args for composite indexes.
+     *
+     * @param indexName composite index name
+     * @param condition condition value {@link Condition}
+     * @param values    values of composite index to match
+     */
+    public Query<T> whereComposite(String indexName, Condition condition, Object... values) {
+        where(indexName, condition, new Object[]{values});
         return this;
     }
 
@@ -137,6 +153,13 @@ public class Query<T> {
         } else if (value instanceof String) {
             buffer.putVarUInt32(Consts.VALUE_STRING)
                     .putVString((String) value);
+        } else if (value instanceof Object[]) {
+            buffer.putVarUInt32(Consts.VALUE_TUPLE);
+            final Object[] objects = (Object[]) value;
+            buffer.putVarUInt32(objects.length);
+            for (Object object : objects) {
+                putValue(object);
+            }
         }
     }
 
@@ -150,13 +173,7 @@ public class Query<T> {
 
         QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
 
-        return CprotoIterator.<T>builder()
-                .asJson(true)
-                .binding(binding)
-                .fetchCount(fetchCount)
-                .namespace(namespace)
-                .queryResult(queryResult)
-                .build();
+        return new CprotoIterator<>(binding, namespace, queryResult, true, fetchCount);
     }
 
     /**
@@ -178,7 +195,7 @@ public class Query<T> {
         int cmd = QUERY_UPDATE_FIELD;
         if (value instanceof Collection<?>) { //Not tested
             Collection<?> values = (Collection<?>) value;
-            if (values.size() <= 0) {
+            if (values.size() <= 1) {
                 cmd = QUERY_UPDATE_FIELD_V2;
                 buffer.putVarUInt32(0); //isArray
             }
@@ -190,7 +207,7 @@ public class Query<T> {
             }
         } else if (value != null && value.getClass().isArray()) { //not tested
             Object[] values = (Object[]) value;
-            if (values.length <= 0) {
+            if (values.length <= 1) {
                 cmd = QUERY_UPDATE_FIELD_V2;
                 buffer.putVarUInt32(0); //isArray
             }

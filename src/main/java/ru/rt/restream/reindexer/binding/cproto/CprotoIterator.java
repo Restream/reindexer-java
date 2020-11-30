@@ -1,8 +1,7 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
-import lombok.Builder;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.Namespace;
+import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
@@ -14,7 +13,7 @@ import ru.rt.restream.reindexer.exceptions.UnimplementedException;
  */
 public class CprotoIterator<T> implements CloseableIterator<T> {
 
-    private final Namespace<T> namespace;
+    private final ReindexerNamespace<T> namespace;
 
     private final Binding binding;
 
@@ -36,9 +35,8 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private boolean closed;
 
-    @Builder
     public CprotoIterator(Binding binding,
-                          Namespace<T> namespace,
+                          ReindexerNamespace<T> namespace,
                           QueryResult queryResult,
                           boolean asJson,
                           int fetchCount) {
@@ -56,7 +54,7 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         count += queryResult.getCount();
         long tag = buffer.getVarUInt();
         if (queryResult.isJson()) {
-            itemReader = new JsonItemReader<>(namespace.getItemClass());
+            itemReader = new JsonItemReader<>(namespace.getItemClass(), queryResult.isWithRank());
         } else {
             throw new UnimplementedException();
         }

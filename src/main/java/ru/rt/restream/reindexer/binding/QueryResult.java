@@ -1,32 +1,85 @@
 package ru.rt.restream.reindexer.binding;
 
-import lombok.Builder;
-import lombok.Data;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
 /**
  * Result of a query.
  */
-@Data
-@Builder
 public class QueryResult {
 
     /**
      * Used to fetch query data.
      */
-    private final long requestId;
+    private long requestId;
 
-    private final long totalCount;
+    private long totalCount;
 
-    private final long qCount;
+    private long qCount;
 
-    private final long count;
+    private long count;
 
-    private final boolean isJson;
+    private boolean isJson;
+
+    private boolean withRank;
 
     /**
      * Encoded query result data.
      */
-    private final ByteBuffer buffer;
+    private ByteBuffer buffer;
 
+    public long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(long requestId) {
+        this.requestId = requestId;
+    }
+
+    public long getTotalCount() {
+        return totalCount;
+    }
+
+    public void setTotalCount(long totalCount) {
+        this.totalCount = totalCount;
+    }
+
+    public long getQCount() {
+        return qCount;
+    }
+
+    public void setqCount(long qCount) {
+        this.qCount = qCount;
+    }
+
+    public long getCount() {
+        return count;
+    }
+
+    public void setCount(long count) {
+        this.count = count;
+    }
+
+    public boolean isJson() {
+        return isJson;
+    }
+
+    public void setJson(boolean json) {
+        isJson = json;
+    }
+
+    public boolean isWithRank() {
+        return withRank;
+    }
+
+    public void setWithRank(boolean withRank) {
+        this.withRank = withRank;
+    }
+
+    public ByteBuffer getBuffer() {
+        return buffer;
+    }
+
+    public void setBuffer(ByteBuffer buffer) {
+        this.buffer = buffer;
+    }
 }

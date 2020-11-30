@@ -66,7 +66,29 @@ public interface Binding {
 
     int RESULTS_FORMAT_MASK = 0xF;
 
-    int RESULT_JSON = 0x3;
+    int RESULTS_PURE = 0x0;
+
+    int RESULTS_PTRS = 0x1;
+
+    int RESULTS_C_JSON = 0x2;
+
+    int RESULTS_JSON = 0x3;
+
+    int RESULTS_MSG_PACK = 0x4;
+
+    int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
+
+    int RESULTS_WITH_ITEM_ID = 0x20;
+
+    int RESULTS_WITH_RANK = 0x40;
+
+    int RESULTS_WITH_NS_ID = 0x80;
+
+    int RESULTS_WITH_JOINED = 0x100;
+
+    int RESULTS_WITH_RAW = 0x200;
+
+    int RESULTS_NEED_OUTPUT_RANK = 0x400;
 
     /**
      * Open or create a new namespace and indexes based on passed definition.
