@@ -78,6 +78,12 @@ public class Cproto implements Binding {
                 packedPercepts, stateToken, 0);
     }
 
+    @Override
+    public void modifyItemTx(int format, byte[] data, int mode, String[] percepts, int stateToken, long txId) {
+        byte[] packedPercepts = new byte[0];
+        rpcCallNoResults(OperationType.WRITE, ADD_TX_ITEM, format, data, mode, packedPercepts, stateToken, txId);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -140,6 +146,24 @@ public class Cproto implements Binding {
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
 
         return rpcCallQuery(OperationType.READ, FETCH_RESULTS, requestId, flags, offset, fetchCount);
+    }
+
+    @Override
+    public long beginTx(String namespaceName) {
+        RpcResponse rpcResponse = rpcCall(OperationType.WRITE, START_TRANSACTION, namespaceName);
+        Object[] responseArguments = rpcResponse.getArguments();
+        return responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
+    }
+
+    @Override
+    public long commitTx(long txId) {
+        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, COMMIT_TX, txId);
+        return queryResult.getCount();
+    }
+
+    @Override
+    public void rollback(long txId) {
+        rpcCallNoResults(OperationType.WRITE, ROLLBACK_TX, txId);
     }
 
     @Override

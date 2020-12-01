@@ -148,7 +148,7 @@ public class PhysicalConnection implements Connection {
                 buffer.putVarUInt32(Consts.VALUE_INT)
                         .putVarInt64(((Integer) arg));
             } else if (arg instanceof Long) {
-                buffer.putVarUInt32(Consts.VALUE_INT)
+                buffer.putVarUInt32(Consts.VALUE_INT_64)
                         .putVarInt64((Long) arg);
             } else if (arg instanceof String) {
                 buffer.putVarUInt32(Consts.VALUE_STRING)

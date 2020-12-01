@@ -23,7 +23,7 @@ public class Reindexer {
 
     private static final int MODE_INSERT = 1;
 
-    private static final int MODE_UPSERT = 2;
+    static final int MODE_UPSERT = 2;
 
     private static final int MODE_DELETE = 3;
 
@@ -74,10 +74,17 @@ public class Reindexer {
 
     }
 
-    public<T> void upsert(String namespaceName, T item) {
+    public <T> void upsert(String namespaceName, T item) {
         Class<T> itemClass = (Class<T>) item.getClass();
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         modifyItem(namespace, item, MODE_UPSERT);
+    }
+
+    public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> clazz) {
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
+        Transaction<T> transaction = new Transaction<>(namespace, binding);
+        transaction.start();
+        return transaction;
     }
 
     public <T> Query<T> query(String namespaceName, Class<T> clazz) {

@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Reindexer;
+import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 
@@ -836,6 +837,52 @@ public class ReindexerTest {
         assertThat(responseNestedTest.value, is(nestedTest.value));
         assertThat(responseNestedTest.test, is(nestedTest.test));
 
+    }
+
+    @Test
+    public void testTransactionUpsertWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsert(testItem);
+
+        long count = tx.commitWithCount();
+        assertThat(count, is(1L));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpsertWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsert(testItem);
+
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
     }
 
     private void post(String path, Object body) {
