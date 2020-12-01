@@ -4,93 +4,141 @@ import java.util.List;
 
 public class ReindexerNamespace<T> {
 
-    private String name;
+    private final String name;
 
-    private Class<T> itemClass;
+    private final Class<T> itemClass;
 
-    private boolean enableStorage;
+    private final boolean enableStorage;
 
-    private boolean createStorageIfMissing;
+    private final boolean createStorageIfMissing;
 
-    private boolean dropStorageOnFileFormatError;
+    private final boolean dropStorageOnFileFormatError;
 
-    private boolean dropOnIndexConflict;
+    private final boolean dropOnIndexConflict;
 
-    private boolean disableObjCache;
+    private final boolean disableObjCache;
 
-    private long objCacheItemsCount;
+    private final long objCacheItemsCount;
 
-    private List<ReindexerIndex> indexes;
+    private final List<ReindexerIndex> indexes;
+
+    public static<T> Builder<T> builder() {
+        return new Builder<>();
+    }
+
+    private ReindexerNamespace(Builder<T> builder) {
+        this.itemClass = builder.itemClass;
+        this.name = builder.name;
+        this.enableStorage = builder.enableStorage;
+        this.createStorageIfMissing = builder.createStorageIfMissing;
+        this.dropOnIndexConflict = builder.dropOnIndexConflict;
+        this.dropStorageOnFileFormatError = builder.dropStorageOnFileFormatError;
+        this.disableObjCache = builder.disableObjCache;
+        this.objCacheItemsCount = builder.objCacheItemsCount;
+        this.indexes = builder.indexes;
+    }
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public Class<T> getItemClass() {
         return itemClass;
     }
 
-    public void setItemClass(Class<T> itemClass) {
-        this.itemClass = itemClass;
-    }
-
     public boolean isEnableStorage() {
         return enableStorage;
-    }
-
-    public void setEnableStorage(boolean enableStorage) {
-        this.enableStorage = enableStorage;
     }
 
     public boolean isCreateStorageIfMissing() {
         return createStorageIfMissing;
     }
 
-    public void setCreateStorageIfMissing(boolean createStorageIfMissing) {
-        this.createStorageIfMissing = createStorageIfMissing;
-    }
-
     public boolean isDropStorageOnFileFormatError() {
         return dropStorageOnFileFormatError;
-    }
-
-    public void setDropStorageOnFileFormatError(boolean dropStorageOnFileFormatError) {
-        this.dropStorageOnFileFormatError = dropStorageOnFileFormatError;
     }
 
     public boolean isDropOnIndexConflict() {
         return dropOnIndexConflict;
     }
 
-    public void setDropOnIndexConflict(boolean dropOnIndexConflict) {
-        this.dropOnIndexConflict = dropOnIndexConflict;
-    }
 
     public boolean isDisableObjCache() {
         return disableObjCache;
     }
 
-    public void setDisableObjCache(boolean disableObjCache) {
-        this.disableObjCache = disableObjCache;
-    }
 
     public long getObjCacheItemsCount() {
         return objCacheItemsCount;
     }
 
-    public void setObjCacheItemsCount(long objCacheItemsCount) {
-        this.objCacheItemsCount = objCacheItemsCount;
-    }
 
     public List<ReindexerIndex> getIndexes() {
         return indexes;
     }
 
-    public void setIndexes(List<ReindexerIndex> indexes) {
-        this.indexes = indexes;
+
+    public static final class Builder<T> {
+        private String name;
+        private Class<T> itemClass;
+        private boolean enableStorage;
+        private boolean createStorageIfMissing;
+        private boolean dropStorageOnFileFormatError;
+        private boolean dropOnIndexConflict;
+        private boolean disableObjCache;
+        private long objCacheItemsCount;
+        private List<ReindexerIndex> indexes;
+
+        private Builder() {
+        }
+
+        public Builder<T> name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder<T> itemClass(Class<T> itemClass) {
+            this.itemClass = itemClass;
+            return this;
+        }
+
+        public Builder<T> enableStorage(boolean enableStorage) {
+            this.enableStorage = enableStorage;
+            return this;
+        }
+
+        public Builder<T> createStorageIfMissing(boolean createStorageIfMissing) {
+            this.createStorageIfMissing = createStorageIfMissing;
+            return this;
+        }
+
+        public Builder<T> dropStorageOnFileFormatError(boolean dropStorageOnFileFormatError) {
+            this.dropStorageOnFileFormatError = dropStorageOnFileFormatError;
+            return this;
+        }
+
+        public Builder<T> dropOnIndexConflict(boolean dropOnIndexConflict) {
+            this.dropOnIndexConflict = dropOnIndexConflict;
+            return this;
+        }
+
+        public Builder<T> disableObjCache(boolean disableObjCache) {
+            this.disableObjCache = disableObjCache;
+            return this;
+        }
+
+        public Builder<T> objCacheItemsCount(long objCacheItemsCount) {
+            this.objCacheItemsCount = objCacheItemsCount;
+            return this;
+        }
+
+        public Builder<T> indexes(List<ReindexerIndex> indexes) {
+            this.indexes = indexes;
+            return this;
+        }
+
+        public ReindexerNamespace<T> build() {
+            return new ReindexerNamespace<>(this);
+        }
     }
 }

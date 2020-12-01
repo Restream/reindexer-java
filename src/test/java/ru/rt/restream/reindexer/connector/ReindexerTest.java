@@ -207,6 +207,88 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testSelectOneByNestedArrayIndex() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+
+            NestedTest nestedTest = new NestedTest();
+            nestedTest.test = i;
+            nestedTest.value = "nestedValue" + i;
+            testItem.setNestedTest(nestedTest);
+
+            List<NestedTest> nestedList = new ArrayList<>();
+            NestedTest arrayItem = new NestedTest();
+            arrayItem.value = "array" + i;
+            arrayItem.test = i;
+            nestedList.add(arrayItem);
+            testItem.setListNested(nestedList);
+
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("listNested.test", EQ, 77)
+                .where("listNested.value", EQ, "array77")
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem next = iterator.next();
+        assertThat(next.id, is(77));
+        assertThat(next.name, is("TestName77"));
+        assertThat(next.value, is("77Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testSelectOneByArrayItem() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+
+            NestedTest nestedTest = new NestedTest();
+            nestedTest.test = i;
+            nestedTest.value = "nestedValue" + i;
+            testItem.setNestedTest(nestedTest);
+
+            List<Integer> integers = new ArrayList<>();
+            integers.add(i);
+            testItem.setIntegers(integers);
+
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("integers", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem next = iterator.next();
+        assertThat(next.id, is(77));
+        assertThat(next.name, is("TestName77"));
+        assertThat(next.value, is("77Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
     public void testSelectOneItemByThreePredicates() {
         //Вставить 100 элементов
         String namespaceName = "items";
@@ -852,6 +934,22 @@ public class ReindexerTest {
 
         public void setNestedTest(NestedTest nestedTest) {
             this.nestedTest = nestedTest;
+        }
+
+        public List<NestedTest> getListNested() {
+            return listNested;
+        }
+
+        public void setListNested(List<NestedTest> listNested) {
+            this.listNested = listNested;
+        }
+
+        public List<Integer> getIntegers() {
+            return integers;
+        }
+
+        public void setIntegers(List<Integer> integers) {
+            this.integers = integers;
         }
 
         @Override

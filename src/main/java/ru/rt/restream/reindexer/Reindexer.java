@@ -13,8 +13,8 @@ import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.NamespaceExistsException;
 import ru.rt.restream.reindexer.util.Pair;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Reindexer {
@@ -42,17 +42,17 @@ public class Reindexer {
     }
 
     public <T> void openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
-        List<ReindexerIndex> indexes = reindexScanner.parseIndexes(itemClass);
-        ReindexerNamespace<T> namespace = new ReindexerNamespace<>();
-        namespace.setName(name);
-        namespace.setEnableStorage(options.isEnableStorage());
-        namespace.setCreateStorageIfMissing(options.isCreateStorageIfMissing());
-        namespace.setDisableObjCache(options.isDisableObjCache());
-        namespace.setDropOnIndexConflict(options.isDropOnIndexesConflict());
-        namespace.setDropStorageOnFileFormatError(options.isDropOnFileFormatError());
-        namespace.setItemClass(itemClass);
-        namespace.setObjCacheItemsCount(options.getObjCacheItemsCount());
-        namespace.setIndexes(indexes);
+        ReindexerNamespace<T> namespace = ReindexerNamespace.<T>builder()
+                .name(name)
+                .itemClass(Objects.requireNonNull(itemClass))
+                .enableStorage(options.isEnableStorage())
+                .createStorageIfMissing(options.isCreateStorageIfMissing())
+                .disableObjCache(options.isDisableObjCache())
+                .dropOnIndexConflict(options.isDropOnIndexesConflict())
+                .dropStorageOnFileFormatError(options.isDropOnFileFormatError())
+                .objCacheItemsCount(options.getObjCacheItemsCount())
+                .indexes(reindexScanner.parseIndexes(itemClass))
+                .build();
 
         registerNamespace(itemClass, namespace);
         try {
@@ -88,6 +88,10 @@ public class Reindexer {
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
         Pair<String, Class<?>> key = new Pair<>(namespaceName, itemClass);
         ReindexerNamespace<?> namespace = namespaceMap.get(key);
+        if (namespace == null) {
+            String msg = String.format("Namespace '%s' is not exists.", namespaceName);
+            throw new IllegalArgumentException(msg);
+        }
 
         if (namespace.getItemClass() != itemClass) {
             throw new RuntimeException("Wrong namespace item type");

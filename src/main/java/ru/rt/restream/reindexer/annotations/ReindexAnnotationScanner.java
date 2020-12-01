@@ -1,39 +1,58 @@
 package ru.rt.restream.reindexer.annotations;
 
-import ru.rt.restream.reindexer.*;
+import ru.rt.restream.reindexer.CollateMode;
+import ru.rt.restream.reindexer.FieldType;
+import ru.rt.restream.reindexer.IndexType;
+import ru.rt.restream.reindexer.ReindexScanner;
+import ru.rt.restream.reindexer.ReindexerIndex;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static ru.rt.restream.reindexer.FieldType.*;
+import static ru.rt.restream.reindexer.FieldType.BOOL;
+import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
+import static ru.rt.restream.reindexer.FieldType.DOUBLE;
+import static ru.rt.restream.reindexer.FieldType.INT;
+import static ru.rt.restream.reindexer.FieldType.INT64;
+import static ru.rt.restream.reindexer.FieldType.STRING;
 
 public class ReindexAnnotationScanner implements ReindexScanner {
 
-    private static final Set<Class<?>> BOOLEAN_TYPES;
-    private static final Set<Class<?>> INT_TYPES;
-    private static final Set<Class<?>> DOUBLE_TYPES;
+    private static final Map<Class<?>, FieldType> MAPPED_TYPES;
 
     static {
-        BOOLEAN_TYPES = new HashSet<>();
-        BOOLEAN_TYPES.add(boolean.class);
-        BOOLEAN_TYPES.add(Boolean.class);
-
-        INT_TYPES = new HashSet<>();
-        INT_TYPES.add(byte.class);
-        INT_TYPES.add(Byte.class);
-        INT_TYPES.add(short.class);
-        INT_TYPES.add(Short.class);
-        INT_TYPES.add(int.class);
-        INT_TYPES.add(Integer.class);
-
-        DOUBLE_TYPES = new HashSet<>();
-        DOUBLE_TYPES.add(float.class);
-        DOUBLE_TYPES.add(Float.class);
-        DOUBLE_TYPES.add(double.class);
-        DOUBLE_TYPES.add(Double.class);
+        MAPPED_TYPES = new HashMap<>();
+        //Booleans
+        MAPPED_TYPES.put(boolean.class, BOOL);
+        MAPPED_TYPES.put(Boolean.class, BOOL);
+        //Integers
+        MAPPED_TYPES.put(byte.class, INT);
+        MAPPED_TYPES.put(Byte.class, INT);
+        MAPPED_TYPES.put(short.class, INT);
+        MAPPED_TYPES.put(Short.class, INT);
+        MAPPED_TYPES.put(int.class, INT);
+        MAPPED_TYPES.put(Integer.class, INT);
+        //Long
+        MAPPED_TYPES.put(long.class, INT64);
+        MAPPED_TYPES.put(Long.class, INT64);
+        //Floats
+        MAPPED_TYPES.put(float.class, DOUBLE);
+        MAPPED_TYPES.put(Float.class, DOUBLE);
+        MAPPED_TYPES.put(double.class, DOUBLE);
+        MAPPED_TYPES.put(Double.class, DOUBLE);
+        //String
+        MAPPED_TYPES.put(String.class, STRING);
+        MAPPED_TYPES.put(char.class, STRING);
+        MAPPED_TYPES.put(Character.class, STRING);
     }
 
     /**
@@ -157,22 +176,10 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     }
 
     private FieldType getFieldTypeByClass(Class<?> type) {
-        if (BOOLEAN_TYPES.contains(type)) {
-            return BOOL;
-        } else if (INT_TYPES.contains(type)) {
-            return INT;
-        } else if (String.class == type || char.class == type || Character.class == type) {
-            return STRING;
-        } else if (DOUBLE_TYPES.contains(type)) {
-            return DOUBLE;
-        } else if (Long.class == type) {
-            return INT64;
-        } else {
-            return COMPOSITE;
-        }
+        return MAPPED_TYPES.getOrDefault(type, COMPOSITE);
     }
 
-    private class FieldInfo {
+    private static class FieldInfo {
         private FieldType fieldType;
         private boolean isArray;
         private Class<?> componentType;
