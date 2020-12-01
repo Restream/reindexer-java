@@ -1,6 +1,5 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
@@ -127,12 +126,15 @@ public class ConnectionPool {
         }
     }
 
-    @RequiredArgsConstructor
     private class PooledConnection implements Connection {
 
         private final Connection connection;
 
         private boolean closed;
+
+        private PooledConnection(Connection connection) {
+            this.connection = connection;
+        }
 
         @Override
         public RpcResponse rpcCall(int command, Object... args) {

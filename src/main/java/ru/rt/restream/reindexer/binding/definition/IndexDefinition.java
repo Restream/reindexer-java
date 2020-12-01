@@ -1,67 +1,148 @@
 package ru.rt.restream.reindexer.binding.definition;
 
-import lombok.Builder;
-import lombok.Getter;
-import ru.rt.restream.reindexer.Index;
+import ru.rt.restream.reindexer.ReindexerIndex;
 
 import java.util.List;
-import java.util.Set;
-
-import static ru.rt.restream.reindexer.Index.Option.APPENDABLE;
-import static ru.rt.restream.reindexer.Index.Option.ARRAY;
-import static ru.rt.restream.reindexer.Index.Option.DENSE;
-import static ru.rt.restream.reindexer.Index.Option.LINEAR;
-import static ru.rt.restream.reindexer.Index.Option.PK;
-import static ru.rt.restream.reindexer.Index.Option.SPARSE;
 
 /**
  * Data-transfer object class, which is used to create namespace index.
  */
-@Builder
-@Getter
 public class IndexDefinition {
 
-    public static IndexDefinition fromIndex(Index index) {
-        Set<Index.Option> options = index.getOptions();
+    private String name;
 
-        return IndexDefinition.builder()
-                .name(index.getIndexFieldPair().getFirst())
-                .collateMode(index.getCollateMode())
-                .fieldType(index.getFieldType())
-                .indexType(index.getIndexType())
-                .isArray(options.contains(ARRAY))
-                .isDense(options.contains(DENSE))
-                .isPk(options.contains(PK))
-                .isSparse(options.contains(SPARSE))
-                .isLinear(options.contains(LINEAR))
-                .isAppendable(options.contains(APPENDABLE))
-                .jsonPaths(index.getJsonPaths())
-                .sortOrder(index.getSortOrder())
-                .build();
+    private List<String> jsonPaths;
+
+    private String indexType;
+
+    private String fieldType;
+
+    private boolean isPk;
+
+    private boolean isArray;
+
+    private boolean isDense;
+
+    private boolean isSparse;
+
+    private boolean isLinear;
+
+    private boolean isAppendable;
+
+    private String collateMode;
+
+    private String sortOrder;
+
+    public static IndexDefinition fromIndex(ReindexerIndex index) {
+        IndexDefinition indexDefinition = new IndexDefinition();
+        indexDefinition.setName(index.getName());
+        indexDefinition.setCollateMode(index.getCollateMode().getName());
+        indexDefinition.setSortOrder(index.getSortOrder());
+        indexDefinition.setDense(index.isDense());
+        indexDefinition.setFieldType(index.getFieldType().getName());
+        indexDefinition.setIndexType(index.getIndexType().getName());
+        indexDefinition.setArray(index.isArray());
+        indexDefinition.setPk(index.isPk());
+        indexDefinition.setJsonPaths(index.getJsonPaths());
+        indexDefinition.setSparse(index.isSparse());
+        indexDefinition.setLinear(false);
+        indexDefinition.setAppendable(false);
+        return indexDefinition;
     }
 
-    private final String name;
+    public String getName() {
+        return name;
+    }
 
-    private final List<String> jsonPaths;
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    private final String indexType;
+    public List<String> getJsonPaths() {
+        return jsonPaths;
+    }
 
-    private final String fieldType;
+    public void setJsonPaths(List<String> jsonPaths) {
+        this.jsonPaths = jsonPaths;
+    }
 
-    private final boolean isPk;
+    public String getIndexType() {
+        return indexType;
+    }
 
-    private final boolean isArray;
+    public void setIndexType(String indexType) {
+        this.indexType = indexType;
+    }
 
-    private final boolean isDense;
+    public String getFieldType() {
+        return fieldType;
+    }
 
-    private final boolean isSparse;
+    public void setFieldType(String fieldType) {
+        this.fieldType = fieldType;
+    }
 
-    private final boolean isLinear;
+    public boolean isPk() {
+        return isPk;
+    }
 
-    private final boolean isAppendable;
+    public void setPk(boolean pk) {
+        isPk = pk;
+    }
 
-    private final String collateMode;
+    public boolean isArray() {
+        return isArray;
+    }
 
-    private final String sortOrder;
+    public void setArray(boolean array) {
+        isArray = array;
+    }
 
+    public boolean isDense() {
+        return isDense;
+    }
+
+    public void setDense(boolean dense) {
+        isDense = dense;
+    }
+
+    public boolean isSparse() {
+        return isSparse;
+    }
+
+    public void setSparse(boolean sparse) {
+        isSparse = sparse;
+    }
+
+    public boolean isLinear() {
+        return isLinear;
+    }
+
+    public void setLinear(boolean linear) {
+        isLinear = linear;
+    }
+
+    public boolean isAppendable() {
+        return isAppendable;
+    }
+
+    public void setAppendable(boolean appendable) {
+        isAppendable = appendable;
+    }
+
+    public String getCollateMode() {
+        return collateMode;
+    }
+
+    public void setCollateMode(String collateMode) {
+        this.collateMode = collateMode;
+    }
+
+    public String getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(String sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }

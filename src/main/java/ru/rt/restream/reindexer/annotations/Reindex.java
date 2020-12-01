@@ -1,39 +1,51 @@
 package ru.rt.restream.reindexer.annotations;
 
-import ru.rt.restream.reindexer.Index;
+import ru.rt.restream.reindexer.IndexType;
 
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Specifies the namespace index for an item field.
- */
-@Target(ElementType.FIELD)
+import static ru.rt.restream.reindexer.IndexType.HASH;
+
+@Target({ElementType.FIELD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(Reindexes.class)
 public @interface Reindex {
 
     /**
-     * Index name. If not specified - field name is used.
+     * Index name.
      */
-    String name() default "";
+    String name();
 
     /**
      * Index type.
      */
-    String type() default "";
+    IndexType type() default HASH;
 
     /**
-     * Additional index options. {@link Index.Option}
+     * Reduce index size. For hash and tree it will save 8 bytes per unique key value. For - it will save 4-8 bytes per
+     * each element. Useful for indexes with high selectivity, but for tree and hash indexes with low selectivity can
+     * seriously decrease update performance. Also dense will slow down wide fullscan queries on - indexes, due to lack
+     * of CPU cache optimization.
      */
-    Index.Option[] options() default {};
+    boolean isDense() default false;
 
     /**
-     * Specifies namespace for which index belongs. If not specified index created in all item namespaces.
+     * Row (document) contains a value of Sparse index only in case if it's set on purpose - there are no empty
+     * (or default) records of this type of indexes in the row (document). It allows to save RAM but it will cost you
+     * performance - it works a bit slower than regular indexes.
      */
-    String nameSpace() default "";
+    boolean isSparse() default false;
 
+    boolean isPrimaryKey() default false;
+
+    boolean isAppendable() default false;
+
+    String collate() default "";
+
+    /**
+     * Used for composite indexes. Only for class-level annotation.
+     */
+    String[] fields() default {};
 }
