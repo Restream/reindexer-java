@@ -3,7 +3,7 @@ package ru.rt.restream.reindexer;
 import java.util.Arrays;
 
 public enum  IndexType {
-    HASH("hash"), TREE("tree"), TEXT("text"), TTL("ttl"), RTREE("rtree"), COLUMN("-");
+    HASH("hash"), TREE("tree"), TEXT("text"), TTL("ttl"), RTREE("rtree"), COLUMN("-"), DEFAULT(null);
 
     private final String name;
 

@@ -7,7 +7,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static ru.rt.restream.reindexer.IndexType.HASH;
+import static ru.rt.restream.reindexer.IndexType.DEFAULT;
 
 @Target({ElementType.FIELD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -21,7 +21,7 @@ public @interface Reindex {
     /**
      * Index type.
      */
-    IndexType type() default HASH;
+    IndexType type() default DEFAULT;
 
     /**
      * Reduce index size. For hash and tree it will save 8 bytes per unique key value. For - it will save 4-8 bytes per

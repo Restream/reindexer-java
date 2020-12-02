@@ -6,12 +6,22 @@ import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
+import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
+import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.OP_AND;
+import static ru.rt.restream.reindexer.binding.Consts.OP_OR;
+import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_DROP_FIELD;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_END;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_JOIN_CONDITION;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_JOIN_ON;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD_V2;
+import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 
 public class Query<T> {
@@ -49,6 +59,14 @@ public class Query<T> {
 
     private int fetchCount = DEFAULT_FETCH_COUNT;
 
+    private final List<Query<?>> joinQueries = new ArrayList<>();
+
+    private final List<String> joinToFields = new ArrayList<>();
+
+    private int joinType;
+
+    private Query<?> root;
+
     public Query(Binding binding, ReindexerNamespace<T> namespace, Transaction<T> transaction) {
         this.binding = binding;
         this.namespace = namespace;
@@ -56,8 +74,43 @@ public class Query<T> {
         buffer.putVString(namespace.getName());
     }
 
-    public Query<T> join(String joined) {
-        return null;
+    public<J> Query<T> join(Query<J> joinQuery, String field) {
+        if (nextOperation == OP_OR) {
+            nextOperation = OP_AND;
+            return join(joinQuery, field, OR_INNER_JOIN);
+        }
+
+        return join(joinQuery, field, INNER_JOIN);
+    }
+
+    private<J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
+        if (joinQuery.root != null) {
+            throw new IllegalStateException("query.Join call on already joined query. You shoud create new Query");
+        }
+
+        if (joinType != LEFT_JOIN) {
+            buffer.putVarUInt32(QUERY_JOIN_CONDITION);
+            buffer.putVarUInt32(joinType);
+            buffer.putVarUInt32(joinQueries.size()); // index of join query
+        }
+
+        joinQuery.joinType = joinType;
+        joinQuery.root = this;
+        joinQueries.add(joinQuery);
+        joinToFields.add(field);
+        //q.joinHandlers = append(q.joinHandlers, nil)
+        return this;
+    }
+
+    public Query<T> on(String index, Condition condition, String joinIndex) {
+        Query<?> joinQuery = joinQueries.get(joinQueries.size() - 1);
+        joinQuery.buffer.putVarUInt32(QUERY_JOIN_ON);
+        joinQuery.buffer.putVarUInt32(joinQuery.nextOperation);
+        joinQuery.buffer.putVarUInt32(condition.code);
+        joinQuery.buffer.putVString(index);
+        joinQuery.buffer.putVString(joinIndex);
+        joinQuery.nextOperation = OP_AND;
+        return this;
     }
 
     /**
@@ -150,6 +203,13 @@ public class Query<T> {
     private void putValue(Object value) {
         if (value == null) {
             buffer.putVarUInt32(VALUE_NULL);
+        } else if (value instanceof Boolean) {
+            buffer.putVarUInt32(VALUE_BOOL);
+            if ((Boolean) value) {
+                buffer.putVarUInt32(1);
+            } else {
+                buffer.putVarUInt32(0);
+            }
         } else if (value instanceof Integer) {
             buffer.putVarUInt32(Consts.VALUE_INT)
                     .putVarInt64((Integer) value);
@@ -172,9 +232,16 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public CloseableIterator<T> execute() {
-        buffer.putVarUInt32(Consts.QUERY_END);
+        buffer.putVarUInt32(QUERY_END);
+
+        for (Query<?> joinQuery : joinQueries) {
+            buffer.putVarUInt32(joinQuery.joinType);
+            buffer.writeBytes(joinQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+        }
 
         QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
+
 
         return new CprotoIterator<>(binding, namespace, queryResult, true, fetchCount);
     }
