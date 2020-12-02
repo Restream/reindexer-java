@@ -32,13 +32,13 @@ public interface Binding {
 
     int UPDATE_INDEX = 25;
 
-    int START_TRANSACTION = 28;
+    int START_TRANSACTION = 29;
 
-    int ADD_TX_ITEM = 29;
+    int ADD_TX_ITEM = 26;
 
-    int COMMIT_TX = 30;
+    int COMMIT_TX = 27;
 
-    int ROLLBACK_TX = 31;
+    int ROLLBACK_TX = 28;
 
     int COMMIT = 32;
 
@@ -117,6 +117,18 @@ public interface Binding {
     void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] percepts, int stateToken);
 
     /**
+     * Modifies the item data in the given transaction id.
+     *
+     * @param format     item encoding format (CJSON, JSON)
+     * @param data       item data
+     * @param mode       modify mode (UPDATE, INSERT, UPSERT, DELETE)
+     * @param percepts
+     * @param stateToken
+     * @param txId       the transaction id
+     */
+    void modifyItemTx(int format, byte[] data, int mode, String[] percepts, int stateToken, long txId);
+
+    /**
      * Drop a namespace by name.
      *
      * @param namespaceName a namespace name to drop
@@ -161,7 +173,30 @@ public interface Binding {
      * @param offset query result offset
      * @param limit items count to fetch within a query request
      * */
-    QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit);
+    QueryResult fetchResults(int requestId, boolean asJson, int offset, int limit);
+
+    /**
+     * Starts a transaction for the given namespace name.
+     *
+     * @param namespaceName the namespace name
+     * @return the transaction id
+     */
+    long beginTx(String namespaceName);
+
+    /**
+     * Commits a transaction by the given id.
+     *
+     * @param txId the transaction id
+     * @return the changes count
+     */
+    long commitTx(long txId);
+
+    /**
+     * Rollbacks a transaction by the given id.
+     *
+     * @param txId the transaction id
+     */
+    void rollback(long txId);
 
     /**
      * Closes query results by requestId.
