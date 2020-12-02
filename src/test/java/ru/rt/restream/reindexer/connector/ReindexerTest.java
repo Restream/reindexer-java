@@ -358,11 +358,9 @@ public class ReindexerTest {
         }
 
         //Удалить из БД элемент с id 77
-        long delete = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .delete();
-
-        assertThat(delete, is(1L));
 
         //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
@@ -387,11 +385,9 @@ public class ReindexerTest {
         }
 
         //Удалить из БД элементы с id 77, 17, 7
-        long delete = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77, 17, 7)
                 .delete();
-
-        assertThat(delete, is(3L));
 
         //Выбрать из БД элементы с id 77, 17, 7
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
@@ -415,10 +411,8 @@ public class ReindexerTest {
         }
 
         //Удалить из БД элементы с id 77, 17, 7
-        long delete = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .delete();
-
-        assertThat(delete, is(100L));
 
         //Выбрать из БД элементы с id 77, 17, 7
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
@@ -623,12 +617,10 @@ public class ReindexerTest {
 
         //Обновить поле объекта с id 77
         final String updatedName = "updated";
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("name", updatedName)
                 .update();
-
-        assertThat(updated, is(1L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("name", EQ, updatedName)
@@ -654,12 +646,10 @@ public class ReindexerTest {
         }
 
         //Обновить поле объекта с id 77
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("nonIndex", null)
                 .update();
-
-        assertThat(updated, is(1L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
@@ -685,12 +675,10 @@ public class ReindexerTest {
         }
 
         //Удалить поле объекта с id 77
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .drop("nonIndex")
                 .update();
-
-        assertThat(updated, is(1L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
@@ -716,12 +704,10 @@ public class ReindexerTest {
 
         //Обновить поля объектов с id 77, 17, 7
         final String updatedName = "updated";
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77, 17, 7)
                 .set("name", updatedName)
                 .update();
-
-        assertThat(updated, is(3L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("name", EQ, updatedName)
@@ -751,11 +737,9 @@ public class ReindexerTest {
         }
 
         final String updatedName = "updated";
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .set("name", updatedName)
                 .update();
-
-        assertThat(updated, is(100L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("name", EQ, updatedName)
@@ -787,13 +771,11 @@ public class ReindexerTest {
         String updatedName = "updatedName";
         String updatedValue = "updatedValue";
 
-        long updated = db.query("items", TestItem.class)
+        db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("name", updatedName)
                 .set("value", updatedValue)
                 .update();
-
-        assertThat(updated, is(1L));
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("name", EQ, updatedName)
@@ -878,6 +860,169 @@ public class ReindexerTest {
         tx.upsert(testItem);
 
         tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionUpdateQueryWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.query()
+                .where("id", EQ, 123)
+                .set("name", "TestNameUpdated")
+                .update();
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is("TestNameUpdated"));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpdateQueryWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.query()
+                .where("id", EQ, 123)
+                .set("name", "TestNameUpdated")
+                .update();
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpdateQueryOnUncommittedItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsert(testItem);
+
+        tx.query()
+                .where("id", EQ, 123)
+                .set("name", "TestNameUpdated")
+                .update();
+
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is("TestNameUpdated"));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionDeleteQueryWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.query()
+                .where("id", EQ, 123)
+                .delete();
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionDeleteQueryWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.query()
+                .where("id", EQ, 123)
+                .delete();
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionDeleteQueryOnUncommittedItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsert(testItem);
+
+        tx.query()
+                .where("id", EQ, 123)
+                .delete();
+
+        tx.commit();
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)

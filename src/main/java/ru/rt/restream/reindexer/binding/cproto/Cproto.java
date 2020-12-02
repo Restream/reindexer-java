@@ -121,16 +121,23 @@ public class Cproto implements Binding {
     }
 
     @Override
-    public long deleteQuery(byte[] queryData) {
-        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, DELETE_QUERY, (Object) queryData);
-        return queryResult.getCount();
+    public void deleteQuery(byte[] queryData) {
+        rpcCallNoResults(OperationType.WRITE, DELETE_QUERY, queryData);
     }
 
+    @Override
+    public void deleteQueryTx(byte[] queryData, long txId) {
+        rpcCallNoResults(OperationType.WRITE, DELETE_QUERY_TX, queryData, txId);
+    }
 
     @Override
-    public long updateQuery(byte[] queryData) {
-        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, UPDATE_QUERY, (Object) queryData);
-        return queryResult.getCount();
+    public void updateQuery(byte[] queryData) {
+        rpcCallNoResults(OperationType.WRITE, UPDATE_QUERY, queryData);
+    }
+
+    @Override
+    public void updateQueryTx(byte[] queryData, long txId) {
+        rpcCallNoResults(OperationType.WRITE, UPDATE_QUERY_TX, queryData, txId);
     }
 
     @Override

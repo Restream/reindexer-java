@@ -46,7 +46,11 @@ public interface Binding {
 
     int DELETE_QUERY = 34;
 
+    int DELETE_QUERY_TX = 30;
+
     int UPDATE_QUERY = 35;
+
+    int UPDATE_QUERY_TX = 31;
 
     int SELECT = 48;
 
@@ -154,16 +158,32 @@ public interface Binding {
     /**
      * Invoke delete query.
      *
-     * @param queryData  encoded query data (selected indexes, predicates, etc)
+     * @param queryData encoded query data (selected indexes, predicates, etc)
      */
-    long deleteQuery(byte[] queryData);
+    void deleteQuery(byte[] queryData);
+
+    /**
+     * Invoke delete query with the given transaction id.
+     *
+     * @param queryData encoded query data (selected indexes, predicates, etc)
+     * @param txId      the transaction id
+     */
+    void deleteQueryTx(byte[] queryData, long txId);
 
     /**
      * Invoke update query.
      *
      * @param queryData encoded query data (selected indexes, predicates, etc)
      */
-    long updateQuery(byte[] queryData);
+    void updateQuery(byte[] queryData);
+
+    /**
+     * Invoke update query with the given transaction id.
+     *
+     * @param queryData encoded query data (selected indexes, predicates, etc)
+     * @param txId      the transaction id
+     */
+    void updateQueryTx(byte[] queryData, long txId);
 
     /**
      * Fetch query result by requestId.

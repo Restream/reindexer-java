@@ -89,7 +89,7 @@ public class Reindexer {
 
     public <T> Query<T> query(String namespaceName, Class<T> clazz) {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
-        return new Query<>(binding, namespace);
+        return new Query<>(binding, namespace, null);
     }
 
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
