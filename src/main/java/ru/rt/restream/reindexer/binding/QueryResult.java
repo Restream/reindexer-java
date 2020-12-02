@@ -10,7 +10,7 @@ public class QueryResult {
     /**
      * Used to fetch query data.
      */
-    private long requestId;
+    private int requestId;
 
     private long totalCount;
 
@@ -27,11 +27,11 @@ public class QueryResult {
      */
     private ByteBuffer buffer;
 
-    public long getRequestId() {
+    public int getRequestId() {
         return requestId;
     }
 
-    public void setRequestId(long requestId) {
+    public void setRequestId(int requestId) {
         this.requestId = requestId;
     }
 

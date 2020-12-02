@@ -173,7 +173,7 @@ public interface Binding {
      * @param offset query result offset
      * @param limit items count to fetch within a query request
      * */
-    QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit);
+    QueryResult fetchResults(int requestId, boolean asJson, int offset, int limit);
 
     /**
      * Starts a transaction for the given namespace name.

@@ -25,7 +25,7 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private ByteBuffer buffer;
 
-    private long requestId;
+    private int requestId;
 
     private long qCount;
 
@@ -108,7 +108,7 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
     public void close() {
         if (needClose()) {
             binding.closeResults(requestId);
-            requestId = -1L;
+            requestId = -1;
             closed = true;
         }
     }

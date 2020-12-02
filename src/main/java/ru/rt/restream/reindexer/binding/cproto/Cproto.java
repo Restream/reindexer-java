@@ -134,7 +134,7 @@ public class Cproto implements Binding {
     }
 
     @Override
-    public QueryResult fetchResults(long requestId, boolean asJson, int offset, int limit) {
+    public QueryResult fetchResults(int requestId, boolean asJson, int offset, int limit) {
         int flags = 0;
         if (asJson) {
             flags = Consts.RESULTS_JSON;
