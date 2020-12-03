@@ -49,19 +49,19 @@ public class Item {
 
         // Init a database instance and choose the binding (builtin). Configure connection pool size and connection
         // timeout. Database should be created explicitly via reindexer_tool.
-        Reindexer reindexer = Configuration.builder()
+        Reindexer db = Configuration.builder()
                 .url("cproto://localhost:6534/testdb")
                 .connectionPoolSize(1)
                 .connectionTimeout(30L)
                 .getReindexer();
 
         // Create new namespace with name 'items', which will store objects of type 'Item'
-        reindexer.openNamespace("items", NamespaceOptions.defaultOptions(), Item.class);
+        db.openNamespace("items", NamespaceOptions.defaultOptions(), Item.class);
 
         // Generate dataset
         for (int i = 0; i < 1000000; i++) {
             Random random = new Random();
-            reindexer.upsert("items", new Item(
+            db.upsert("items", new Item(
                     i,
                     "Vasya",
                     Arrays.asList(random.nextInt() % 100, random.nextInt() % 100), 2000 + random.nextInt() % 50)
@@ -69,7 +69,7 @@ public class Item {
         }
 
         // Query multiple documents, execute the query and return an iterator
-        CloseableIterator<Item> iterator = reindexer.query("items", Item.class)
+        CloseableIterator<Item> iterator = db.query("items", Item.class)
                 .sort("year", false)
                 .where("name", EQ, "Vasya")
                 .where("year", GT, 2020)
@@ -87,26 +87,26 @@ public class Item {
         iterator.close();
 
         //Update single item
-        reindexer.query("items", Item.class)
+        db.query("items", Item.class)
             .where("id", EQ, 5)
             .set("name", "Vova")
             .update();
         
         //Update multiple fields
-        reindexer.query("items", Item.class)
+        db.query("items", Item.class)
             .where("id", EQ, 5)
             .set("name", "Vova")
             .set("year", 2021)
             .update();
 
         //Update multiple items items
-        reindexer.query("items", Item.class)
+        db.query("items", Item.class)
             .where("id", LT, 5)
             .set("name", "Petya")
             .update();
         
         //Drop an item field
-        reindexer.query("items", Item.class)
+        db.query("items", Item.class)
             .where("id", EQ, 6)
             .drop("name");
 
@@ -138,7 +138,7 @@ public class Item {
 Query for composite index:
 
 ```java
-reindexer.query("items", Item.class)
+db.query("items", Item.class)
     .whereComposite("id+sub_id", EQ, 1, "test")
     .execute();
 ```
