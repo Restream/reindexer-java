@@ -125,8 +125,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             if (collateMode == CollateMode.CUSTOM) {
                 sortOrder = collate;
             }
-            ReindexerIndex compositeIndex = createIndex(String.join("+", composite.fields()),
-                    Arrays.asList(composite.fields()), composite.type(), COMPOSITE, composite.isDense(),
+            ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
+                    Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
                     composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder);
             indexes.add(compositeIndex);
         }
