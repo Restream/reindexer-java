@@ -1073,7 +1073,7 @@ public class ReindexerTest {
         }
     }
 
-    @Reindex(name = "composite", fields = {"id", "name"})
+    @Reindex(name = "composite", subIndexes = {"id", "name"})
     public static class TestItem {
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;

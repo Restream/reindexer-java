@@ -47,5 +47,5 @@ public @interface Reindex {
     /**
      * Used for composite indexes. Only for class-level annotation.
      */
-    String[] fields() default {};
+    String[] subIndexes() default {};
 }
