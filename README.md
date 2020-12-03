@@ -143,4 +143,37 @@ reindexer.query("items", Item.class)
     .execute();
 ```
 
+### Transactions and batch update
 
+Reindexer supports transactions. Transaction are performs atomic namespace update. There are synchronous and 
+async transaction available. To start transaction method db.beginTransaction() is used. This method creates transaction 
+object, which provides usual Update/Upsert/Insert/Delete interface for application. For RPC clients there is 
+transactions count limitation - each connection can't has more than 1024 opened transactions at the same time.
+
+#### Synchronous mode
+
+```java
+// Create new transaction object
+Transaction<Item> tx = db.beginTransaction("items", Item.class);
+// Fill transaction object
+tx.upsert(new Item(100, "Vasya", Arrays.asList(6, 1, 8), 2019));
+tx.upsert(new Item(101, "Vova", Arrays.asList(7, 2, 9), 2020));
+tx.query().where("id", EQ, 102).set("name", "Petya").update();
+// Apply transaction
+tx.commit();
+```
+
+#### Async batch mode (TODO)
+
+#### Transactions commit strategies
+
+Depends on amount changes in transaction there are 2 possible Commit strategies:
+
+- Locked atomic update. Reindexer locks namespace and applying all changes under common lock. This mode is used with small amounts of changes.
+- Copy & atomic replace. In this mode Reindexer makes namespace's snapshot, applying all changes to this snapshot, and atomically replaces namespace without lock.
+
+#### Implementation notes
+
+1. Transaction object is not thread safe and can't be used from different threads.
+2. Transaction object holds Reindexer's resources, therefore application should explicitly call Rollback or Commit, otherwise resources will leak.
+3. It is possible to call Query from transaction by call `tx.query().execute(); ...`. Only read-committed isolation is available. Changes made in active transaction is invisible to current and another transactions.
