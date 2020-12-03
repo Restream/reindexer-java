@@ -48,6 +48,15 @@ public class Transaction<T> {
     }
 
     /**
+     * Returns the current transaction id.
+     *
+     * @return the current transaction id
+     */
+    public long getTransactionId() {
+        return transactionId;
+    }
+
+    /**
      * Starts a transaction.
      *
      * @throws IllegalStateException if the current transaction is finalized
@@ -125,6 +134,17 @@ public class Transaction<T> {
         itemWriter.writeItem(buffer, item);
 
         binding.modifyItemTx(format, buffer.bytes(), Reindexer.MODE_UPSERT, percepts, 0, transactionId);
+    }
+
+    /**
+     * Creates a {@link Query} with the current transaction for Update or Delete or Read.
+     * Read-committed isolation is available for read operations.
+     * Changes made in the current transaction is invisible to the current and another transactions.
+     *
+     * @return a {@link Query} with the current transaction
+     */
+    public Query<T> query() {
+        return new Query<>(binding, namespace, this);
     }
 
 }

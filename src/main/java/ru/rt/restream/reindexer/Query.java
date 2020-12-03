@@ -45,11 +45,14 @@ public class Query<T> {
 
     private final ReindexerNamespace<T> namespace;
 
+    private final Transaction<T> transaction;
+
     private int fetchCount = DEFAULT_FETCH_COUNT;
 
-    public Query(Binding binding, ReindexerNamespace<T> namespace) {
+    public Query(Binding binding, ReindexerNamespace<T> namespace, Transaction<T> transaction) {
         this.binding = binding;
         this.namespace = namespace;
+        this.transaction = transaction;
         buffer.putVString(namespace.getName());
     }
 
@@ -177,12 +180,14 @@ public class Query<T> {
     }
 
     /**
-     * Will execute query, and delete items, matches query
-     *
-     * @return number of deleted elements
+     * Will execute query, and delete items, matches query.
      */
-    public long delete() {
-        return binding.deleteQuery(buffer.bytes());
+    public void delete() {
+        if (transaction != null) {
+            binding.deleteQueryTx(buffer.bytes(), transaction.getTransactionId());
+        } else {
+            binding.deleteQuery(buffer.bytes());
+        }
     }
 
     /**
@@ -240,11 +245,13 @@ public class Query<T> {
     }
 
     /**
-     * Will execute query, and update fields in items, which matches query
-     *
-     * @return number of deleted elements
+     * Will execute query, and update fields in items, which matches query.
      */
-    public long update() {
-        return binding.updateQuery(buffer.bytes());
+    public void update() {
+        if (transaction != null) {
+            binding.updateQueryTx(buffer.bytes(), transaction.getTransactionId());
+        } else {
+            binding.updateQuery(buffer.bytes());
+        }
     }
 }
