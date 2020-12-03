@@ -60,38 +60,44 @@ public class ReindexAnnotationScanner implements ReindexScanner {
      */
     @Override
     public List<ReindexerIndex> parseIndexes(Class<?> itemClass) {
-        return parseIndexes(itemClass, false, "", new HashMap<>());
+        return parseIndexes(itemClass, false, "", "",new HashMap<>());
     }
 
-    List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String reindexBasePath,
-                                      Map<String, int[]> joined) {
+    List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String reindexBasePath, String jsonBasePath,
+                                      Map<String, List<Integer>> joined) {
         if (reindexBasePath.length() != 0 && !reindexBasePath.endsWith(".")) {
             reindexBasePath = reindexBasePath + ".";
         }
 
+        if (jsonBasePath.length() != 0 && !jsonBasePath.endsWith(".")) {
+            jsonBasePath = jsonBasePath + ".";
+        }
+
         List<ReindexerIndex> indexes = new ArrayList<>();
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
-        for (Field field : fields) {
-            String reindexPath = reindexBasePath + field.getName();
+        for (int i = 0; i < fields.size(); i++) {
+            Field field = fields.get(i);
             Reindex reindex = field.getAnnotation(Reindex.class);
-            if (reindex != null && "-".equals(reindex.name())) {
+            if (reindex == null || "-".equals(reindex.name())) {
                 continue;
             }
+            String reindexPath = reindexBasePath + reindex.name();
+            String jsonPath = jsonBasePath + field.getName();
             FieldInfo fieldInfo = getFieldInfo(field);
             if (subArray) {
                 fieldInfo.isArray = true;
             }
+            if (field.getAnnotation(Joined.class) != null) {
+                continue;
+            }
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
-                List<ReindexerIndex> nested = parseIndexes(field.getType(), true, reindexPath, joined);
+                List<ReindexerIndex> nested = parseIndexes(field.getType(), true, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
-            } else if ((fieldInfo.isArray || subArray) && fieldInfo.componentType!= null
+            } else if ((fieldInfo.isArray) && fieldInfo.componentType!= null
                     && getFieldTypeByClass(fieldInfo.componentType) == COMPOSITE) {
-                List<ReindexerIndex> nested = parseIndexes(fieldInfo.componentType, true, reindexPath, joined);
+                List<ReindexerIndex> nested = parseIndexes(fieldInfo.componentType, true, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
             } else {
-                if (reindex == null) {
-                    continue;
-                }
                 String collate = reindex.collate();
                 CollateMode collateMode = Arrays.stream(CollateMode.values())
                         .filter(cm -> cm.getName().equals(collate))
@@ -101,7 +107,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 if (collateMode == CollateMode.CUSTOM) {
                     sortOrder = collate;
                 }
-                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(reindexPath), reindex.type(),
+                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
                         fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
                         fieldInfo.isArray, collateMode, sortOrder);
                 indexes.add(index);

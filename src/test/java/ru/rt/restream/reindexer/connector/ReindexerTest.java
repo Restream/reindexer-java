@@ -1084,6 +1084,7 @@ public class ReindexerTest {
         private String nonIndex;
         @Reindex(name = "nestedTest")
         private NestedTest nestedTest;
+        @Reindex(name = "listNested")
         private List<NestedTest> listNested;
         @Reindex(name = "integers")
         private List<Integer> integers;
