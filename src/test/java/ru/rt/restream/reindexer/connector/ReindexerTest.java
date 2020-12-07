@@ -822,6 +822,51 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testTransactionInsertWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.insert(testItem);
+
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionInsertWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.insert(testItem);
+
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
     public void testTransactionUpsertWithCommit() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -860,6 +905,163 @@ public class ReindexerTest {
         tx.upsert(testItem);
 
         tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionUpdateWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        testItem.setName("TestNameUpdated");
+        tx.update(testItem);
+
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpdateWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        String originalName = testItem.getName();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        testItem.setName("TestNameUpdated");
+        tx.update(testItem);
+
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(originalName));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpdateOnUncommittedItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.insert(testItem);
+
+        testItem.setName("TestNameUpdated");
+        tx.update(testItem);
+
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionDeleteWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.delete(testItem);
+
+        tx.commit();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionDeleteWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.upsert(namespaceName, testItem);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.delete(testItem);
+
+        tx.rollback();
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionDeleteOnUncommittedItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.insert(testItem);
+
+        tx.delete(testItem);
+
+        tx.commit();
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
