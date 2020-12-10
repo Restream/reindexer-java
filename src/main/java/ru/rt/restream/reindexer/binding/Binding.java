@@ -115,10 +115,10 @@ public interface Binding {
      * @param format item encoding format (CJSON, JSON)
      * @param data item data
      * @param mode modify mode (UPDATE, INSERT, UPSERT, DELETE)
-     * @param percepts
+     * @param precepts
      * @param stateToken
      */
-    void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] percepts, int stateToken);
+    void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
      * Modifies the item data in the given transaction id.
@@ -126,11 +126,11 @@ public interface Binding {
      * @param format     item encoding format (CJSON, JSON)
      * @param data       item data
      * @param mode       modify mode (UPDATE, INSERT, UPSERT, DELETE)
-     * @param percepts
+     * @param precepts
      * @param stateToken
      * @param txId       the transaction id
      */
-    void modifyItemTx(int format, byte[] data, int mode, String[] percepts, int stateToken, long txId);
+    void modifyItemTx(int format, byte[] data, int mode, String[] precepts, int stateToken, long txId);
 
     /**
      * Drop a namespace by name.

@@ -16,6 +16,8 @@ public class ReindexerIndex {
 
     private String sortOrder;
 
+    private String precept;
+
     private boolean isArray;
 
     private boolean isPk;
@@ -70,6 +72,14 @@ public class ReindexerIndex {
 
     public void setSortOrder(String sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public String getPrecept() {
+        return precept;
+    }
+
+    public void setPrecept(String precept) {
+        this.precept = precept;
     }
 
     public boolean isArray() {

@@ -163,14 +163,14 @@ public class Transaction<T> {
         start();
 
         int format = Consts.FORMAT_JSON;
-        String[] percepts = new String[0];
+        String[] precepts = namespace.getPrecepts();
 
         ByteBuffer buffer = new ByteBuffer();
         buffer.putVarInt64(format);
         ItemWriter<T> itemWriter = new JsonItemWriter<>();
         itemWriter.writeItem(buffer, item);
 
-        binding.modifyItemTx(format, buffer.bytes(), mode, percepts, 0, transactionId);
+        binding.modifyItemTx(format, buffer.bytes(), mode, precepts, 0, transactionId);
     }
 
     /**

@@ -116,8 +116,7 @@ public class Reindexer {
     }
 
     private <T> void modifyItem(ReindexerNamespace<T> namespace, T item, int mode) {
-        //TODO: percepts
-        String[] percepts = new String[0];
+        String[] percepts = namespace.getPrecepts();
         //TODO: cjson
         int format = Consts.FORMAT_JSON;
         //TODO: stateToken

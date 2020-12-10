@@ -107,9 +107,16 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 if (collateMode == CollateMode.CUSTOM) {
                     sortOrder = collate;
                 }
+                String precept = null;
+                if (field.isAnnotationPresent(Serial.class)) {
+                    if (!fieldInfo.isInt()) {
+                        throw new IllegalStateException("@Serial is allowed only for int types (i.e INT, INT64)");
+                    }
+                    precept = field.getName() + "=serial()";
+                }
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
                         fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder);
+                        fieldInfo.isArray, collateMode, sortOrder, precept);
                 indexes.add(index);
             }
         }
@@ -127,7 +134,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             }
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null);
             indexes.add(compositeIndex);
         }
 
@@ -136,7 +143,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
-                                       boolean isArray, CollateMode collateMode, String sortOrder) {
+                                       boolean isArray, CollateMode collateMode, String sortOrder, String precept) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -149,6 +156,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setJsonPaths(jsonPath);
         index.setIndexType(indexType);
         index.setFieldType(fieldType);
+        index.setPrecept(precept);
         return index;
     }
 
@@ -189,6 +197,10 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         private FieldType fieldType;
         private boolean isArray;
         private Class<?> componentType;
+
+        private boolean isInt() {
+            return fieldType == INT || fieldType == INT64;
+        }
     }
 
 }

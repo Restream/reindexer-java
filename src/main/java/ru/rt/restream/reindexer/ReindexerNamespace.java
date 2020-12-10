@@ -1,6 +1,7 @@
 package ru.rt.restream.reindexer;
 
 import java.util.List;
+import java.util.Objects;
 
 public class ReindexerNamespace<T> {
 
@@ -22,6 +23,8 @@ public class ReindexerNamespace<T> {
 
     private final List<ReindexerIndex> indexes;
 
+    private final String[] precepts;
+
     public static<T> Builder<T> builder() {
         return new Builder<>();
     }
@@ -36,6 +39,10 @@ public class ReindexerNamespace<T> {
         this.disableObjCache = builder.disableObjCache;
         this.objCacheItemsCount = builder.objCacheItemsCount;
         this.indexes = builder.indexes;
+        this.precepts = indexes.stream()
+                .map(ReindexerIndex::getPrecept)
+                .filter(Objects::nonNull)
+                .toArray(String[]::new);
     }
 
     public String getName() {
@@ -77,6 +84,9 @@ public class ReindexerNamespace<T> {
         return indexes;
     }
 
+    public String[] getPrecepts() {
+        return precepts;
+    }
 
     public static final class Builder<T> {
         private String name;
