@@ -116,13 +116,50 @@ public class Transaction<T> {
     }
 
     /**
-     * Inserts or updates the given item data.
+     * Inserts the given item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param item the item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void insert(T item) {
+        modifyItem(item, Reindexer.MODE_INSERT);
+    }
+
+    /**
+     * Updates the given item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param item the item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void update(T item) {
+        modifyItem(item, Reindexer.MODE_UPDATE);
+    }
+
+    /**
+     * Inserts or updates the given item data in the current transaction.
      * Starts a transaction if not started.
      *
      * @param item the item data
      * @throws IllegalStateException if the current transaction is finalized
      */
     public void upsert(T item) {
+        modifyItem(item, Reindexer.MODE_UPSERT);
+    }
+
+    /**
+     * Deletes the given item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param item the item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void delete(T item) {
+        modifyItem(item, Reindexer.MODE_DELETE);
+    }
+
+    private void modifyItem(T item, int mode) {
         start();
 
         int format = Consts.FORMAT_JSON;
@@ -133,7 +170,7 @@ public class Transaction<T> {
         ItemWriter<T> itemWriter = new JsonItemWriter<>();
         itemWriter.writeItem(buffer, item);
 
-        binding.modifyItemTx(format, buffer.bytes(), Reindexer.MODE_UPSERT, percepts, 0, transactionId);
+        binding.modifyItemTx(format, buffer.bytes(), mode, percepts, 0, transactionId);
     }
 
     /**

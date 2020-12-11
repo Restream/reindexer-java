@@ -19,13 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Reindexer {
 
-    private static final int MODE_UPDATE = 0;
+    static final int MODE_UPDATE = 0;
 
-    private static final int MODE_INSERT = 1;
+    static final int MODE_INSERT = 1;
 
     static final int MODE_UPSERT = 2;
 
-    private static final int MODE_DELETE = 3;
+    static final int MODE_DELETE = 3;
 
     private final Binding binding;
 
