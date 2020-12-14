@@ -13,6 +13,8 @@ import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
+
 /**
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
  */
@@ -68,20 +70,29 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] percepts,
+    public void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts,
                            int stateToken) {
-        byte[] packedPercepts = new byte[0];
-        if (percepts.length > 0) {
-            throw new UnimplementedException();
-        }
+        byte[] packedPercepts = packPrecepts(precepts);
         rpcCallNoResults(OperationType.WRITE, MODIFY_ITEM, namespaceName, format, data, mode,
                 packedPercepts, stateToken, 0);
     }
 
     @Override
-    public void modifyItemTx(int format, byte[] data, int mode, String[] percepts, int stateToken, long txId) {
-        byte[] packedPercepts = new byte[0];
-        rpcCallNoResults(OperationType.WRITE, ADD_TX_ITEM, format, data, mode, packedPercepts, stateToken, txId);
+    public void modifyItemTx(int format, byte[] data, int mode, String[] precepts, int stateToken, long txId) {
+        byte[] packedPrecepts = packPrecepts(precepts);
+        rpcCallNoResults(OperationType.WRITE, ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, txId);
+    }
+
+    private byte[] packPrecepts(String[] precepts) {
+        if (precepts.length == 0) {
+            return EMPTY_BYTE_ARRAY;
+        }
+        ByteBuffer buffer = new ByteBuffer();
+        buffer.putVarUInt32(precepts.length);
+        for (String precept : precepts) {
+            buffer.putVString(precept);
+        }
+        return buffer.bytes();
     }
 
     /**

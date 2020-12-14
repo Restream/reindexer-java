@@ -22,6 +22,7 @@ import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
+import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
@@ -1232,6 +1234,48 @@ public class ReindexerTest {
         assertThat(iterator.hasNext(), is(false));
     }
 
+    @Test
+    public void testUpsertWithSerialId() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        db.upsert(namespaceName, new SerialIdTestItem());
+        db.upsert(namespaceName, new SerialIdTestItem());
+        db.upsert(namespaceName, new SerialIdTestItem());
+
+        Iterator<SerialIdTestItem> iterator = db.query(namespaceName, SerialIdTestItem.class)
+                .where("id", EQ, 1, 2, 3)
+                .execute();
+        List<Integer> ids = new ArrayList<>();
+        while (iterator.hasNext()) {
+            SerialIdTestItem item = iterator.next();
+            ids.add(item.id);
+        }
+        assertThat(ids, contains(1, 2, 3));
+    }
+
+    @Test
+    public void testTransactionUpsertWithSerialId() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        Transaction<SerialIdTestItem> tx = db.beginTransaction(namespaceName, SerialIdTestItem.class);
+        tx.upsert(new SerialIdTestItem());
+        tx.upsert(new SerialIdTestItem());
+        tx.upsert(new SerialIdTestItem());
+        tx.commit();
+
+        Iterator<SerialIdTestItem> iterator = db.query(namespaceName, SerialIdTestItem.class)
+                .where("id", EQ, 1, 2, 3)
+                .execute();
+        List<Integer> ids = new ArrayList<>();
+        while (iterator.hasNext()) {
+            SerialIdTestItem item = iterator.next();
+            ids.add(item.id);
+        }
+        assertThat(ids, contains(1, 2, 3));
+    }
+
     private void post(String path, Object body) {
         HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
 
@@ -1273,6 +1317,22 @@ public class ReindexerTest {
         public void setName(String name) {
             this.name = name;
         }
+    }
+
+    public static class SerialIdTestItem {
+
+        @Serial
+        @Reindex(name = "id", isPrimaryKey = true)
+        private int id;
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
     }
 
     @Reindex(name = "composite", subIndexes = {"id", "name"})
