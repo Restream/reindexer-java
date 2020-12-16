@@ -156,6 +156,15 @@ public class PhysicalConnection implements Connection {
             } else if (arg instanceof byte[]) {
                 buffer.putVarUInt32(Consts.VALUE_STRING)
                         .putVBytes(((byte[]) arg));
+            } else if (arg instanceof long[]) {
+                long[] array = (long[]) arg;
+                buffer.putVarUInt32(Consts.VALUE_STRING);
+                ByteBuffer arrayBuffer = new ByteBuffer();
+                arrayBuffer.putVarUInt32(array.length);
+                for (long i : array) {
+                    arrayBuffer.putVarUInt32(i);
+                }
+                buffer.putVBytes(arrayBuffer.bytes());
             } else {
                 throw new IllegalArgumentException("Unsupported data type " + arg.getClass());
             }

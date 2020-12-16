@@ -240,10 +240,10 @@ public class Query<T> {
             buffer.putVarUInt32(QUERY_END);
         }
 
-        QueryResult queryResult = binding.selectQuery(buffer.bytes(), true, fetchCount);
+        QueryResult queryResult = binding.selectQuery(buffer.bytes(), false, fetchCount);
 
 
-        return new CprotoIterator<>(binding, namespace, queryResult, true, fetchCount);
+        return new CprotoIterator<>(binding, namespace, queryResult, fetchCount);
     }
 
     /**
