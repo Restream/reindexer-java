@@ -74,10 +74,48 @@ public class Reindexer {
 
     }
 
+    /**
+     * Inserts the given item data.
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param item          the item data
+     */
+    public <T> void insert(String namespaceName, T item) {
+        modifyItem(namespaceName, item, MODE_INSERT);
+    }
+
+    /**
+     * Updates the given item data.
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param item          the item data
+     */
+    public <T> void update(String namespaceName, T item) {
+        modifyItem(namespaceName, item, MODE_UPDATE);
+    }
+
+    /**
+     * Inserts or updates the given item data.
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param item          the item data
+     */
     public <T> void upsert(String namespaceName, T item) {
-        Class<T> itemClass = (Class<T>) item.getClass();
-        ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
-        modifyItem(namespace, item, MODE_UPSERT);
+        modifyItem(namespaceName, item, MODE_UPSERT);
+    }
+
+    /**
+     * Deletes the given item data.
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param item          the item data
+     */
+    public <T> void delete(String namespaceName, T item) {
+        modifyItem(namespaceName, item, MODE_DELETE);
     }
 
     public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> clazz) {
@@ -115,7 +153,10 @@ public class Reindexer {
         namespaceMap.put(key, namespace);
     }
 
-    private <T> void modifyItem(ReindexerNamespace<T> namespace, T item, int mode) {
+    @SuppressWarnings("unchecked")
+    private <T> void modifyItem(String namespaceName, T item, int mode) {
+        Class<T> itemClass = (Class<T>) item.getClass();
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         String[] percepts = namespace.getPrecepts();
         //TODO: cjson
         int format = Consts.FORMAT_JSON;
