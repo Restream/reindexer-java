@@ -241,44 +241,42 @@ public class Cproto implements Binding {
 
         List<PayloadType> payloadTypes = new ArrayList<>();
         queryResult.setPayloadTypes(payloadTypes);
-        if (!isJson) {
-            if (queryResult.isWithPayloadTypes()) {
-                int ptCount = (int) buffer.getVarUInt();
-                for (int i = 0; i < ptCount; i++) {
-                    long namespaceId = buffer.getVarUInt();
-                    String namespaceName = buffer.getVString();
-                    long stateToken = buffer.getVarUInt();
-                    long version = buffer.getVarUInt();
+        if (!isJson && queryResult.isWithPayloadTypes()) {
+            int ptCount = (int) buffer.getVarUInt();
+            for (int i = 0; i < ptCount; i++) {
+                long namespaceId = buffer.getVarUInt();
+                String namespaceName = buffer.getVString();
+                long stateToken = buffer.getVarUInt();
+                long version = buffer.getVarUInt();
 
-                    //read tags
-                    List<String> tags = new ArrayList<>();
-                    long tagsCount = buffer.getVarUInt();
-                    for (int j = 0; j < tagsCount; j++) {
-                        tags.add(buffer.getVString());
-                    }
-
-                    //read payload fields
-                    long pStringHdrOffset = buffer.getVarUInt();
-                    List<PayloadField> fields = new ArrayList<>();
-                    long fieldsCount = buffer.getVarUInt();
-                    for (int j = 0; j < fieldsCount; j++) {
-                        long type = buffer.getVarUInt();
-                        String name = buffer.getVString();
-                        long offset = buffer.getVarUInt();
-                        long size = buffer.getVarUInt();
-                        boolean isArray = buffer.getVarUInt() != 0;
-                        long jsonPathCnt = buffer.getVarUInt();
-                        List<String> jsonPaths = new ArrayList<>();
-                        for (int k = 0; k < jsonPathCnt; k++) {
-                            jsonPaths.add(buffer.getVString());
-                        }
-                        fields.add(new PayloadField(type, name, offset, size, isArray, jsonPaths));
-                    }
-
-                    PayloadType payloadType = new PayloadType(namespaceId, namespaceName, version, stateToken,
-                            pStringHdrOffset, tags, fields);
-                    payloadTypes.add(payloadType);
+                //read tags
+                List<String> tags = new ArrayList<>();
+                long tagsCount = buffer.getVarUInt();
+                for (int j = 0; j < tagsCount; j++) {
+                    tags.add(buffer.getVString());
                 }
+
+                //read payload fields
+                long pStringHdrOffset = buffer.getVarUInt();
+                List<PayloadField> fields = new ArrayList<>();
+                long fieldsCount = buffer.getVarUInt();
+                for (int j = 0; j < fieldsCount; j++) {
+                    long type = buffer.getVarUInt();
+                    String name = buffer.getVString();
+                    long offset = buffer.getVarUInt();
+                    long size = buffer.getVarUInt();
+                    boolean isArray = buffer.getVarUInt() != 0;
+                    long jsonPathCnt = buffer.getVarUInt();
+                    List<String> jsonPaths = new ArrayList<>();
+                    for (int k = 0; k < jsonPathCnt; k++) {
+                        jsonPaths.add(buffer.getVString());
+                    }
+                    fields.add(new PayloadField(type, name, offset, size, isArray, jsonPaths));
+                }
+
+                PayloadType payloadType = new PayloadType(namespaceId, namespaceName, version, stateToken,
+                        pStringHdrOffset, tags, fields);
+                payloadTypes.add(payloadType);
             }
         }
 
