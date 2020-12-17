@@ -75,8 +75,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
         List<ReindexerIndex> indexes = new ArrayList<>();
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
-        for (int i = 0; i < fields.size(); i++) {
-            Field field = fields.get(i);
+        for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
             if (reindex == null || "-".equals(reindex.name())) {
                 continue;
@@ -93,7 +92,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
                 List<ReindexerIndex> nested = parseIndexes(field.getType(), true, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
-            } else if ((fieldInfo.isArray) && fieldInfo.componentType!= null
+            } else if ((fieldInfo.isArray) && fieldInfo.componentType != null
                     && getFieldTypeByClass(fieldInfo.componentType) == COMPOSITE) {
                 List<ReindexerIndex> nested = parseIndexes(fieldInfo.componentType, true, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
@@ -173,7 +172,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
             Type typeArgument = parameterizedType.getActualTypeArguments()[0];
             if (typeArgument instanceof Class<?>) {
-                final Class<?> componentType = (Class<?>) typeArgument;
+                Class<?> componentType = (Class<?>) typeArgument;
                 fieldType = getFieldTypeByClass(componentType);
                 fieldInfo.componentType = componentType;
             }

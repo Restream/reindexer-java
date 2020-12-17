@@ -1,6 +1,9 @@
 package ru.rt.restream.reindexer.binding;
 
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+
+import java.util.List;
 
 /**
  * Result of a query.
@@ -21,6 +24,14 @@ public class QueryResult {
     private boolean isJson;
 
     private boolean withRank;
+
+    private boolean withItemId;
+
+    private boolean withNsId;
+
+    private boolean withPayloadTypes;
+
+    private List<PayloadType> payloadTypes;
 
     /**
      * Encoded query result data.
@@ -81,5 +92,37 @@ public class QueryResult {
 
     public void setBuffer(ByteBuffer buffer) {
         this.buffer = buffer;
+    }
+
+    public boolean isWithItemId() {
+        return withItemId;
+    }
+
+    public void setWithItemId(boolean withItemId) {
+        this.withItemId = withItemId;
+    }
+
+    public boolean isWithNsId() {
+        return withNsId;
+    }
+
+    public void setWithNsId(boolean withNsId) {
+        this.withNsId = withNsId;
+    }
+
+    public boolean isWithPayloadTypes() {
+        return withPayloadTypes;
+    }
+
+    public void setWithPayloadTypes(boolean withPayloadTypes) {
+        this.withPayloadTypes = withPayloadTypes;
+    }
+
+    public List<PayloadType> getPayloadTypes() {
+        return payloadTypes;
+    }
+
+    public void setPayloadTypes(List<PayloadType> payloadTypes) {
+        this.payloadTypes = payloadTypes;
     }
 }

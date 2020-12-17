@@ -4,8 +4,8 @@ import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
-import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
 /**
  * An iterator over a query result.
@@ -17,52 +17,46 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private final Binding binding;
 
-    private final boolean asJson;
-
     private final int fetchCount;
 
     private ItemReader<T> itemReader;
 
     private ByteBuffer buffer;
 
-    private int requestId;
-
-    private long qCount;
-
-    private long count;
+    private QueryResult queryResult;
 
     private int position;
+
+    private long count;
 
     private boolean closed;
 
     public CprotoIterator(Binding binding,
                           ReindexerNamespace<T> namespace,
                           QueryResult queryResult,
-                          boolean asJson,
                           int fetchCount) {
         this.binding = binding;
         this.namespace = namespace;
-        this.asJson = asJson;
         this.fetchCount = fetchCount;
         parseQueryResult(queryResult);
     }
 
     private void parseQueryResult(QueryResult queryResult) {
-        this.requestId = queryResult.getRequestId();
-        buffer = queryResult.getBuffer();
-        qCount = queryResult.getQCount();
+        this.buffer = queryResult.getBuffer();
+        this.queryResult = queryResult;
         count += queryResult.getCount();
-        long tag = buffer.getVarUInt();
-        if (queryResult.isJson()) {
-            itemReader = new JsonItemReader<>(namespace.getItemClass(), queryResult.isWithRank());
-        } else {
-            throw new UnimplementedException();
+        if (itemReader == null) {
+            if (queryResult.isJson()) {
+                itemReader = new JsonItemReader<>(namespace.getItemClass(), queryResult.isWithRank());
+            } else {
+                itemReader = new CjsonItemReader<>(namespace.getItemClass(), queryResult.getPayloadTypes().get(0));
+            }
         }
     }
 
     @Override
     public boolean hasNext() {
-        return position < qCount;
+        return position < queryResult.getQCount();
     }
 
     /**
@@ -84,7 +78,9 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
             fetchResults();
         }
 
-        T item = itemReader.readItem(buffer);
+        readItemParams();
+        int length = (int) buffer.getUInt32();
+        T item = itemReader.readItem(new ByteBuffer(buffer.getBytes(length)).rewind());
 
         position++;
 
@@ -92,12 +88,34 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     }
 
+    private void readItemParams() {
+        long rank = -1;
+        long id = -1;
+        long version = -1;
+        long nsId = -1;
+
+        if (queryResult.isWithItemId()) {
+            id = buffer.getVarUInt();
+            version = buffer.getVarUInt();
+        }
+
+        if (queryResult.isWithNsId()) {
+            nsId = buffer.getVarUInt();
+        }
+
+        if (queryResult.isWithRank()) {
+            //used for full-text search
+            rank = buffer.getVarUInt();
+        }
+    }
+
     private boolean needFetch() {
         return this.position == count;
     }
 
     private void fetchResults() {
-        QueryResult queryResult = binding.fetchResults(requestId, asJson, position, fetchCount);
+        QueryResult queryResult = binding.fetchResults(this.queryResult.getRequestId(), this.queryResult.isJson(),
+                position, fetchCount);
         parseQueryResult(queryResult);
     }
 
@@ -107,14 +125,14 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
     @Override
     public void close() {
         if (needClose()) {
-            binding.closeResults(requestId);
-            requestId = -1;
+            binding.closeResults(this.queryResult.getRequestId());
+            this.queryResult.setRequestId(-1);
             closed = true;
         }
     }
 
     private boolean needClose() {
-        return requestId != -1L;
+        return this.queryResult.getRequestId() != -1L;
     }
 
 }
