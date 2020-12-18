@@ -3,6 +3,7 @@ package ru.rt.restream.reindexer;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 
@@ -55,7 +56,7 @@ public class Query<T> {
 
     private final ReindexerNamespace<T> namespace;
 
-    private final Transaction<T> transaction;
+    private final TransactionContext transactionContext;
 
     private int fetchCount = DEFAULT_FETCH_COUNT;
 
@@ -67,10 +68,10 @@ public class Query<T> {
 
     private Query<?> root;
 
-    public Query(Binding binding, ReindexerNamespace<T> namespace, Transaction<T> transaction) {
+    public Query(Binding binding, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
         this.binding = binding;
         this.namespace = namespace;
-        this.transaction = transaction;
+        this.transactionContext = transactionContext;
         buffer.putVString(namespace.getName());
     }
 
@@ -250,8 +251,8 @@ public class Query<T> {
      * Will execute query, and delete items, matches query.
      */
     public void delete() {
-        if (transaction != null) {
-            binding.deleteQueryTx(buffer.bytes(), transaction.getTransactionId());
+        if (transactionContext != null) {
+            transactionContext.deleteQuery(buffer.bytes());
         } else {
             binding.deleteQuery(buffer.bytes());
         }
@@ -315,8 +316,8 @@ public class Query<T> {
      * Will execute query, and update fields in items, which matches query.
      */
     public void update() {
-        if (transaction != null) {
-            binding.updateQueryTx(buffer.bytes(), transaction.getTransactionId());
+        if (transactionContext != null) {
+            transactionContext.updateQuery(buffer.bytes());
         } else {
             binding.updateQuery(buffer.bytes());
         }

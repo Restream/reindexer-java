@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.DeferredResult;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
@@ -36,8 +37,10 @@ import java.util.Objects;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
@@ -63,6 +66,7 @@ public class ReindexerTest {
 
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
+                .threadPoolSize(1)
                 .connectionPoolSize(1)
                 .connectionTimeout(30L)
                 .getReindexer();
@@ -950,8 +954,7 @@ public class ReindexerTest {
         testItem.setNonIndex("testNonIndex");
         tx.upsert(testItem);
 
-        long count = tx.commitWithCount();
-        assertThat(count, is(1L));
+        tx.commit();
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -1344,6 +1347,252 @@ public class ReindexerTest {
             ids.add(item.id);
         }
         assertThat(ids, contains(1, 2, 3));
+    }
+
+    @Test
+    public void testTransactionInsertAsyncWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            tx.insertAsync(testItem, results::add);
+        }
+
+        tx.commit();
+
+        int itemCount = 0;
+        Iterator<DeferredResult<TestItem>> resultIterator = results.iterator();
+        Iterator<TestItem> itemIterator = db.query(namespaceName, TestItem.class).execute();
+        while (resultIterator.hasNext() && itemIterator.hasNext()) {
+            DeferredResult<TestItem> result = resultIterator.next();
+            assertThat(result.hasError(), is(false));
+
+            TestItem testItem = result.getItem();
+            assertThat(testItem, notNullValue());
+
+            TestItem item = itemIterator.next();
+            assertThat(item.id, is(testItem.id));
+            assertThat(item.name, is(testItem.name));
+            assertThat(item.nonIndex, is(testItem.nonIndex));
+
+            itemCount++;
+        }
+
+        assertThat(itemCount, is(100));
+    }
+
+    @Test
+    public void testTransactionInsertAsyncWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            tx.insertAsync(testItem, results::add);
+        }
+
+        tx.rollback();
+
+        assertThat(results, hasSize(100));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class).execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionUpdateAsyncWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        testItem.setName("TestNameUpdated");
+        tx.updateAsync(testItem, results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpdateAsyncWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        String originalName = testItem.getName();
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        testItem.setName("TestNameUpdated");
+        tx.updateAsync(testItem, results::add);
+
+        tx.rollback();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(originalName));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpsertAsyncWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsertAsync(testItem, results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testTransactionUpsertAsyncWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        tx.upsertAsync(testItem, results::add);
+
+        tx.rollback();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionDeleteAsyncWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.deleteAsync(testItem, results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testTransactionDeleteAsyncWithRollback() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        List<DeferredResult<TestItem>> results = new ArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        tx.deleteAsync(testItem, results::add);
+
+        tx.rollback();
+
+        assertThat(results, hasSize(1));
+        assertThat(results.stream().noneMatch(DeferredResult::hasError), is(true));
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
     }
 
     private void post(String path, Object body) {

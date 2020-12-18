@@ -163,7 +163,25 @@ tx.query().where("id", EQ, 102).set("name", "Petya").update();
 tx.commit();
 ```
 
-#### Async batch mode (TODO)
+#### Async batch mode
+
+```java
+// Create new transaction object
+Transaction<Item> tx = db.beginTransaction("items", Item.class);
+// Prepare transaction object async
+tx.upsertAsync(new Item(100, "Vasya", Arrays.asList(6, 1, 8), 2019), result -> {});
+tx.upsertAsync(new Item(101, "Vova", Arrays.asList(7, 2, 9), 2020), result -> {
+    if (result.hasError()) {
+        logger.error(result.getError().getMessage());
+    }
+});
+// Wait for async operations done, and apply transaction
+tx.commit();
+```
+
+The second argument of `tx.upsertAsync` is completion function, which will be called after receiving server response. 
+Also, if any error occurred during prepare process, then `tx.commit` should return an error. So it is enough, to 
+check error returned by `tx.commit` - to be sure, that all data has been successfully committed or not.
 
 #### Transactions commit strategies
 
@@ -175,5 +193,6 @@ Depends on amount changes in transaction there are 2 possible Commit strategies:
 #### Implementation notes
 
 1. Transaction object is not thread safe and can't be used from different threads.
-2. Transaction object holds Reindexer's resources, therefore application should explicitly call Rollback or Commit, otherwise resources will leak.
-3. It is possible to call Query from transaction by call `tx.query().execute(); ...`. Only read-committed isolation is available. Changes made in active transaction is invisible to current and another transactions.
+2. Transaction object holds Reindexer's resources, therefore application should explicitly call `tx.rollback` or `tx.commit`, otherwise resources will leak.
+3. It is safe to call `tx.rollback` after `tx.commit`.
+4. It is possible to call Query from transaction by call `tx.query().execute(); ...`. Only read-committed isolation is available. Changes made in active transaction is invisible to current and another transactions.

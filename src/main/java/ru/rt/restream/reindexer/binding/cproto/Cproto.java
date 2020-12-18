@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadField;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
@@ -82,12 +83,6 @@ public class Cproto implements Binding {
                 packedPercepts, stateToken, 0);
     }
 
-    @Override
-    public void modifyItemTx(int format, byte[] data, int mode, String[] precepts, int stateToken, long txId) {
-        byte[] packedPrecepts = packPrecepts(precepts);
-        rpcCallNoResults(OperationType.WRITE, ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, txId);
-    }
-
     private byte[] packPrecepts(String[] precepts) {
         if (precepts.length == 0) {
             return EMPTY_BYTE_ARRAY;
@@ -141,18 +136,8 @@ public class Cproto implements Binding {
     }
 
     @Override
-    public void deleteQueryTx(byte[] queryData, long txId) {
-        rpcCallNoResults(OperationType.WRITE, DELETE_QUERY_TX, queryData, txId);
-    }
-
-    @Override
     public void updateQuery(byte[] queryData) {
         rpcCallNoResults(OperationType.WRITE, UPDATE_QUERY, queryData);
-    }
-
-    @Override
-    public void updateQueryTx(byte[] queryData, long txId) {
-        rpcCallNoResults(OperationType.WRITE, UPDATE_QUERY_TX, queryData, txId);
     }
 
     @Override
@@ -170,21 +155,15 @@ public class Cproto implements Binding {
     }
 
     @Override
-    public long beginTx(String namespaceName) {
-        RpcResponse rpcResponse = rpcCall(OperationType.WRITE, START_TRANSACTION, namespaceName);
+    public TransactionContext beginTx(String namespaceName) {
+        Connection connection = pool.getConnection();
+        RpcResponse rpcResponse = connection.rpcCall(START_TRANSACTION, namespaceName);
+        if (rpcResponse.hasError()) {
+            throw new ReindexerException(rpcResponse.getErrorMessage());
+        }
         Object[] responseArguments = rpcResponse.getArguments();
-        return responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
-    }
-
-    @Override
-    public long commitTx(long txId) {
-        QueryResult queryResult = rpcCallQuery(OperationType.WRITE, COMMIT_TX, txId);
-        return queryResult.getCount();
-    }
-
-    @Override
-    public void rollback(long txId) {
-        rpcCallNoResults(OperationType.WRITE, ROLLBACK_TX, txId);
+        long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
+        return new CprotoTransactionContext(transactionId, connection);
     }
 
     @Override

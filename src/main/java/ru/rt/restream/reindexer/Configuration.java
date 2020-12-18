@@ -8,11 +8,15 @@ import ru.rt.restream.reindexer.exceptions.UnimplementedException;
  */
 public final class Configuration {
 
+    private static final int DEFAULT_THREAD_POOL_SIZE = 8;
+
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
 
     private static final long DEFAULT_CONNECTION_TIMEOUT = 60L;
 
     private String url;
+
+    private int threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 
     private int connectionPoolSize = DEFAULT_CONNECTION_POOL_SIZE;
 
@@ -33,6 +37,17 @@ public final class Configuration {
      */
     public Configuration url(String url) {
         this.url = url;
+        return this;
+    }
+
+    /**
+     * Configure reindexer thread pool size. Defaults to 8.
+     *
+     * @param threadPoolSize the thread pool size
+     * @return the {@link Configuration} for further customizations
+     */
+    public Configuration threadPoolSize(int threadPoolSize) {
+        this.threadPoolSize = threadPoolSize;
         return this;
     }
 
@@ -71,7 +86,7 @@ public final class Configuration {
         String protocol = url.substring(0, url.indexOf(":"));
         switch (protocol) {
             case "cproto":
-                return new Reindexer(new Cproto(url, connectionPoolSize, connectionTimeout));
+                return new Reindexer(new Cproto(url, connectionPoolSize, connectionTimeout), threadPoolSize);
             case "http":
             case "builtin":
             case "builtinserver":
