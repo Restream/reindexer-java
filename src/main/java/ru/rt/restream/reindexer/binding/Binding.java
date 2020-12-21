@@ -34,23 +34,11 @@ public interface Binding {
 
     int START_TRANSACTION = 29;
 
-    int ADD_TX_ITEM = 26;
-
-    int COMMIT_TX = 27;
-
-    int ROLLBACK_TX = 28;
-
-    int COMMIT = 32;
-
     int MODIFY_ITEM = 33;
 
     int DELETE_QUERY = 34;
 
-    int DELETE_QUERY_TX = 30;
-
     int UPDATE_QUERY = 35;
-
-    int UPDATE_QUERY_TX = 31;
 
     int SELECT = 48;
 
@@ -121,18 +109,6 @@ public interface Binding {
     void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
-     * Modifies the item data in the given transaction id.
-     *
-     * @param format     item encoding format (CJSON, JSON)
-     * @param data       item data
-     * @param mode       modify mode (UPDATE, INSERT, UPSERT, DELETE)
-     * @param precepts
-     * @param stateToken
-     * @param txId       the transaction id
-     */
-    void modifyItemTx(int format, byte[] data, int mode, String[] precepts, int stateToken, long txId);
-
-    /**
      * Drop a namespace by name.
      *
      * @param namespaceName a namespace name to drop
@@ -163,27 +139,11 @@ public interface Binding {
     void deleteQuery(byte[] queryData);
 
     /**
-     * Invoke delete query with the given transaction id.
-     *
-     * @param queryData encoded query data (selected indexes, predicates, etc)
-     * @param txId      the transaction id
-     */
-    void deleteQueryTx(byte[] queryData, long txId);
-
-    /**
      * Invoke update query.
      *
      * @param queryData encoded query data (selected indexes, predicates, etc)
      */
     void updateQuery(byte[] queryData);
-
-    /**
-     * Invoke update query with the given transaction id.
-     *
-     * @param queryData encoded query data (selected indexes, predicates, etc)
-     * @param txId      the transaction id
-     */
-    void updateQueryTx(byte[] queryData, long txId);
 
     /**
      * Fetch query result by requestId.
@@ -199,24 +159,9 @@ public interface Binding {
      * Starts a transaction for the given namespace name.
      *
      * @param namespaceName the namespace name
-     * @return the transaction id
+     * @return the transaction context
      */
-    long beginTx(String namespaceName);
-
-    /**
-     * Commits a transaction by the given id.
-     *
-     * @param txId the transaction id
-     * @return the changes count
-     */
-    long commitTx(long txId);
-
-    /**
-     * Rollbacks a transaction by the given id.
-     *
-     * @param txId the transaction id
-     */
-    void rollback(long txId);
+    TransactionContext beginTx(String namespaceName);
 
     /**
      * Closes query results by requestId.

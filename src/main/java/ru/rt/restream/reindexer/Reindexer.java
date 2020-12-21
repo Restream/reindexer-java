@@ -16,6 +16,8 @@ import ru.rt.restream.reindexer.util.Pair;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Reindexer {
 
@@ -29,16 +31,20 @@ public class Reindexer {
 
     private final Binding binding;
 
+    private final ExecutorService executor;
+
     private final ReindexScanner reindexScanner = new ReindexAnnotationScanner();
 
     private final Map<Pair<String, Class<?>>, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
 
-    Reindexer(Binding binding) {
+    Reindexer(Binding binding, int threadPoolSize) {
         this.binding = binding;
+        this.executor = Executors.newFixedThreadPool(threadPoolSize);
     }
 
     public void close() {
         binding.close();
+        executor.shutdown();
     }
 
     public <T> void openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
@@ -120,7 +126,7 @@ public class Reindexer {
 
     public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> clazz) {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
-        Transaction<T> transaction = new Transaction<>(namespace, binding);
+        Transaction<T> transaction = new Transaction<>(namespace, binding, executor);
         transaction.start();
         return transaction;
     }
