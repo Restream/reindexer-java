@@ -1,8 +1,7 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
 import java.net.URI;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -17,8 +16,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @see ArrayBlockingQueue
  */
 public class ConnectionPool {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionPool.class);
 
     /**
      * Available connections.
@@ -116,13 +113,7 @@ public class ConnectionPool {
      */
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            for (Connection connection : connections) {
-                try {
-                    connection.close();
-                } catch (Exception e) {
-                    LOGGER.error("rx: connection close error", e);
-                }
-            }
+            connections.forEach(ConnectionUtils::close);
         }
     }
 
@@ -137,7 +128,7 @@ public class ConnectionPool {
         }
 
         @Override
-        public RpcResponse rpcCall(int command, Object... args) {
+        public synchronized RpcResponse rpcCall(int command, Object... args) {
             if (closed) {
                 throw new IllegalStateException("Connection is closed");
             }
@@ -145,7 +136,7 @@ public class ConnectionPool {
         }
 
         @Override
-        public void close() {
+        public synchronized void close() {
             if (closed) {
                 return;
             }

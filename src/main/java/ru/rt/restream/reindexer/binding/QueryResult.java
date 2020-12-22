@@ -10,11 +10,6 @@ import java.util.List;
  */
 public class QueryResult {
 
-    /**
-     * Used to fetch query data.
-     */
-    private int requestId;
-
     private long totalCount;
 
     private long qCount;
@@ -37,14 +32,6 @@ public class QueryResult {
      * Encoded query result data.
      */
     private ByteBuffer buffer;
-
-    public int getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(int requestId) {
-        this.requestId = requestId;
-    }
 
     public long getTotalCount() {
         return totalCount;

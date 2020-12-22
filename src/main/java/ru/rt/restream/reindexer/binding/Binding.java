@@ -128,8 +128,9 @@ public interface Binding {
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param asJson     format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
      * @param fetchCount items count to fetch within a query request
+     * @return the request context
      */
-    QueryResult selectQuery(byte[] queryData, boolean asJson, int fetchCount);
+    RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount);
 
     /**
      * Invoke delete query.
@@ -146,29 +147,12 @@ public interface Binding {
     void updateQuery(byte[] queryData);
 
     /**
-     * Fetch query result by requestId.
-     *
-     * @param requestId query request id
-     * @param asJson format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
-     * @param offset query result offset
-     * @param limit items count to fetch within a query request
-     * */
-    QueryResult fetchResults(int requestId, boolean asJson, int offset, int limit);
-
-    /**
      * Starts a transaction for the given namespace name.
      *
      * @param namespaceName the namespace name
      * @return the transaction context
      */
     TransactionContext beginTx(String namespaceName);
-
-    /**
-     * Closes query results by requestId.
-     *
-     * @param requestId query request id
-     */
-    void closeResults(long requestId);
 
     /**
      * Closes binding to Reindexer instance.

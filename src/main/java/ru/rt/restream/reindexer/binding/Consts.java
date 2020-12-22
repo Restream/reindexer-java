@@ -71,7 +71,6 @@ public class Consts {
     public static final int MODE_CACHED_TOTAL = 1;
     public static final int MODE_ACCURATE_TOTAL = 2;
 
-    public static final int QUERY_RESULT_END = 0;
     public static final int QUERY_RESULT_AGGREGATION = 1;
     public static final int QUERY_RESULT_EXPLAIN = 2;
 

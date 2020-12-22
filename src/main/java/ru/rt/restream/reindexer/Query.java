@@ -2,7 +2,7 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
-import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
@@ -241,10 +241,11 @@ public class Query<T> {
             buffer.putVarUInt32(QUERY_END);
         }
 
-        QueryResult queryResult = binding.selectQuery(buffer.bytes(), false, fetchCount);
+        RequestContext requestContext = transactionContext != null
+                ? transactionContext.selectQuery(buffer.bytes(), false, fetchCount)
+                : binding.selectQuery(buffer.bytes(), false, fetchCount);
 
-
-        return new CprotoIterator<>(binding, namespace, queryResult, fetchCount);
+        return new CprotoIterator<>(namespace, requestContext, fetchCount);
     }
 
     /**

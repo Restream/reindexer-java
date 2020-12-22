@@ -67,7 +67,7 @@ public class ReindexerTest {
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
                 .threadPoolSize(1)
-                .connectionPoolSize(1)
+                .connectionPoolSize(4)
                 .connectionTimeout(30L)
                 .getReindexer();
     }
