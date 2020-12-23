@@ -1595,6 +1595,36 @@ public class ReindexerTest {
         assertThat(item.nonIndex, is(testItem.nonIndex));
     }
 
+    @Test
+    public void testQueryToList() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<TestItem> testItems = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+            testItems.add(testItem);
+        }
+        assertThat(testItems, hasSize(5));
+
+        List<TestItem> items = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 0, 1, 2, 3, 4)
+                .toList();
+        assertThat(items, hasSize(5));
+
+        for (int i = 0; i < 5; i++) {
+            TestItem item = items.get(i);
+            TestItem testItem = testItems.get(i);
+            assertThat(item.id, is(testItem.id));
+            assertThat(item.name, is(testItem.name));
+            assertThat(item.nonIndex, is(testItem.nonIndex));
+        }
+    }
+
     private void post(String path, Object body) {
         HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
 

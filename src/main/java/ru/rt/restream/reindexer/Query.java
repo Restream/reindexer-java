@@ -228,6 +228,23 @@ public class Query<T> {
     }
 
     /**
+     * Will execute query, and return list of items.
+     *
+     * @return list of items
+     */
+    public List<T> toList() {
+        try (CloseableIterator<T> iterator = execute()) {
+            List<T> result = new ArrayList<>();
+            while (iterator.hasNext()) {
+                result.add(iterator.next());
+            }
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * Will execute query, and return slice of items.
      *
      * @return an iterator over a query result
