@@ -2,8 +2,8 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.ReindexerNamespace;
-import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
 import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
 
@@ -15,7 +15,7 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private final ReindexerNamespace<T> namespace;
 
-    private final Binding binding;
+    private final RequestContext requestContext;
 
     private final int fetchCount;
 
@@ -31,14 +31,13 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private boolean closed;
 
-    public CprotoIterator(Binding binding,
-                          ReindexerNamespace<T> namespace,
-                          QueryResult queryResult,
+    public CprotoIterator(ReindexerNamespace<T> namespace,
+                          RequestContext requestContext,
                           int fetchCount) {
-        this.binding = binding;
         this.namespace = namespace;
+        this.requestContext = requestContext;
         this.fetchCount = fetchCount;
-        parseQueryResult(queryResult);
+        parseQueryResult(requestContext.getQueryResult());
     }
 
     private void parseQueryResult(QueryResult queryResult) {
@@ -114,25 +113,21 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
     }
 
     private void fetchResults() {
-        QueryResult queryResult = binding.fetchResults(this.queryResult.getRequestId(), this.queryResult.isJson(),
-                position, fetchCount);
+        requestContext.fetchResults(position, fetchCount);
+        queryResult = requestContext.getQueryResult();
         parseQueryResult(queryResult);
     }
 
     /**
-     * Closes query results if needed (i.e query request id is not -1).
+     * Closes the request context.
      */
     @Override
     public void close() {
-        if (needClose()) {
-            binding.closeResults(this.queryResult.getRequestId());
-            this.queryResult.setRequestId(-1);
-            closed = true;
+        if (closed) {
+            return;
         }
-    }
-
-    private boolean needClose() {
-        return this.queryResult.getRequestId() != -1L;
+        requestContext.close();
+        closed = true;
     }
 
 }
