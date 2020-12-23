@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,6 +43,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
 @Testcontainers
@@ -1623,6 +1625,104 @@ public class ReindexerTest {
             assertThat(item.name, is(testItem.name));
             assertThat(item.nonIndex, is(testItem.nonIndex));
         }
+    }
+
+    @Test
+    public void testQueryGetOne() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        TestItem item = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testQueryGetOneWhenNoItemThenException() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        assertThrows(RuntimeException.class,
+                () -> db.query(namespaceName, TestItem.class)
+                        .where("id", EQ, 123)
+                        .getOne(),
+                "Exactly one item expected, but there is zero");
+    }
+
+    @Test
+    public void testQueryGetOneWhenMoreThanOneItemThenException() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 2; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+        }
+
+        assertThrows(RuntimeException.class, () -> db.query(namespaceName, TestItem.class).getOne(),
+                "Exactly one item expected, but there are more");
+    }
+
+    @Test
+    public void testQueryFindOne() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        Optional<TestItem> itemOptional = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .findOne();
+        assertThat(itemOptional.isPresent(), is(true));
+
+        TestItem item = itemOptional.get();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testQueryFindOneWhenNoItemThenEmpty() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Optional<TestItem> itemOptional = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .findOne();
+        assertThat(itemOptional.isPresent(), is(false));
+    }
+
+    @Test
+    public void testQueryFindOneWhenMoreThanOneItemThenException() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 2; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+        }
+
+        assertThrows(RuntimeException.class, () -> db.query(namespaceName, TestItem.class).findOne(),
+                "Exactly one item expected, but there are more");
     }
 
     private void post(String path, Object body) {
