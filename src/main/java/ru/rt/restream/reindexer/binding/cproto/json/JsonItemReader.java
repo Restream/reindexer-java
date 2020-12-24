@@ -23,7 +23,7 @@ import ru.rt.restream.reindexer.binding.cproto.ItemReader;
 import java.nio.charset.StandardCharsets;
 
 /**
- * An implementation of {@link ItemReader<T>} that reads items encoded in JSON format.
+ * An implementation of {@link ItemReader} that reads items encoded in JSON format.
  */
 public class JsonItemReader<T> implements ItemReader<T> {
 

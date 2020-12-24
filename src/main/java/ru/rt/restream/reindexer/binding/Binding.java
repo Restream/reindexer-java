@@ -107,7 +107,8 @@ public interface Binding {
     /**
      * Add an index based on passed definition.
      *
-     * @param index an index definition to add
+     * @param namespace the namespace name
+     * @param index     an index definition to add
      */
     void addIndex(String namespace, IndexDefinition index);
 
@@ -115,11 +116,11 @@ public interface Binding {
      * Modifies namespace item data.
      *
      * @param namespaceName name of a namespace item belongs to
-     * @param format item encoding format (CJSON, JSON)
-     * @param data item data
-     * @param mode modify mode (UPDATE, INSERT, UPSERT, DELETE)
-     * @param precepts
-     * @param stateToken
+     * @param format        item encoding format (CJSON, JSON)
+     * @param data          item data
+     * @param mode          modify mode (UPDATE, INSERT, UPSERT, DELETE)
+     * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")
+     * @param stateToken    state token
      */
     void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts, int stateToken);
 

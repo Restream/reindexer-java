@@ -136,6 +136,7 @@ public class Query<T> {
      * @param indexName index name
      * @param condition condition value {@link Condition}
      * @param values    values to match
+     * @return the {@link Query} for further customizations
      */
     public Query<T> where(String indexName, Condition condition, Object... values) {
         buffer.putVarUInt32(Consts.QUERY_CONDITION)
@@ -161,6 +162,7 @@ public class Query<T> {
      * @param indexName composite index name
      * @param condition condition value {@link Condition}
      * @param values    values of composite index to match
+     * @return the {@link Query} for further customizations
      */
     public Query<T> whereComposite(String indexName, Condition condition, Object... values) {
         where(indexName, condition, new Object[]{values});
@@ -187,6 +189,11 @@ public class Query<T> {
      * Apply sort order to returned from query items. If values argument specified, then items equal to values, if found
      * will be placed in the top positions. For composite indexes values must be []interface{}, with value of each
      * subindex
+     *
+     * @param index  the index name
+     * @param desc   true if sorting in descending order
+     * @param values values to match
+     * @return the {@link Query} for further customizations
      */
     public Query<T> sort(String index, boolean desc, Object... values) {
 
@@ -208,9 +215,10 @@ public class Query<T> {
 
     /**
      * FetchCount sets the number of items that will be fetched by one operation
-     * When fetchCount <= 0 query will fetch all results in one operation
+     * When fetchCount {@literal <=} 0 query will fetch all results in one operation
      *
      * @param fetchCount items count to fetch
+     * @return the {@link Query} for further customizations
      */
     public Query<T> fetchCount(int fetchCount) {
         this.fetchCount = fetchCount;
@@ -337,6 +345,7 @@ public class Query<T> {
      *
      * @param fieldName field name
      * @param value     updated value
+     * @return the {@link Query} for further customizations
      */
     public Query<T> set(String fieldName, Object value) {
         int cmd = QUERY_UPDATE_FIELD;
@@ -379,6 +388,7 @@ public class Query<T> {
      * Drop removes field from item within Update statement.
      *
      * @param field field to drop
+     * @return the {@link Query} for further customizations
      */
     public Query<T> drop(String field) {
         buffer.putVarUInt32(QUERY_DROP_FIELD);
