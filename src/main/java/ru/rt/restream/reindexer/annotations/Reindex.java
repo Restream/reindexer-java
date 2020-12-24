@@ -30,11 +30,15 @@ public @interface Reindex {
 
     /**
      * Index name.
+     *
+     * @return an index name
      */
     String name();
 
     /**
      * Index type.
+     *
+     * @return an index type
      */
     IndexType type() default DEFAULT;
 
@@ -43,6 +47,8 @@ public @interface Reindex {
      * each element. Useful for indexes with high selectivity, but for tree and hash indexes with low selectivity can
      * seriously decrease update performance. Also dense will slow down wide fullscan queries on - indexes, due to lack
      * of CPU cache optimization.
+     *
+     * @return true if the index size is reduced
      */
     boolean isDense() default false;
 
@@ -50,6 +56,8 @@ public @interface Reindex {
      * Row (document) contains a value of Sparse index only in case if it's set on purpose - there are no empty
      * (or default) records of this type of indexes in the row (document). It allows to save RAM but it will cost you
      * performance - it works a bit slower than regular indexes.
+     *
+     * @return true if the index contains a Sparse value
      */
     boolean isSparse() default false;
 
@@ -61,6 +69,8 @@ public @interface Reindex {
 
     /**
      * Used for composite indexes. Only for class-level annotation.
+     *
+     * @return a sub index names for a composite index
      */
     String[] subIndexes() default {};
 }

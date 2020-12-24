@@ -33,6 +33,8 @@ public class CjsonDecoder {
 
     /**
      * This method decodes data into its equivalent representation as a tree of {@link CjsonElement}s.
+     *
+     * @return the decoded {@link CjsonElement}
      */
     public CjsonElement decode() {
         Ctag ctag = new Ctag(buffer.getVarUInt());

@@ -49,6 +49,7 @@ public final class Configuration {
      * Configure reindexer database url.
      *
      * @param url a database url of the form protocol://host:port/database_name
+     * @return the {@link Configuration} for further customizations
      */
     public Configuration url(String url) {
         this.url = url;

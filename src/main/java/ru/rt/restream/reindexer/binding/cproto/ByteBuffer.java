@@ -92,6 +92,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putUInt16(int value) {
         if (value < 0 || value > 0xFFFF) {
@@ -106,6 +107,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putUInt32(long value) {
         if (value < 0 || value > 0xFFFF_FFFFL) {
@@ -135,6 +137,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putVarUInt32(long value) {
         if (value < 0) {
@@ -158,6 +161,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putVarInt64(long value) {
         // Great trick from http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
@@ -181,6 +185,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putVString(String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
@@ -194,6 +199,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value array to put
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer putVBytes(byte[] value) {
         int length = value.length;
@@ -207,6 +213,7 @@ public class ByteBuffer {
      * Increments buffer position.
      *
      * @param value array to put
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer writeBytes(byte[] value) {
         grow(value.length);
@@ -303,6 +310,7 @@ public class ByteBuffer {
      * Reads a string of specified length from a buffer.
      * Increments buffer position.
      *
+     * @param length the length of a string
      * @return the string read from a backed array
      */
     private String getString(int length) {
@@ -331,6 +339,7 @@ public class ByteBuffer {
      * Reads byte array of specified size from a buffer.
      * Increments buffer position.
      *
+     * @param length the length of an array of bytes
      * @return bytes read from a backed array
      */
     public byte[] getBytes(int length) {
@@ -366,6 +375,8 @@ public class ByteBuffer {
 
     /**
      * Sets current buffer position at the beginning of the backed array.
+     *
+     * @return the {@link ByteBuffer} for further customizations
      */
     public ByteBuffer rewind() {
         position = 0;

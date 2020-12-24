@@ -23,7 +23,7 @@ import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
 import java.nio.charset.StandardCharsets;
 
 /**
- * An implementation of {@link ItemWriter <T>} that encodes items in JSON format.
+ * An implementation of {@link ItemWriter} that encodes items in JSON format.
  */
 public class JsonItemWriter<T> implements ItemWriter<T> {
 
