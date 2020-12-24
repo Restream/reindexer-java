@@ -33,10 +33,6 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
  */
 public class Cproto implements Binding {
 
-    private enum OperationType {
-        READ, WRITE
-    }
-
     /**
      * The connection pool executor.
      */
@@ -60,7 +56,7 @@ public class Cproto implements Binding {
     @Override
     public void openNamespace(NamespaceDefinition namespace) {
         String json = toJson(namespace);
-        rpcCallNoResults(OperationType.WRITE, OPEN_NAMESPACE, json);
+        rpcCallNoResults(OPEN_NAMESPACE, json);
     }
 
     private String toJson(Object object) {
@@ -75,17 +71,17 @@ public class Cproto implements Binding {
      */
     @Override
     public void addIndex(String namespace, IndexDefinition index) {
-        rpcCallNoResults(OperationType.WRITE, ADD_INDEX, namespace, toJson(index));
+        rpcCallNoResults(ADD_INDEX, namespace, toJson(index));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts,
+    public void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts,
                            int stateToken) {
         byte[] packedPercepts = packPrecepts(precepts);
-        rpcCallNoResults(OperationType.WRITE, MODIFY_ITEM, namespaceName, format, data, mode,
+        rpcCallNoResults(MODIFY_ITEM, namespaceName, Consts.FORMAT_C_JSON, data, mode,
                 packedPercepts, stateToken, 0);
     }
 
@@ -106,7 +102,7 @@ public class Cproto implements Binding {
      */
     @Override
     public void dropNamespace(String namespaceName) {
-        rpcCallNoResults(OperationType.WRITE, DROP_NAMESPACE, namespaceName);
+        rpcCallNoResults(DROP_NAMESPACE, namespaceName);
     }
 
     /**
@@ -114,20 +110,16 @@ public class Cproto implements Binding {
      */
     @Override
     public void closeNamespace(String namespaceName) {
-        rpcCallNoResults(OperationType.WRITE, CLOSE_NAMESPACE, namespaceName);
+        rpcCallNoResults(CLOSE_NAMESPACE, namespaceName);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount) {
-        int flags;
-        if (asJson) {
-            flags = Consts.RESULTS_JSON;
-        } else {
-            flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-        }
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
+        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+
         return executor.executeInConnection(conn -> {
             RpcResponse rpcResponse = ConnectionUtils.rpcCall(conn, SELECT, queryData, flags,
                     fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
@@ -137,12 +129,12 @@ public class Cproto implements Binding {
 
     @Override
     public void deleteQuery(byte[] queryData) {
-        rpcCallNoResults(OperationType.WRITE, DELETE_QUERY, queryData);
+        rpcCallNoResults(DELETE_QUERY, queryData);
     }
 
     @Override
     public void updateQuery(byte[] queryData) {
-        rpcCallNoResults(OperationType.WRITE, UPDATE_QUERY, queryData);
+        rpcCallNoResults(UPDATE_QUERY, queryData);
     }
 
     @Override
@@ -163,7 +155,7 @@ public class Cproto implements Binding {
         executor.close();
     }
 
-    private void rpcCallNoResults(OperationType operationType, int command, Object... args) {
+    private void rpcCallNoResults(int command, Object... args) {
         executor.executeInConnection(conn -> {
             ConnectionUtils.rpcCallNoResults(conn, command, args);
             return null;

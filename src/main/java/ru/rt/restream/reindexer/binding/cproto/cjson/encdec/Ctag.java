@@ -43,6 +43,10 @@ class Ctag {
         this.value = value;
     }
 
+    Ctag(int tagType, int tagName, int tagField) {
+        this((tagType | (tagName << TYPE_BITS) | (tagField << (NAME_BITS + TYPE_BITS))));
+    }
+
     public int name() {
         return (int) ((value >> TYPE_BITS) & ((1 << NAME_BITS) - 1));
     }
@@ -74,6 +78,10 @@ class Ctag {
             return "<null>";
         }
         return String.format("<unknown %d>", tagType);
+    }
+
+    public long getValue() {
+        return value;
     }
 
     String dump() {

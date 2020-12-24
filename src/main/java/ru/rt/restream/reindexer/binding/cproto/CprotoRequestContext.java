@@ -80,12 +80,7 @@ public class CprotoRequestContext implements RequestContext {
 
     @Override
     public void fetchResults(int offset, int limit) {
-        int flags = 0;
-        if (queryResult.isJson()) {
-            flags = Consts.RESULTS_JSON;
-        } else {
-            flags |= Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-        }
+        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
         RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, FETCH_RESULTS, requestId, flags, offset, fetchCount);
         queryResult = getQueryResult(rpcResponse);

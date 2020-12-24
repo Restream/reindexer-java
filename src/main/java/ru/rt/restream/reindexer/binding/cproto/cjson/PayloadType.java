@@ -51,29 +51,6 @@ public class PayloadType {
         }
     }
 
-    public int nameToTag (String name) {
-        Integer tag = names.get(name);
-        if (tag == null) {
-            return 0;
-        } else {
-            return tag + 1;
-        }
-    }
-
-    public String tagToName (int tag) {
-        tag = tag & ((1 << 12) - 1);
-
-        if (tag == 0) {
-            return "";
-        }
-
-        if (tag - 1 >= tags.size()) {
-            throw new IllegalArgumentException(String.format("Unknown tag %d\n", tag));
-        }
-
-        return tags.get(tag - 1);
-    }
-
     public long getNamespaceId() {
         return namespaceId;
     }

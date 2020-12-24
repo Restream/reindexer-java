@@ -17,15 +17,24 @@ package ru.rt.restream.reindexer.binding.cproto.cjson;
 
 /**
  * A class representing a Cjson primitive value.
- *
- * @author Inderjeet Singh
- * @author Joel Leitch
  */
 public class CjsonPrimitive extends CjsonElement {
 
     private final Object value;
 
-    public CjsonPrimitive(Object value) {
+    public CjsonPrimitive(String value) {
+        this.value = value;
+    }
+
+    public CjsonPrimitive(Long value) {
+        this.value = value;
+    }
+
+    public CjsonPrimitive(Boolean value) {
+        this.value = value;
+    }
+
+    public CjsonPrimitive(Double value) {
         this.value = value;
     }
 
@@ -137,5 +146,50 @@ public class CjsonPrimitive extends CjsonElement {
         } else {
             throw new IllegalStateException(String.format("Unexpected value type: %s", value.getClass().getName()));
         }
+    }
+
+    /**
+     * Check that value is an integral type
+     *
+     * @return true if value is an integral type
+     */
+    public boolean isIntegral() {
+        return value instanceof Long;
+    }
+
+    /**
+     * Check that value is a double type
+     *
+     * @return true if value is an double type
+     */
+    public boolean isDouble() {
+        return value instanceof Double;
+    }
+
+    /**
+     * Check that value is a String type
+     *
+     * @return true if value is an String type
+     */
+    public boolean isString() {
+        return value instanceof String;
+    }
+
+    /**
+     * Check that value is a boolean type
+     *
+     * @return true if value is an boolean type
+     */
+    public boolean isBoolean() {
+        return value instanceof Boolean;
+    }
+
+    /**
+     * Get value.
+     *
+     * @return value
+     */
+    public Object getValue() {
+        return value;
     }
 }

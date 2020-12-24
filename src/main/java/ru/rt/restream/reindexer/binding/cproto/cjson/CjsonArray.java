@@ -44,4 +44,8 @@ public class CjsonArray extends CjsonElement implements Iterable<CjsonElement> {
     public Iterator<CjsonElement> iterator() {
         return members.iterator();
     }
+
+    public List<CjsonElement> list() {
+        return members;
+    }
 }

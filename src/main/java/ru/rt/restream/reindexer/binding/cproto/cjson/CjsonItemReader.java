@@ -32,19 +32,19 @@ public class CjsonItemReader<T> implements ItemReader<T> {
 
     private final Class<T> itemClass;
 
-    private final PayloadType payloadType;
+    private final CtagMatcher ctagMatcher;
 
-    public CjsonItemReader(Class<T> itemClass, PayloadType payloadType) {
+    public CjsonItemReader(Class<T> itemClass, CtagMatcher ctagMatcher) {
         this.itemClass = itemClass;
-        this.payloadType = payloadType;
+        this.ctagMatcher = ctagMatcher;
     }
 
     @Override
     public T readItem(ByteBuffer buffer) {
-        CjsonDecoder reader = new CjsonDecoder(payloadType, buffer);
+        CjsonDecoder reader = new CjsonDecoder(ctagMatcher, buffer);
         CjsonElement element = reader.decode();
         if (!element.isObject()) {
-            throw new IllegalArgumentException("Read item is not an item");
+            throw new IllegalArgumentException("Read object is not an item");
         }
         return readObject(element.getAsCjsonObject(), itemClass);
     }

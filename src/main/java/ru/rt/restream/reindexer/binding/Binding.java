@@ -71,25 +71,11 @@ public interface Binding {
 
     int CODE_MAX = 128;
 
-    int RESULTS_FORMAT_MASK = 0xF;
-
     int RESULTS_PURE = 0x0;
 
     int RESULTS_PTRS = 0x1;
 
-    int RESULTS_C_JSON = 0x2;
-
-    int RESULTS_JSON = 0x3;
-
     int RESULTS_MSG_PACK = 0x4;
-
-    int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
-
-    int RESULTS_WITH_ITEM_ID = 0x20;
-
-    int RESULTS_WITH_RANK = 0x40;
-
-    int RESULTS_WITH_NS_ID = 0x80;
 
     int RESULTS_WITH_JOINED = 0x100;
 
@@ -122,7 +108,7 @@ public interface Binding {
      * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken    state token
      */
-    void modifyItem(String namespaceName, int format, byte[] data, int mode, String[] precepts, int stateToken);
+    void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
      * Drop a namespace by name.
@@ -142,11 +128,11 @@ public interface Binding {
      * Invoke select query.
      *
      * @param queryData  encoded query data (selected indexes, predicates, etc)
-     * @param asJson     format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
      * @param fetchCount items count to fetch within a query request
+     * @param ptVersions payload type state tokens
      * @return the request context
      */
-    RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount);
+    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions);
 
     /**
      * Invoke delete query.

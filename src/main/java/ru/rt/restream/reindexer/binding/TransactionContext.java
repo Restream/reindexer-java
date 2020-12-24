@@ -23,13 +23,21 @@ public interface TransactionContext {
     /**
      * Modifies the item data in the transaction that is associated with the context.
      *
-     * @param format     item encoding format (CJSON, JSON)
      * @param data       item data
      * @param mode       modify mode (INSERT, UPDATE, UPSERT, DELETE)
      * @param precepts   precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken state token
      */
-    void modifyItem(int format, byte[] data, int mode, String[] precepts, int stateToken);
+    void modifyItem(byte[] data, int mode, String[] precepts, int stateToken);
+
+    /**
+     * Invoke select query.
+     *
+     * @param queryData  encoded query data (selected indexes, predicates, etc)
+     * @param fetchCount items count to fetch within a query request
+     * @param ptVersions payload type state tokens
+     */
+    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions);
 
     /**
      * Invoke update query in the transaction that is associated with the context.

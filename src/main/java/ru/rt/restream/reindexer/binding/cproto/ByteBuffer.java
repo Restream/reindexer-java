@@ -15,8 +15,6 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
-import ru.rt.restream.reindexer.exceptions.UnimplementedException;
-
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -98,7 +96,7 @@ public class ByteBuffer {
         if (value < 0 || value > 0xFFFF) {
             throw new IllegalArgumentException();
         }
-        putIntBits(value, Short.BYTES);
+        putIntBits(value, Short.BYTES, -1);
         return this;
     }
 
@@ -113,20 +111,32 @@ public class ByteBuffer {
         if (value < 0 || value > 0xFFFF_FFFFL) {
             throw new IllegalArgumentException();
         }
-        putIntBits(value, Integer.BYTES);
+        putIntBits(value, Integer.BYTES, -1);
         return this;
     }
 
-    private void putIntBits(long input, int size) {
+    public ByteBuffer putUInt32(long value, int position) {
+        if (value < 0 || value > 0xFFFF_FFFFL) {
+            throw new IllegalArgumentException();
+        }
+        putIntBits(value, Integer.BYTES, position);
+        return this;
+    }
+
+    private void putIntBits(long input, int size, int position) {
         grow(size);
         byte[] buffer = new byte[size];
         for (int i = 0; i < size; i++) {
             buffer[i] = (byte) input;
             input = input >> 8;
         }
-        System.arraycopy(buffer, 0, this.buffer, position, buffer.length);
-        position = position + buffer.length;
-        this.size = this.size + buffer.length;
+        if (position != -1) {
+            System.arraycopy(buffer, 0, this.buffer, position, buffer.length);
+        } else {
+            System.arraycopy(buffer, 0, this.buffer, this.position, buffer.length);
+            this.position = this.position + buffer.length;
+            this.size = this.size + buffer.length;
+        }
     }
 
     /**
@@ -320,8 +330,13 @@ public class ByteBuffer {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Reads double value from a buffer. Increments buffer position.
+     *
+     * @return the double read from a backed array
+     */
     public double getDouble() {
-        throw new UnimplementedException();
+        return Double.longBitsToDouble(readIntBits(Long.BYTES));
     }
 
     /**
@@ -395,4 +410,19 @@ public class ByteBuffer {
         }
     }
 
+    public void putDouble(Double value) {
+        putIntBits(Double.doubleToLongBits(value), Long.BYTES, -1);
+    }
+
+    public void truncateStart(int length) {
+        byte[] bytes = new byte[buffer.length - length];
+        System.arraycopy(buffer, length, bytes, 0, buffer.length - length);
+        buffer = bytes;
+        position = position - length;
+        size = size - length;
+    }
+
+    public int getPosition() {
+        return position;
+    }
 }
