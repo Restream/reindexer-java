@@ -25,6 +25,7 @@ import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
@@ -256,6 +257,46 @@ public class Query<T> {
             return result;
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Will execute query, and return one item.
+     *
+     * @return one item
+     * @throws IllegalStateException if there are more than one or zero items
+     */
+    public T getOne() {
+        T item = getOneInternal();
+        if (item == null) {
+            throw new IllegalStateException("Exactly one item expected, but there is zero");
+        }
+        return item;
+    }
+
+    /**
+     * Will execute query, and return Optional item.
+     *
+     * @return Optional item
+     * @throws IllegalStateException if there are more than one item
+     */
+    public Optional<T> findOne() {
+        T item = getOneInternal();
+        return Optional.ofNullable(item);
+    }
+
+    private T getOneInternal() {
+        try (CloseableIterator<T> iterator = execute()) {
+            T item = null;
+            if (iterator.hasNext()) {
+                item = iterator.next();
+            }
+            if (iterator.hasNext()) {
+                throw new IllegalStateException("Exactly one item expected, but there are more");
+            }
+            return item;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
