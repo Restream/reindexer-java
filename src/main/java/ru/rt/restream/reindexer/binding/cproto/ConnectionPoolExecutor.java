@@ -55,7 +55,7 @@ public class ConnectionPoolExecutor {
         try {
             return function.apply(connection);
         } catch (Exception e) {
-            LOGGER.error("rx: executeInConnection error - force closing a connection", e);
+            LOGGER.debug("rx: executeInConnection error - force closing a connection", e);
             ConnectionUtils.close(connection);
             throw e;
         } finally {
