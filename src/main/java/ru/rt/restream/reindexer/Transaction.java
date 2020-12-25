@@ -17,10 +17,8 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.TransactionContext;
-import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
-import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CJsonItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
+import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
@@ -297,7 +295,8 @@ public class Transaction<T> {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
-                byte[] data = serialize(item);
+                ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
+                byte[] data = itemSerializer.serialize(item);
                 transactionContext.modifyItem(data, mode, precepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
@@ -312,18 +311,6 @@ public class Transaction<T> {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private byte[] serialize(T item) {
-        ByteBuffer buffer = new ByteBuffer();
-        CtagMatcher ctagMatcher = new CtagMatcher();
-        PayloadType payloadType = namespace.getPayloadType();
-        if (payloadType != null) {
-            ctagMatcher.read(payloadType);
-        }
-        ItemWriter<T> itemWriter = new CJsonItemWriter<>(ctagMatcher);
-        itemWriter.writeItem(buffer, item);
-        return buffer.bytes();
     }
 
     /**
