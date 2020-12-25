@@ -15,5 +15,10 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
-public class DbException extends ReindexerException {
+public class StateInvalidatedException extends ReindexerException {
+
+    StateInvalidatedException(String errorMessage) {
+        super(errorMessage);
+    }
+
 }

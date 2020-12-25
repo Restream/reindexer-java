@@ -23,6 +23,7 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
 import static ru.rt.restream.reindexer.binding.Binding.SELECT;
+import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
 /**
  * A transaction context which establish a connection to the Reindexer instance via RPC.
@@ -57,7 +58,7 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public void modifyItem(int format, byte[] data, int mode, String[] precepts, int stateToken) {
+    public void modifyItem(byte[] data, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = new byte[0];
         if (precepts.length > 0) {
             ByteBuffer buffer = new ByteBuffer();
@@ -67,7 +68,8 @@ public class CprotoTransactionContext implements TransactionContext {
             }
             packedPrecepts = buffer.bytes();
         }
-        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, transactionId);
+        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken,
+                transactionId);
     }
 
     @Override
@@ -81,15 +83,10 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount) {
-        int flags;
-        if (asJson) {
-            flags = Consts.RESULTS_JSON;
-        } else {
-            flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-        }
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
+        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
-                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
+                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
         return new CprotoRequestContext(rpcResponse, connection, true);
     }
 

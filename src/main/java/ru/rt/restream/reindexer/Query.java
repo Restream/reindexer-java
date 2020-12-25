@@ -17,13 +17,16 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
+import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -343,9 +346,17 @@ public class Query<T> {
             buffer.putVarUInt32(QUERY_END);
         }
 
+        PayloadType payloadType = namespace.getPayloadType();
+        long[] ptVersions =  new long[]{payloadType == null ? 0 : payloadType.getStateToken()};
         RequestContext requestContext = transactionContext != null
-                ? transactionContext.selectQuery(buffer.bytes(), false, fetchCount)
-                : binding.selectQuery(buffer.bytes(), false, fetchCount);
+                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions)
+                : binding.selectQuery(buffer.bytes(), fetchCount, ptVersions);
+
+        QueryResult queryResult = requestContext.getQueryResult();
+        queryResult.getPayloadTypes().stream()
+                .filter(pt -> payloadType == null || payloadType.getVersion() < pt.getVersion())
+                .max(Comparator.comparing(PayloadType::getVersion))
+                .ifPresent(namespace::updatePayloadType);
 
         return new CprotoIterator<>(namespace, requestContext, fetchCount);
     }

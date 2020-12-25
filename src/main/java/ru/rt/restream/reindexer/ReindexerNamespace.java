@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -39,6 +41,8 @@ public class ReindexerNamespace<T> {
     private final List<ReindexerIndex> indexes;
 
     private final String[] precepts;
+
+    private volatile PayloadType payloadType;
 
     public static<T> Builder<T> builder() {
         return new Builder<>();
@@ -101,6 +105,16 @@ public class ReindexerNamespace<T> {
 
     public String[] getPrecepts() {
         return precepts;
+    }
+
+    public PayloadType getPayloadType() {
+        return payloadType;
+    }
+
+    public synchronized void updatePayloadType(PayloadType payloadType) {
+        if (this.payloadType == null || this.payloadType.getVersion() < payloadType.getVersion()) {
+            this.payloadType = payloadType;
+        }
     }
 
     public static final class Builder<T> {

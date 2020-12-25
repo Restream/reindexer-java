@@ -20,7 +20,8 @@ import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
-import ru.rt.restream.reindexer.binding.cproto.json.JsonItemReader;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 /**
  * An iterator over a query result.
@@ -61,9 +62,14 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         count += queryResult.getCount();
         if (itemReader == null) {
             if (queryResult.isJson()) {
-                itemReader = new JsonItemReader<>(namespace.getItemClass(), queryResult.isWithRank());
+                throw new UnsupportedOperationException("Query result in json format is not supported");
             } else {
-                itemReader = new CjsonItemReader<>(namespace.getItemClass(), queryResult.getPayloadTypes().get(0));
+                CtagMatcher ctagMatcher = new CtagMatcher();
+                PayloadType payloadType = namespace.getPayloadType();
+                if (payloadType != null) {
+                    ctagMatcher.read(payloadType);
+                }
+                itemReader = new CjsonItemReader<>(namespace.getItemClass(), ctagMatcher);
             }
         }
     }

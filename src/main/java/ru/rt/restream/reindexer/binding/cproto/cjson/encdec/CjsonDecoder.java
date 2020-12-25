@@ -19,15 +19,15 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.*;
 
 /**
- * Decodes a Cjson byte data to a CjsonElement.
+ * Decodes a сjson byte data to a CjsonElement.
  */
 public class CjsonDecoder {
 
-    private final PayloadType payloadType;
+    private final CtagMatcher ctagMatcher;
     private final ByteBuffer buffer;
 
-    public CjsonDecoder(PayloadType payloadType, ByteBuffer buffer) {
-        this.payloadType = payloadType;
+    public CjsonDecoder(CtagMatcher ctagMatcher, ByteBuffer buffer) {
+        this.ctagMatcher = ctagMatcher;
         this.buffer = buffer;
     }
 
@@ -71,7 +71,7 @@ public class CjsonDecoder {
         CjsonObject cjsonObject = new CjsonObject();
         Ctag ctag = new Ctag(buffer.getVarUInt());
         while (ctag.type() != Ctag.END) {
-            cjsonObject.add(payloadType.tagToName(ctag.name()), decode(ctag.type()));
+            cjsonObject.add(ctagMatcher.getName(ctag.name()), decode(ctag.type()));
             ctag = new Ctag(buffer.getVarUInt());
         }
         return cjsonObject;

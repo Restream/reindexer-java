@@ -24,7 +24,6 @@ public class ReindexerException extends RuntimeException {
         super(message);
     }
 
-
     public ReindexerException(String message, Throwable cause) {
         super(message, cause);
     }

@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.cproto.Connection;
 import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
+import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 
 /**
  * Utility class for using a {@link Connection}.
@@ -56,7 +57,7 @@ public final class ConnectionUtils {
     public static RpcResponse rpcCall(Connection connection, int command, Object... args) {
         RpcResponse rpcResponse = connection.rpcCall(command, args);
         if (rpcResponse.hasError()) {
-            throw new ReindexerException(rpcResponse.getErrorMessage());
+            throw ReindexerExceptionFactory.fromRpcResponse(rpcResponse);
         }
         return rpcResponse;
     }

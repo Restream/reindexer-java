@@ -16,11 +16,13 @@
 package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.json.JsonItemWriter;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CJsonItemWriter;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,11 +57,6 @@ public class Transaction<T> {
      * The futures list.
      */
     private final List<Future<DeferredResult<T>>> futures = new ArrayList<>();
-
-    /**
-     * The {@link ItemWriter} for JSON serialization.
-     */
-    private final ItemWriter<T> itemWriter = new JsonItemWriter<>();
 
     /**
      * Indicates that the current transaction is started.
@@ -295,15 +292,36 @@ public class Transaction<T> {
     }
 
     private void modifyItem(T item, int mode) {
-        int format = Consts.FORMAT_JSON;
-        byte[] data = serialize(item, format);
         String[] precepts = namespace.getPrecepts();
-        transactionContext.modifyItem(format, data, mode, precepts, 0);
+        for (int i = 0; i < 2; i++) {
+            try {
+                PayloadType payloadType = namespace.getPayloadType();
+                int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+                byte[] data = serialize(item);
+                transactionContext.modifyItem(data, mode, precepts, stateToken);
+                break;
+            } catch (StateInvalidatedException e) {
+                updatePayloadType();
+            }
+        }
     }
 
-    private byte[] serialize(T item, int format) {
+    private void updatePayloadType() {
+        try {
+            query().limit(0).execute().close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private byte[] serialize(T item) {
         ByteBuffer buffer = new ByteBuffer();
-        buffer.putVarInt64(format);
+        CtagMatcher ctagMatcher = new CtagMatcher();
+        PayloadType payloadType = namespace.getPayloadType();
+        if (payloadType != null) {
+            ctagMatcher.read(payloadType);
+        }
+        ItemWriter<T> itemWriter = new CJsonItemWriter<>(ctagMatcher);
         itemWriter.writeItem(buffer, item);
         return buffer.bytes();
     }
