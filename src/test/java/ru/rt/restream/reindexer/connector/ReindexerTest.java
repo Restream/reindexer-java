@@ -236,6 +236,66 @@ public class ReindexerTest {
     }
 
     @Test
+    public void testSelectItemByOrCondition() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элемент с id 77 или 78
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .or()
+                .where("id", EQ, 78)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem next = iterator.next();
+        assertThat(next.id, is(77));
+        assertThat(next.name, is("TestName77"));
+        assertThat(next.value, is("77Value"));
+
+        assertThat(iterator.hasNext(), is(true));
+        next = iterator.next();
+        assertThat(next.id, is(78));
+        assertThat(next.name, is("TestName78"));
+        assertThat(next.value, is("78Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testSelectItemsByNotCondition() {
+        //Вставить 100 элементов
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+        //Выбрать из БД элементы у которых id не равняется 77
+        List<TestItem> queryItems = db.query("items", TestItem.class)
+                .not()
+                .where("id", EQ, 77)
+                .toList();
+
+        assertThat(queryItems.size(), is(99));
+        assertThat(queryItems.stream().anyMatch(testItem -> testItem.id == 77), is(false));
+    }
+
+    @Test
     public void testSelectOneItemByCompositeIndex() {
         //Вставить 100 элементов
         String namespaceName = "items";

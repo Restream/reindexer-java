@@ -29,8 +29,6 @@ import java.util.Optional;
 
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
-import static ru.rt.restream.reindexer.binding.Consts.OP_AND;
-import static ru.rt.restream.reindexer.binding.Consts.OP_OR;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_DROP_FIELD;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_END;
@@ -44,6 +42,10 @@ import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 public class Query<T> {
 
     private static final int DEFAULT_FETCH_COUNT = 100;
+
+    private static final int OP_OR = 1;
+    private static final int OP_AND = 2;
+    private static final int OP_NOT = 3;
 
     public enum Condition {
         ANY(0),
@@ -61,7 +63,6 @@ public class Query<T> {
         Condition(int code) {
             this.code = code;
         }
-
     }
 
     private final Binding binding;
@@ -153,6 +154,26 @@ public class Query<T> {
             }
         }
 
+        return this;
+    }
+
+    /**
+     * Next condition will added with OR
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> or() {
+        this.nextOperation = OP_OR;
+        return this;
+    }
+
+    /**
+     * Next condition will added with NOT
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> not() {
+        this.nextOperation = OP_NOT;
         return this;
     }
 

@@ -37,10 +37,6 @@ public class Consts {
     public static final int COLLATE_NUMERIC = 3;
     public static final int COLLATE_CUSTOM = 4;
 
-    public static final int OP_OR = 1;
-    public static final int OP_AND = 2;
-    public static final int OP_NOT = 3;
-
     public static final int VALUE_INT_64 = 0;
     public static final int VALUE_DOUBLE = 1;
     public static final int VALUE_STRING = 2;
