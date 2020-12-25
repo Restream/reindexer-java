@@ -17,10 +17,8 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
-import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CJsonItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
+import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
@@ -185,25 +183,14 @@ public class Reindexer {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
-                byte[] data = serialize(namespace, item);
+                ItemSerializer<T> serializer = new CjsonItemSerializer<>(payloadType);
+                byte[] data = serializer.serialize(item);
                 binding.modifyItem(namespace.getName(), data, mode, percepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType(namespace);
             }
         }
-    }
-
-    private<T> byte[] serialize(ReindexerNamespace<T> namespace, T item) {
-        ByteBuffer buffer = new ByteBuffer();
-        CtagMatcher ctagMatcher = new CtagMatcher();
-        PayloadType payloadType = namespace.getPayloadType();
-        if (payloadType != null) {
-            ctagMatcher.read(payloadType);
-        }
-        ItemWriter<T> itemWriter = new CJsonItemWriter<>(ctagMatcher);
-        itemWriter.writeItem(buffer, item);
-        return buffer.bytes();
     }
 
     private void updatePayloadType(ReindexerNamespace<?> namespace) {
