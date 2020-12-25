@@ -142,7 +142,7 @@ public class CprotoRequestContext implements RequestContext {
             for (int i = 0; i < ptCount; i++) {
                 long namespaceId = buffer.getVarUInt();
                 String namespaceName = buffer.getVString();
-                long stateToken = buffer.getVarUInt();
+                int stateToken = (int) buffer.getVarUInt();
                 long version = buffer.getVarUInt();
 
                 //read tags

@@ -182,22 +182,28 @@ public class Reindexer {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         String[] percepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
-            ByteBuffer buffer = new ByteBuffer();
-            CtagMatcher ctagMatcher = new CtagMatcher();
-            PayloadType payloadType = namespace.getPayloadType();
-            if (payloadType != null) {
-                ctagMatcher.read(payloadType);
-            }
-            ItemWriter<T> itemWriter = new CJsonItemWriter<>(ctagMatcher);
-            itemWriter.writeItem(buffer, item);
             try {
-                int stateToken = (int) (payloadType == null ? 0 : payloadType.getStateToken());
-                binding.modifyItem(namespace.getName(), buffer.bytes(), mode, percepts, stateToken);
+                PayloadType payloadType = namespace.getPayloadType();
+                int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+                byte[] data = serialize(namespace, item);
+                binding.modifyItem(namespace.getName(), data, mode, percepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType(namespace);
             }
         }
+    }
+
+    private<T> byte[] serialize(ReindexerNamespace<T> namespace, T item) {
+        ByteBuffer buffer = new ByteBuffer();
+        CtagMatcher ctagMatcher = new CtagMatcher();
+        PayloadType payloadType = namespace.getPayloadType();
+        if (payloadType != null) {
+            ctagMatcher.read(payloadType);
+        }
+        ItemWriter<T> itemWriter = new CJsonItemWriter<>(ctagMatcher);
+        itemWriter.writeItem(buffer, item);
+        return buffer.bytes();
     }
 
     private void updatePayloadType(ReindexerNamespace<?> namespace) {

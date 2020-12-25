@@ -292,18 +292,17 @@ public class Transaction<T> {
     }
 
     private void modifyItem(T item, int mode) {
+        String[] precepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
             try {
-                byte[] data = serialize(item);
-                String[] precepts = namespace.getPrecepts();
                 PayloadType payloadType = namespace.getPayloadType();
-                int stateToken = (int) (payloadType == null ? -1 : payloadType.getStateToken());
+                int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+                byte[] data = serialize(item);
                 transactionContext.modifyItem(data, mode, precepts, stateToken);
+                break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType();
-                continue;
             }
-            break;
         }
     }
 

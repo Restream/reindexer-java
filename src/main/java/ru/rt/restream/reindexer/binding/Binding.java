@@ -102,7 +102,6 @@ public interface Binding {
      * Modifies namespace item data.
      *
      * @param namespaceName name of a namespace item belongs to
-     * @param format        item encoding format (CJSON, JSON)
      * @param data          item data
      * @param mode          modify mode (UPDATE, INSERT, UPSERT, DELETE)
      * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")

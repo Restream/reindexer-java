@@ -73,17 +73,6 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-        if (fetchCount <= 0) {
-            fetchCount = Integer.MAX_VALUE;
-        }
-        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags, fetchCount,
-                ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection, true);
-    }
-
-    @Override
     public void updateQuery(byte[] queryData) {
         ConnectionUtils.rpcCallNoResults(connection, UPDATE_QUERY_TX, queryData, transactionId);
     }
@@ -94,10 +83,10 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount) {
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
-                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
+                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
         return new CprotoRequestContext(rpcResponse, connection, true);
     }
 

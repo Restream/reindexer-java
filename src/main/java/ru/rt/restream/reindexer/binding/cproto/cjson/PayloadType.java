@@ -27,7 +27,7 @@ public class PayloadType {
 
     private final long version;
 
-    private final long stateToken;
+    private final int stateToken;
 
     private final long pStringHdrOffset;
 
@@ -37,7 +37,7 @@ public class PayloadType {
 
     private final Map<String, Integer> names = new HashMap<>();
 
-    public PayloadType(long namespaceId, String namespaceName, long version, long stateToken, long pStringHdrOffset,
+    public PayloadType(long namespaceId, String namespaceName, long version, int stateToken, long pStringHdrOffset,
                        List<String> tags, List<PayloadField> fields) {
         this.namespaceId = namespaceId;
         this.namespaceName = namespaceName;
@@ -63,7 +63,7 @@ public class PayloadType {
         return version;
     }
 
-    public long getStateToken() {
+    public int getStateToken() {
         return stateToken;
     }
 

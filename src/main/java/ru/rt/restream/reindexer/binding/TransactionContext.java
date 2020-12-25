@@ -54,16 +54,6 @@ public interface TransactionContext {
     void deleteQuery(byte[] queryData);
 
     /**
-     * Invoke select query in the transaction that is associated with the context.
-     *
-     * @param queryData  encoded query data (selected indexes, predicates, etc)
-     * @param asJson     format of encoded query data. If asJson = true - JSON format is used, CJSON otherwise.
-     * @param fetchCount items count to fetch within a query request
-     * @return the request context
-     */
-    RequestContext selectQuery(byte[] queryData, boolean asJson, int fetchCount);
-
-    /**
      * Commits the transaction that is associated with the context.
      */
     void commit();
