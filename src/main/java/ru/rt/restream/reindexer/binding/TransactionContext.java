@@ -31,11 +31,12 @@ public interface TransactionContext {
     void modifyItem(byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
-     * Invoke select query.
+     * Invoke select query in the transaction that is associated with the context.
      *
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param fetchCount items count to fetch within a query request
      * @param ptVersions payload type state tokens
+     * @return the request context
      */
     RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions);
 
