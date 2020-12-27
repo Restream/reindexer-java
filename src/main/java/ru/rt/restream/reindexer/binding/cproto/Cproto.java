@@ -34,9 +34,9 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
 public class Cproto implements Binding {
 
     /**
-     * The connection pool executor.
+     * The connection pool.
      */
-    private final ConnectionPoolExecutor executor;
+    private final ConnectionPool pool;
 
     /**
      * Construct binding instance to the given database URL.
@@ -46,8 +46,7 @@ public class Cproto implements Binding {
      * @param connectionTimeout  the connection timeout
      */
     public Cproto(String url, int connectionPoolSize, long connectionTimeout) {
-        ConnectionPool pool = new ConnectionPool(url, connectionPoolSize, connectionTimeout);
-        executor = new ConnectionPoolExecutor(pool);
+        pool = new ConnectionPool(url, connectionPoolSize, connectionTimeout);
     }
 
     /**
@@ -119,12 +118,15 @@ public class Cproto implements Binding {
     @Override
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-
-        return executor.executeInConnection(conn -> {
-            RpcResponse rpcResponse = ConnectionUtils.rpcCall(conn, SELECT, queryData, flags,
+        Connection connection = pool.getConnection();
+        try {
+            RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                     fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
-            return new CprotoRequestContext(rpcResponse, conn, false);
-        }, true);
+            return new CprotoRequestContext(rpcResponse, connection, false);
+        } catch (Exception e) {
+            ConnectionUtils.close(connection);
+            throw e;
+        }
     }
 
     @Override
@@ -139,27 +141,33 @@ public class Cproto implements Binding {
 
     @Override
     public TransactionContext beginTx(String namespaceName) {
-        return executor.executeInConnection(conn -> {
-            RpcResponse rpcResponse = ConnectionUtils.rpcCall(conn, START_TRANSACTION, namespaceName);
+        Connection connection = pool.getConnection();
+        try {
+            RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, START_TRANSACTION, namespaceName);
             Object[] responseArguments = rpcResponse.getArguments();
             long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
-            return new CprotoTransactionContext(transactionId, conn);
-        }, true);
+            return new CprotoTransactionContext(transactionId, connection);
+        } catch (Exception e) {
+            ConnectionUtils.close(connection);
+            throw e;
+        }
     }
 
     /**
-     * Closes the connection pool executor.
+     * Closes the connection pool.
      */
     @Override
     public void close() {
-        executor.close();
+        pool.close();
     }
 
     private void rpcCallNoResults(int command, Object... args) {
-        executor.executeInConnection(conn -> {
-            ConnectionUtils.rpcCallNoResults(conn, command, args);
-            return null;
-        }, false);
+        Connection connection = pool.getConnection();
+        try {
+            ConnectionUtils.rpcCallNoResults(connection, command, args);
+        } finally {
+            ConnectionUtils.close(connection);
+        }
     }
 
 }
