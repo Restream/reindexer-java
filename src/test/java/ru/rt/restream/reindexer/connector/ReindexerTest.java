@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -1798,6 +1800,25 @@ public class ReindexerTest {
 
         assertThrows(RuntimeException.class, () -> db.query(namespaceName, TestItem.class).findOne(),
                 "Exactly one item expected, but there are more");
+    }
+
+    @Test
+    public void testQueryStream() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 5; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+        }
+
+        try (Stream<TestItem> items = db.query(namespaceName, TestItem.class).stream()) {
+            List<Integer> ids = items.map(TestItem::getId).collect(Collectors.toList());
+            assertThat(ids, contains(0, 1, 2, 3, 4));
+        }
     }
 
     private void post(String path, Object body) {

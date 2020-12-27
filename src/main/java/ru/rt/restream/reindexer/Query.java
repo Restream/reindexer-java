@@ -29,6 +29,10 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
@@ -273,6 +277,19 @@ public class Query<T> {
                 putValue(object);
             }
         }
+    }
+
+    /**
+     * Will execute query, and return stream of items.
+     * The returned stream must be closed using the {@link Stream#close()} method or
+     * by using a Java 7 try-with-resources block.
+     *
+     * @return stream of items
+     */
+    public Stream<T> stream() {
+        CloseableIterator<T> iterator = execute();
+        Spliterator<T> spliterator = Spliterators.spliterator(iterator, iterator.size(), Spliterator.NONNULL);
+        return StreamSupport.stream(spliterator, false).onClose(iterator::close);
     }
 
     /**
