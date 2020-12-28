@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.encdec.CjsonDecoder;
@@ -53,7 +54,9 @@ public class CjsonItemReader<T> implements ItemReader<T> {
         V instance = createInstance(target);
         List<Field> fields = BeanPropertyUtils.getInheritedFields(target);
         for (Field field : fields) {
-            Object value = getTargetValue(field, cjsonObject.getProperty(field.getName()));
+            Json json = field.getAnnotation(Json.class);
+            String tagName = json == null ? field.getName() : json.value();
+            Object value = getTargetValue(field, cjsonObject.getProperty(tagName));
             if (value != null) {
                 writeField(instance, field, value);
             }

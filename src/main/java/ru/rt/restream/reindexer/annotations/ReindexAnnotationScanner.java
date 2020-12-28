@@ -96,7 +96,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 continue;
             }
             String reindexPath = reindexBasePath + reindex.name();
-            String jsonPath = jsonBasePath + field.getName();
+            Json json = field.getAnnotation(Json.class);
+            String jsonPath = jsonBasePath + (json == null ? field.getName() : json.value());
             FieldInfo fieldInfo = getFieldInfo(field);
             if (subArray) {
                 fieldInfo.isArray = true;

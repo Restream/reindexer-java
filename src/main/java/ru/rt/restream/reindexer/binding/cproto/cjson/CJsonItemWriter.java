@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
 import ru.rt.restream.reindexer.binding.cproto.cjson.encdec.CjsonEncoder;
@@ -75,7 +76,9 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                 Object fieldValue = readFieldValue(source, field);
                 if (fieldValue != null) {
                     CjsonElement cjsonElement = toCjson(fieldValue);
-                    cjsonObject.add(field.getName(), cjsonElement);
+                    Json json = field.getAnnotation(Json.class);
+                    String tagName = json == null ? field.getName() : json.value();
+                    cjsonObject.add(tagName, cjsonElement);
                 }
             }
             return cjsonObject;
