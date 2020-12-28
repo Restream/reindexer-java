@@ -26,4 +26,17 @@ import java.util.Iterator;
  */
 public interface CloseableIterator<E> extends Iterator<E>, AutoCloseable {
 
+    /**
+     * Returns the iterator size.
+     *
+     * @return the iterator size
+     */
+    long size();
+
+    /**
+     * Closes the iterator.
+     */
+    @Override
+    void close();
+
 }

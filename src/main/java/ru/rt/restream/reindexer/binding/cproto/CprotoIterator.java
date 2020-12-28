@@ -139,6 +139,11 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         parseQueryResult(queryResult);
     }
 
+    @Override
+    public long size() {
+        return queryResult.getQCount();
+    }
+
     /**
      * Closes the request context.
      */
