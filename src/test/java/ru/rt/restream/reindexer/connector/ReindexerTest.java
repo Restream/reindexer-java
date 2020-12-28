@@ -1838,6 +1838,34 @@ public class ReindexerTest {
         assertThat(count, is(10L));
     }
 
+    @Test
+    public void testQueryNotExists() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        boolean notExists = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .notExists();
+        assertThat(notExists, is(true));
+    }
+
+    @Test
+    public void testQueryExists() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        boolean exists = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .exists();
+        assertThat(exists, is(true));
+    }
+
     private void post(String path, Object body) {
         HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
 

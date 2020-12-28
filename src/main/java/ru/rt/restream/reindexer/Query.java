@@ -361,6 +361,26 @@ public class Query<T> {
     }
 
     /**
+     * Will execute query, and return true if the item does not exists.
+     *
+     * @return true if the item does not exists
+     */
+    public boolean notExists() {
+        return !exists();
+    }
+
+    /**
+     * Will execute query, and return true if the item exists.
+     *
+     * @return true if the item exists
+     */
+    public boolean exists() {
+        try (CloseableIterator<T> iterator = execute()) {
+            return iterator.hasNext();
+        }
+    }
+
+    /**
      * Will execute query, and return slice of items.
      *
      * @return an iterator over a query result
