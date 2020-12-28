@@ -350,6 +350,17 @@ public class Query<T> {
     }
 
     /**
+     * Will execute query, and return count of items.
+     *
+     * @return count of items
+     */
+    public long count() {
+        try (CloseableIterator<T> iterator = execute()) {
+            return iterator.size();
+        }
+    }
+
+    /**
      * Will execute query, and return slice of items.
      *
      * @return an iterator over a query result
