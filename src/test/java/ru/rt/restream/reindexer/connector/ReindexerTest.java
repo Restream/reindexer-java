@@ -1821,6 +1821,23 @@ public class ReindexerTest {
         }
     }
 
+    @Test
+    public void testQueryCount() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 10; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+        }
+
+        long count = db.query(namespaceName, TestItem.class).count();
+        assertThat(count, is(10L));
+    }
+
     private void post(String path, Object body) {
         HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
 
