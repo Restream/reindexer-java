@@ -50,4 +50,12 @@ public class DeferredResult<T> {
         return error != null;
     }
 
+    @Override
+    public String toString() {
+        return "DeferredResult{" +
+               "item=" + item +
+               ", error=" + error +
+               '}';
+    }
+
 }

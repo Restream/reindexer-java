@@ -2013,6 +2013,20 @@ public class ReindexerTest {
         public int hashCode() {
             return Objects.hash(id, name, value, nonIndex, nestedTest);
         }
+
+        @Override
+        public String toString() {
+            return "TestItem{" +
+                   "id=" + id +
+                   ", name='" + name + '\'' +
+                   ", value='" + value + '\'' +
+                   ", nonIndex='" + nonIndex + '\'' +
+                   ", nestedTest=" + nestedTest +
+                   ", listNested=" + listNested +
+                   ", integers=" + integers +
+                   '}';
+        }
+
     }
 
     private static class NestedTest {
