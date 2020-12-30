@@ -36,8 +36,8 @@ public interface RequestContext {
     void fetchResults(int offset, int limit);
 
     /**
-     * Closes the context.
+     * Closes query results.
      */
-    void close();
+    void closeResults();
 
 }

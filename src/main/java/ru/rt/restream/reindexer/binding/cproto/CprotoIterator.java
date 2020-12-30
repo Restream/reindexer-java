@@ -152,7 +152,7 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         if (closed) {
             return;
         }
-        requestContext.close();
+        requestContext.closeResults();
         closed = true;
     }
 

@@ -15,8 +15,6 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.cproto.Connection;
 import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
@@ -26,8 +24,6 @@ import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
  * Utility class for using a {@link Connection}.
  */
 public final class ConnectionUtils {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionUtils.class);
 
     private ConnectionUtils() {
         // utils
@@ -60,20 +56,6 @@ public final class ConnectionUtils {
             throw ReindexerExceptionFactory.fromRpcResponse(rpcResponse);
         }
         return rpcResponse;
-    }
-
-    /**
-     * Closes the given connection.
-     * Exceptions while closing are written to the log.
-     *
-     * @param connection the connection to close
-     */
-    public static void close(Connection connection) {
-        try {
-            connection.close();
-        } catch (Exception e) {
-            LOGGER.error("rx: connection close error", e);
-        }
     }
 
 }

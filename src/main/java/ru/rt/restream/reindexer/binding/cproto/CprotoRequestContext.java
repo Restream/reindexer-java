@@ -54,8 +54,6 @@ public class CprotoRequestContext implements RequestContext {
 
     private final Connection connection;
 
-    private final boolean transactional;
-
     private QueryResult queryResult;
 
     private int requestId = -1;
@@ -63,14 +61,12 @@ public class CprotoRequestContext implements RequestContext {
     /**
      * Creates an instance.
      *
-     * @param rpcResponse   the RPC response
-     * @param connection    the connection in which the request was made
-     * @param transactional indicates that the request is being executed in a transaction
+     * @param rpcResponse the RPC response
+     * @param connection  the connection in which the request was made
      */
-    public CprotoRequestContext(RpcResponse rpcResponse, Connection connection, boolean transactional) {
+    public CprotoRequestContext(RpcResponse rpcResponse, Connection connection) {
         this.queryResult = getQueryResult(rpcResponse);
         this.connection = connection;
-        this.transactional = transactional;
     }
 
     @Override
@@ -88,22 +84,15 @@ public class CprotoRequestContext implements RequestContext {
 
     /**
      * Closes query results if need (i.e. query request id is not -1).
-     * Closes the connection if the request is not transactional (the connection will be closed after a rollback or commit).
      */
     @Override
-    public void close() {
-        try {
-            if (requestId != -1) {
-                RpcResponse rpcResponse = connection.rpcCall(CLOSE_RESULTS, requestId);
-                if (rpcResponse.hasError()) {
-                    LOGGER.error("rx: query close error {}", rpcResponse.getErrorMessage());
-                }
-                requestId = -1;
+    public void closeResults() {
+        if (requestId != -1) {
+            RpcResponse rpcResponse = connection.rpcCall(CLOSE_RESULTS, requestId);
+            if (rpcResponse.hasError()) {
+                LOGGER.error("rx: query close error {}", rpcResponse.getErrorMessage());
             }
-        } finally {
-            if (!transactional) {
-                ConnectionUtils.close(connection);
-            }
+            requestId = -1;
         }
     }
 

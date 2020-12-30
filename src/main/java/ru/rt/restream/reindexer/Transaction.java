@@ -118,7 +118,6 @@ public class Transaction<T> {
         awaitResults();
         checkAsyncError();
         transactionContext.commit();
-        transactionContext.close();
         finalized = true;
     }
 
@@ -133,7 +132,6 @@ public class Transaction<T> {
         }
         awaitResults();
         transactionContext.rollback();
-        transactionContext.close();
         asyncError = null;
         finalized = true;
     }

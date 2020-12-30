@@ -66,7 +66,7 @@ public class JoinTest {
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
                 .connectionPoolSize(1)
-                .connectionTimeout(30L)
+                .requestTimeout(30L)
                 .getReindexer();
     }
 

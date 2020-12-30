@@ -43,10 +43,10 @@ public class Cproto implements Binding {
      *
      * @param url                a database url of the form cproto://host:port/database_name
      * @param connectionPoolSize the connection pool size
-     * @param connectionTimeout  the connection timeout
+     * @param requestTimeout     the request timeout
      */
-    public Cproto(String url, int connectionPoolSize, long connectionTimeout) {
-        pool = new ConnectionPool(url, connectionPoolSize, connectionTimeout);
+    public Cproto(String url, int connectionPoolSize, long requestTimeout) {
+        pool = new ConnectionPool(url, connectionPoolSize, requestTimeout);
     }
 
     /**
@@ -119,14 +119,9 @@ public class Cproto implements Binding {
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
-        try {
-            RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
-                    fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
-            return new CprotoRequestContext(rpcResponse, connection, false);
-        } catch (Exception e) {
-            ConnectionUtils.close(connection);
-            throw e;
-        }
+        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
+                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
+        return new CprotoRequestContext(rpcResponse, connection);
     }
 
     @Override
@@ -142,15 +137,10 @@ public class Cproto implements Binding {
     @Override
     public TransactionContext beginTx(String namespaceName) {
         Connection connection = pool.getConnection();
-        try {
-            RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, START_TRANSACTION, namespaceName);
-            Object[] responseArguments = rpcResponse.getArguments();
-            long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
-            return new CprotoTransactionContext(transactionId, connection);
-        } catch (Exception e) {
-            ConnectionUtils.close(connection);
-            throw e;
-        }
+        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, START_TRANSACTION, namespaceName);
+        Object[] responseArguments = rpcResponse.getArguments();
+        long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
+        return new CprotoTransactionContext(transactionId, connection);
     }
 
     /**
@@ -163,11 +153,7 @@ public class Cproto implements Binding {
 
     private void rpcCallNoResults(int command, Object... args) {
         Connection connection = pool.getConnection();
-        try {
-            ConnectionUtils.rpcCallNoResults(connection, command, args);
-        } finally {
-            ConnectionUtils.close(connection);
-        }
+        ConnectionUtils.rpcCallNoResults(connection, command, args);
     }
 
 }

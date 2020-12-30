@@ -16,31 +16,35 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
 import java.net.URI;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A simple standalone connection pool.
- * It is based on a blocking queue.
- *
- * @see ArrayBlockingQueue
  */
 public class ConnectionPool {
 
     /**
-     * Available connections.
+     * Scheduler for async I/O processing.
      */
-    private final BlockingQueue<Connection> connections;
+    private final ScheduledExecutorService scheduler;
 
     /**
-     * Connection timeout.
+     * Available connections.
      */
-    private final long connectionTimeout;
+    private final List<Connection> connections;
+
+    /**
+     * Generator of identifiers for obtaining a connection.
+     */
+    private final AtomicInteger next = new AtomicInteger(0);
 
     /**
      * Indicates that if this pool is closed.
@@ -67,9 +71,9 @@ public class ConnectionPool {
      *
      * @param url                a database url of the form cproto://host:port/database_name
      * @param connectionPoolSize the connection pool size
-     * @param connectionTimeout  the connection timeout
+     * @param requestTimeout     the request timeout
      */
-    public ConnectionPool(String url, int connectionPoolSize, long connectionTimeout) {
+    public ConnectionPool(String url, int connectionPoolSize, long requestTimeout) {
         URI uri = URI.create(url);
         database = uri.getPath().substring(1);
         String userInfo = uri.getUserInfo();
@@ -85,13 +89,14 @@ public class ConnectionPool {
             user = "";
             password = "";
         }
-        connections = new ArrayBlockingQueue<>(connectionPoolSize);
+        scheduler = Executors.newScheduledThreadPool(connectionPoolSize * 2);
+        List<Connection> connections = new ArrayList<>(connectionPoolSize);
         for (int i = 0; i < connectionPoolSize; i++) {
-            Connection connection = new PhysicalConnection(uri.getHost(), uri.getPort());
+            Connection connection = new PhysicalConnection(uri.getHost(), uri.getPort(), requestTimeout, scheduler);
             login(connection);
             connections.add(connection);
         }
-        this.connectionTimeout = connectionTimeout;
+        this.connections = Collections.unmodifiableList(connections);
     }
 
     private void login(Connection connection) {
@@ -99,27 +104,16 @@ public class ConnectionPool {
     }
 
     /**
-     * Retrieves a {@link Connection} from the connection pool. If <code>connectionPoolSize</code> connections are
-     * already in use, waits until a connection becomes available or <code>connectionTimeout</code> seconds elapsed.
-     * When the application is finished using the connection, it must close it in order to return it to the pool.
+     * Returns the next {@link Connection} from the connection pool.
      *
      * @return a {@link Connection} from the connection pool
-     * @throws IllegalStateException if the connection pool is closed or a timeout occurred
+     * @throws IllegalStateException if the connection pool is closed
      */
     public Connection getConnection() {
         if (closed.get()) {
             throw new IllegalStateException("Connection pool is closed");
         }
-        Connection connection = null;
-        try {
-            connection = connections.poll(connectionTimeout, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            // ignore
-        }
-        if (connection == null) {
-            throw new IllegalStateException("No available connections in pool");
-        }
-        return new PooledConnection(connection);
+        return connections.get(next.getAndIncrement() % connections.size());
     }
 
     /**
@@ -128,37 +122,9 @@ public class ConnectionPool {
      */
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            connections.forEach(ConnectionUtils::close);
+            connections.forEach(Connection::close);
+            scheduler.shutdown();
         }
-    }
-
-    private class PooledConnection implements Connection {
-
-        private final Connection connection;
-
-        private boolean closed;
-
-        private PooledConnection(Connection connection) {
-            this.connection = connection;
-        }
-
-        @Override
-        public synchronized RpcResponse rpcCall(int command, Object... args) {
-            if (closed) {
-                throw new IllegalStateException("Connection is closed");
-            }
-            return connection.rpcCall(command, args);
-        }
-
-        @Override
-        public synchronized void close() {
-            if (closed) {
-                return;
-            }
-            connections.add(connection);
-            closed = true;
-        }
-
     }
 
 }

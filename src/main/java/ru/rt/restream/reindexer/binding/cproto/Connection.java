@@ -30,4 +30,10 @@ public interface Connection extends AutoCloseable {
      */
     RpcResponse rpcCall(int command, Object... args);
 
+    /**
+     * Closes the connection.
+     */
+    @Override
+    void close();
+
 }
