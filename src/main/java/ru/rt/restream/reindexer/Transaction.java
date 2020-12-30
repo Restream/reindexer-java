@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
@@ -35,6 +37,8 @@ import java.util.function.Consumer;
  * An object that represents the context of a transaction.
  */
 public class Transaction<T> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Transaction.class);
 
     /**
      * Namespace in which the transaction is executed.
@@ -101,6 +105,7 @@ public class Transaction<T> {
         }
         transactionContext = binding.beginTx(namespace.getName());
         started = true;
+        LOGGER.debug("rx: transaction started");
     }
 
     /**
@@ -120,6 +125,7 @@ public class Transaction<T> {
         transactionContext.commit();
         transactionContext.close();
         finalized = true;
+        LOGGER.debug("rx: transaction finalized with commit");
     }
 
     /**
@@ -136,6 +142,7 @@ public class Transaction<T> {
         transactionContext.close();
         asyncError = null;
         finalized = true;
+        LOGGER.debug("rx: transaction finalized with rollback");
     }
 
     private void checkFinalized() {
@@ -151,6 +158,7 @@ public class Transaction<T> {
     }
 
     private void awaitResults() {
+        LOGGER.debug("rx: transaction awaiting for async results");
         try {
             while (!futures.isEmpty()) {
                 Future<DeferredResult<T>> future = completionService.take();
@@ -158,13 +166,16 @@ public class Transaction<T> {
                 DeferredResult<T> result = future.get();
                 if (result.hasError()) {
                     asyncError = result.getError();
+                    LOGGER.error("rx: transaction async error, pending requests will be canceled", asyncError);
                     break;
                 }
             }
         } catch (InterruptedException e) {
+            LOGGER.error("rx: transaction thread interrupted, pending requests will be canceled", e);
             Thread.currentThread().interrupt();
             asyncError = e;
         } catch (ExecutionException e) {
+            LOGGER.error("rx: transaction async execution error, pending requests will be canceled", e);
             asyncError = e;
         } finally {
             futures.forEach(f -> f.cancel(true));
@@ -274,22 +285,26 @@ public class Transaction<T> {
 
     private void modifyItemAsync(T item, int mode, Consumer<DeferredResult<T>> callback) {
         Future<DeferredResult<T>> future = completionService.submit(() -> {
+            LOGGER.debug("rx: transaction async modifyItem processing started");
             DeferredResult<T> result = new DeferredResult<>();
             try {
                 modifyItem(item, mode);
                 result.setItem(item);
             } catch (Exception e) {
+                LOGGER.error("rx: transaction async modifyItem processing error", e);
                 result.setError(e);
             }
             if (callback != null) {
                 callback.accept(result);
             }
+            LOGGER.debug("rx: transaction async modifyItem processing finished with result={}", result);
             return result;
         });
         futures.add(future);
     }
 
     private void modifyItem(T item, int mode) {
+        LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", item, mode);
         String[] precepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
             try {
@@ -300,6 +315,7 @@ public class Transaction<T> {
                 transactionContext.modifyItem(data, mode, precepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
+                LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");
                 updatePayloadType();
             }
         }
