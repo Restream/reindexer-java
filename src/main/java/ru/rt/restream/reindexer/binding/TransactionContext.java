@@ -64,9 +64,4 @@ public interface TransactionContext {
      */
     void rollback();
 
-    /**
-     * Closes context resources.
-     */
-    void close();
-
 }

@@ -27,7 +27,7 @@ public final class Configuration {
 
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
 
-    private static final long DEFAULT_CONNECTION_TIMEOUT = 60L;
+    private static final long DEFAULT_REQUEST_TIMEOUT = 60L;
 
     private String url;
 
@@ -35,7 +35,7 @@ public final class Configuration {
 
     private int connectionPoolSize = DEFAULT_CONNECTION_POOL_SIZE;
 
-    private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+    private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
 
     private Configuration() {
 
@@ -79,13 +79,13 @@ public final class Configuration {
     }
 
     /**
-     * Configure reindexer connection timeout. Defaults to 60 seconds.
+     * Configure reindexer request timeout. Defaults to 60 seconds.
      *
-     * @param connectionTimeout the connection timeout in seconds
+     * @param requestTimeout the request timeout in seconds
      * @return the {@link Configuration} for further customizations
      */
-    public Configuration connectionTimeout(long connectionTimeout) {
-        this.connectionTimeout = connectionTimeout;
+    public Configuration requestTimeout(long requestTimeout) {
+        this.requestTimeout = requestTimeout;
         return this;
     }
 
@@ -102,7 +102,7 @@ public final class Configuration {
         String protocol = url.substring(0, url.indexOf(":"));
         switch (protocol) {
             case "cproto":
-                return new Reindexer(new Cproto(url, connectionPoolSize, connectionTimeout), threadPoolSize);
+                return new Reindexer(new Cproto(url, connectionPoolSize, requestTimeout), threadPoolSize);
             case "http":
             case "builtin":
             case "builtinserver":

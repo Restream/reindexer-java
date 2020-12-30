@@ -123,7 +123,6 @@ public class Transaction<T> {
         awaitResults();
         checkAsyncError();
         transactionContext.commit();
-        transactionContext.close();
         finalized = true;
         LOGGER.debug("rx: transaction finalized with commit");
     }
@@ -139,7 +138,6 @@ public class Transaction<T> {
         }
         awaitResults();
         transactionContext.rollback();
-        transactionContext.close();
         asyncError = null;
         finalized = true;
         LOGGER.debug("rx: transaction finalized with rollback");

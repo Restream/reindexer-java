@@ -15,20 +15,42 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.exceptions.InvalidProtocolException;
 import ru.rt.restream.reindexer.exceptions.NetworkException;
+import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A "Physical" connection with a specific reindexer instance. Uses reindexer rpc protocol.
  * Commands are executed and results are returned within the context of a connection.
  */
 public class PhysicalConnection implements Connection {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PhysicalConnection.class);
+
+    private static final int QUEUE_SIZE = 512;
+
+    private static final long TASK_DELAY = 0L;
+
+    private static final long TASK_PERIOD = 10L;
 
     static final long CPROTO_MAGIC = 0xEEDD1132L;
 
@@ -40,22 +62,64 @@ public class PhysicalConnection implements Connection {
 
     static final int CPROTO_VERSION_MASK = 0x3FF;
 
+    private final AtomicLong seq = new AtomicLong(0L);
+
+    private final BlockingQueue<byte[]> requests = new ArrayBlockingQueue<>(QUEUE_SIZE);
+
+    private final Map<Long, BlockingQueue<RpcResponse>> responses = new ConcurrentHashMap<>();
+
+    private final List<Future<?>> futures = new ArrayList<>();
+
     private final Socket clientSocket;
 
     private final DataOutputStream output;
 
     private final DataInputStream input;
 
-    private int seq;
+    private final long requestTimeout;
 
-    public PhysicalConnection(String host, int port) {
+    public PhysicalConnection(String host, int port, long requestTimeout, ScheduledExecutorService scheduler) {
         try {
             clientSocket = new Socket(host, port);
             output = new DataOutputStream(clientSocket.getOutputStream());
             input = new DataInputStream(clientSocket.getInputStream());
+            this.requestTimeout = requestTimeout;
+            scheduleReadTask(scheduler);
+            scheduleWriteTask(scheduler);
         } catch (IOException e) {
             throw new NetworkException(e);
         }
+    }
+
+    private void scheduleReadTask(ScheduledExecutorService scheduler) {
+        ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
+            try {
+                RpcResponse rpcResponse = readResponse(input);
+                long seqNum = rpcResponse.getSeqNum();
+                BlockingQueue<RpcResponse> output = responses.get(seqNum);
+                if (output != null) {
+                    output.add(rpcResponse);
+                }
+            } catch (Exception e) {
+                LOGGER.error("rx: read task error", e);
+            }
+        }, TASK_DELAY, TASK_PERIOD, TimeUnit.MILLISECONDS);
+        futures.add(future);
+    }
+
+    private void scheduleWriteTask(ScheduledExecutorService scheduler) {
+        ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
+            try {
+                byte[] request = requests.take();
+                output.write(request);
+            } catch (InterruptedException e) {
+                LOGGER.error("rx: write task thread interrupted", e);
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                LOGGER.error("rx: write task error", e);
+            }
+        }, TASK_DELAY, TASK_PERIOD, TimeUnit.MILLISECONDS);
+        futures.add(future);
     }
 
     /**
@@ -67,58 +131,70 @@ public class PhysicalConnection implements Connection {
      */
     @Override
     public RpcResponse rpcCall(int command, Object... args) {
+        long seqNum = seq.getAndIncrement();
+        responses.put(seqNum, new ArrayBlockingQueue<>(1));
         try {
-            byte[] request = encode(command, seq++, args);
-            output.write(request);
-            return readResponse(input);
-        } catch (IOException e) {
-            throw new NetworkException(e);
+            byte[] request = encode(command, seqNum, args);
+            if (!requests.offer(request, requestTimeout, TimeUnit.SECONDS)) {
+                throw new ReindexerException("Request queue is full");
+            }
+            RpcResponse rpcResponse = responses.get(seqNum).poll(requestTimeout, TimeUnit.SECONDS);
+            if (rpcResponse == null) {
+                throw new ReindexerException("Request timeout");
+            }
+            return rpcResponse;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ReindexerException("Interrupted while rpcCall", e);
+        } finally {
+            responses.remove(seqNum);
         }
     }
 
-    private RpcResponse readResponse(DataInputStream inputStream) {
-        try {
-            byte[] header = new byte[CPROTO_HDR_LEN];
-            inputStream.readFully(header);
-            ByteBuffer deserializer = new ByteBuffer(header).rewind();
+    private RpcResponse readResponse(DataInputStream inputStream) throws IOException {
+        byte[] header = new byte[CPROTO_HDR_LEN];
+        inputStream.readFully(header);
+        ByteBuffer deserializer = new ByteBuffer(header).rewind();
 
-            long magic = deserializer.getUInt32();
-            int version = deserializer.getUInt16();
-            deserializer.getUInt16();
-            int size = (int) deserializer.getUInt32();
-            long rseq = deserializer.getUInt16();
+        long magic = deserializer.getUInt32();
+        int version = deserializer.getUInt16();
+        deserializer.getUInt16();
+        int size = (int) deserializer.getUInt32();
+        long rseq = deserializer.getUInt16();
 
-            if (magic != CPROTO_MAGIC) {
-                throw new InvalidProtocolException(String.format("Invalid cproto magic '%08X'", magic));
-            }
-
-            version &= CPROTO_VERSION_MASK;
-            if (version < CPROTO_VERSION) {
-                throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
-                        "This client expects reindexer server v1.9.8+", version));
-            }
-
-            byte[] body = new byte[size];
-            inputStream.readFully(body);
-
-            deserializer = new ByteBuffer(body).rewind();
-            int code = (int) deserializer.getVarUInt();
-            String message = deserializer.getVString();
-            int argsCount = (int) deserializer.getVarUInt();
-            Object[] responseArgs = new Object[argsCount];
-            for (int i = 0; i < argsCount; i++) {
-                responseArgs[i] = readArgument(deserializer);
-            }
-
-            return new RpcResponse(code, message, responseArgs);
-        } catch (IOException e) {
-            throw new NetworkException(e);
+        if (magic != CPROTO_MAGIC) {
+            throw new InvalidProtocolException(String.format("Invalid cproto magic '%08X'", magic));
         }
+
+        version &= CPROTO_VERSION_MASK;
+        if (version < CPROTO_VERSION) {
+            throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
+                                                             "This client expects reindexer server v1.9.8+", version));
+        }
+
+        byte[] body = new byte[size];
+        inputStream.readFully(body);
+
+        deserializer = new ByteBuffer(body).rewind();
+        int code = (int) deserializer.getVarUInt();
+        String message = deserializer.getVString();
+        int argsCount = (int) deserializer.getVarUInt();
+        Object[] responseArgs = new Object[argsCount];
+        for (int i = 0; i < argsCount; i++) {
+            responseArgs[i] = readArgument(deserializer);
+        }
+
+        return new RpcResponse(code, rseq, message, responseArgs);
     }
 
     @Override
-    public void close() throws Exception {
-        clientSocket.close();
+    public void close() {
+        futures.forEach(f -> f.cancel(true));
+        try {
+            clientSocket.close();
+        } catch (IOException e) {
+            LOGGER.error("rx: connection close error", e);
+        }
     }
 
     private Object readArgument(ByteBuffer deserializer) {
@@ -139,7 +215,7 @@ public class PhysicalConnection implements Connection {
         }
     }
 
-    private byte[] encode(int command, int seq, Object... args) {
+    private byte[] encode(int command, long seq, Object... args) {
 
         byte[] body = encodeArgs(args);
         byte[] header = encodeHeader(seq, command, body.length);
@@ -188,7 +264,7 @@ public class PhysicalConnection implements Connection {
         return buffer.bytes();
     }
 
-    private byte[] encodeHeader(int seq, int command, int size) {
+    private byte[] encodeHeader(long seq, int command, int size) {
         return new ByteBuffer()
                 .putUInt32(CPROTO_MAGIC)
                 .putUInt16(CPROTO_VERSION)

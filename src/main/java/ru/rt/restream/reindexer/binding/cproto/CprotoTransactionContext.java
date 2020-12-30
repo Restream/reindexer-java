@@ -87,7 +87,7 @@ public class CprotoTransactionContext implements TransactionContext {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection, true);
+        return new CprotoRequestContext(rpcResponse, connection);
     }
 
     @Override
@@ -106,14 +106,6 @@ public class CprotoTransactionContext implements TransactionContext {
         } catch (Exception e) {
             LOGGER.error("rx: rollback error", e);
         }
-    }
-
-    /**
-     * Closes the connection.
-     */
-    @Override
-    public void close() {
-        ConnectionUtils.close(connection);
     }
 
 }
