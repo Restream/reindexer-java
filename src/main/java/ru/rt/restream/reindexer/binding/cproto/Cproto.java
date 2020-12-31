@@ -26,6 +26,8 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 
+import java.time.Duration;
+
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
 
 /**
@@ -45,7 +47,7 @@ public class Cproto implements Binding {
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public Cproto(String url, int connectionPoolSize, long requestTimeout) {
+    public Cproto(String url, int connectionPoolSize, Duration requestTimeout) {
         pool = new ConnectionPool(url, connectionPoolSize, requestTimeout);
     }
 

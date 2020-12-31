@@ -21,15 +21,12 @@ public class RpcResponse {
 
     private final int code;
 
-    private final long seqNum;
-
     private final String errorMessage;
 
     private final Object[] arguments;
 
-    public RpcResponse(int code, long seqNum, String errorMessage, Object[] arguments) {
+    public RpcResponse(int code, String errorMessage, Object[] arguments) {
         this.code = code;
-        this.seqNum = seqNum;
         this.errorMessage = errorMessage;
         this.arguments = arguments;
     }
@@ -40,10 +37,6 @@ public class RpcResponse {
 
     public int getCode() {
         return code;
-    }
-
-    public long getSeqNum() {
-        return seqNum;
     }
 
     public String getErrorMessage() {

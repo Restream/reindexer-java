@@ -38,10 +38,12 @@ import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static ru.rt.restream.reindexer.Query.Condition.*;
+import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.reindexer.Query.Condition.SET;
 
 @Testcontainers
 public class JoinTest {
@@ -66,7 +68,7 @@ public class JoinTest {
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
                 .connectionPoolSize(1)
-                .requestTimeout(30L)
+                .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
     }
 

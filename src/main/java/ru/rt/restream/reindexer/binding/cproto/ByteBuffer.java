@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * A byte buffer with auto-expansion functionality. This class defines methods for reading and writing values with space
@@ -71,6 +72,16 @@ public class ByteBuffer {
      */
     public ByteBuffer() {
         this(DEFAULT_EXPAND_FACTOR, DEFAULT_INITIAL_CAPACITY);
+    }
+
+    /**
+     * Construct byte buffer with default expand factor and specified initial capacity.
+     * Position is set to 0.
+     *
+     * @param initialCapacity initial capacity of backed byte array
+     */
+    public ByteBuffer(int initialCapacity) {
+        this(DEFAULT_EXPAND_FACTOR, initialCapacity);
     }
 
     /**
@@ -422,7 +433,22 @@ public class ByteBuffer {
         size = size - length;
     }
 
+    /**
+     * Resets the buffer to be empty,
+     * but it retains the underlying storage for use by future writes.
+     */
+    public void reset() {
+        Arrays.fill(buffer, (byte) 0);
+        position = 0;
+        size = 0;
+    }
+
     public int getPosition() {
         return position;
     }
+
+    public int length() {
+        return size;
+    }
+
 }

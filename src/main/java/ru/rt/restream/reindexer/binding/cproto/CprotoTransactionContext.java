@@ -22,6 +22,8 @@ import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
+import java.util.concurrent.CompletableFuture;
+
 import static ru.rt.restream.reindexer.binding.Binding.SELECT;
 import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
@@ -59,6 +61,18 @@ public class CprotoTransactionContext implements TransactionContext {
 
     @Override
     public void modifyItem(byte[] data, int mode, String[] precepts, int stateToken) {
+        byte[] packedPrecepts = packPrecepts(precepts);
+        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken,
+                transactionId);
+    }
+
+    @Override
+    public CompletableFuture<RpcResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken) {
+        byte[] packedPrecepts = packPrecepts(precepts);
+        return connection.rpcCallAsync(ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken, transactionId);
+    }
+
+    private byte[] packPrecepts(String[] precepts) {
         byte[] packedPrecepts = new byte[0];
         if (precepts.length > 0) {
             ByteBuffer buffer = new ByteBuffer();
@@ -68,8 +82,7 @@ public class CprotoTransactionContext implements TransactionContext {
             }
             packedPrecepts = buffer.bytes();
         }
-        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken,
-                transactionId);
+        return packedPrecepts;
     }
 
     @Override
