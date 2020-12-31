@@ -24,6 +24,7 @@ import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -100,6 +101,10 @@ public class PhysicalConnection implements Connection {
                 if (output != null) {
                     output.add(rpcResponse);
                 }
+            } catch (EOFException e) {
+                // expected
+            } catch (IOException e) {
+                throw new ReindexerException(e);
             } catch (Exception e) {
                 LOGGER.error("rx: read task error", e);
             }
@@ -113,8 +118,9 @@ public class PhysicalConnection implements Connection {
                 byte[] request = requests.take();
                 output.write(request);
             } catch (InterruptedException e) {
-                LOGGER.error("rx: write task thread interrupted", e);
                 Thread.currentThread().interrupt();
+            } catch (IOException e) {
+                throw new ReindexerException(e);
             } catch (Exception e) {
                 LOGGER.error("rx: write task error", e);
             }
