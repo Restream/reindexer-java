@@ -62,7 +62,17 @@ public class Reindexer {
         executor.shutdown();
     }
 
-    public <T> void openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
+    /**
+     * Opens or creates new namespace and indexes based on passed item class.
+     *
+     * @param <T>       the item type
+     * @param name      the namespace name
+     * @param options   namespace options
+     * @param itemClass the item class
+     *
+     * @return object, that provides methods for manipulating namespace data
+     */
+    public <T> Namespace<T> openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
         ReindexerNamespace<T> namespace = ReindexerNamespace.<T>builder()
                 .name(name)
                 .itemClass(Objects.requireNonNull(itemClass))
@@ -73,6 +83,7 @@ public class Reindexer {
                 .dropStorageOnFileFormatError(options.isDropOnFileFormatError())
                 .objCacheItemsCount(options.getObjCacheItemsCount())
                 .indexes(reindexScanner.parseIndexes(itemClass))
+                .reindexer(this)
                 .build();
 
         registerNamespace(itemClass, namespace);
@@ -93,6 +104,7 @@ public class Reindexer {
             throw e;
         }
 
+        return namespace;
     }
 
     /**
@@ -139,13 +151,29 @@ public class Reindexer {
         modifyItem(namespaceName, item, MODE_DELETE);
     }
 
-    public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> clazz) {
-        ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
+    /**
+     * Begin a unit of work and return the associated namespace Transaction object.
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param itemClass     the item class
+     * @return a Transaction instance
+     */
+    public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> itemClass) {
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         Transaction<T> transaction = new Transaction<>(namespace, binding, executor);
         transaction.start();
         return transaction;
     }
 
+    /**
+     * Creates new Query for building request
+     *
+     * @param <T>           the item type
+     * @param namespaceName the namespace name
+     * @param clazz         the item class
+     * @return builder for building request
+     */
     public <T> Query<T> query(String namespaceName, Class<T> clazz) {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
         return new Query<>(binding, namespace, null);

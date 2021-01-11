@@ -1,0 +1,67 @@
+/*
+ * Copyright 2020 Restream
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package ru.rt.restream.reindexer;
+
+/**
+ * Provides methods for manipulating Reindexer namespace data.
+ *
+ * @param <T> the type of stored items
+ */
+public interface Namespace<T> {
+
+    /**
+     * Begin a unit of work and return the associated namespace Transaction object.
+     *
+     * @return a Transaction instance
+     */
+    Transaction<T> beginTransaction();
+
+    /**
+     * Inserts the given item data.
+     *
+     * @param item          the item data
+     */
+    void insert(T item);
+
+    /**
+     * Inserts or updates the given item data.
+     *
+     * @param item          the item data
+     */
+    void upsert(T item);
+
+    /**
+     * Updates the given item data.
+     *
+     * @param item          the item data
+     */
+    void update(T item);
+
+    /**
+     * Deletes the given item data.
+     *
+     * @param item          the item data
+     */
+    void delete(T item);
+
+    /**
+     * Creates new Query for building request
+     *
+     * @return builder for building request
+     * */
+    Query<T> query();
+
+}
