@@ -20,7 +20,7 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import java.util.List;
 import java.util.Objects;
 
-public class ReindexerNamespace<T> {
+public class ReindexerNamespace<T> implements Namespace<T>{
 
     private final String name;
 
@@ -42,6 +42,8 @@ public class ReindexerNamespace<T> {
 
     private final String[] precepts;
 
+    private final Reindexer reindexer;
+
     private volatile PayloadType payloadType;
 
     public static<T> Builder<T> builder() {
@@ -62,6 +64,7 @@ public class ReindexerNamespace<T> {
                 .map(ReindexerIndex::getPrecept)
                 .filter(Objects::nonNull)
                 .toArray(String[]::new);
+        this.reindexer = builder.reindexer;
     }
 
     public String getName() {
@@ -117,6 +120,36 @@ public class ReindexerNamespace<T> {
         }
     }
 
+    @Override
+    public Transaction<T> beginTransaction() {
+        return reindexer.beginTransaction(name, itemClass);
+    }
+
+    @Override
+    public void insert(T item) {
+        reindexer.insert(name, item);
+    }
+
+    @Override
+    public void upsert(T item) {
+        reindexer.upsert(name, item);
+    }
+
+    @Override
+    public void update(T item) {
+        reindexer.update(name, item);
+    }
+
+    @Override
+    public void delete(T item) {
+        reindexer.delete(name, item);
+    }
+
+    @Override
+    public Query<T> query() {
+        return reindexer.query(name, itemClass);
+    }
+
     public static final class Builder<T> {
         private String name;
         private Class<T> itemClass;
@@ -127,6 +160,7 @@ public class ReindexerNamespace<T> {
         private boolean disableObjCache;
         private long objCacheItemsCount;
         private List<ReindexerIndex> indexes;
+        public Reindexer reindexer;
 
         private Builder() {
         }
@@ -173,6 +207,11 @@ public class ReindexerNamespace<T> {
 
         public Builder<T> indexes(List<ReindexerIndex> indexes) {
             this.indexes = indexes;
+            return this;
+        }
+
+        public Builder<T> reindexer(Reindexer reindexer) {
+            this.reindexer = reindexer;
             return this;
         }
 

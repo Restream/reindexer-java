@@ -114,6 +114,14 @@ public class Item {
 
 }
 ```
+
+An alternative way to perform queries is to use the "Namespace" object, which can be obtained by opening the namespace using the Reindexer.openNamespace method:
+```java
+Namespace itemNamespace = db.openNamespace("items", NamespaceOptions.defaultOptions(), Item.class);
+Item item = namespace.query()
+        .where("name", EQ, "Vasya")
+        .getOne();
+```
 ### Complex Primary Keys and Composite Indexes
 
 A Document can have multiple fields as a primary key. To enable this feature add composite index to object.
