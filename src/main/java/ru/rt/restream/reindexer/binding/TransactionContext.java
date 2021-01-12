@@ -15,6 +15,10 @@
  */
 package ru.rt.restream.reindexer.binding;
 
+import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
+
+import java.util.concurrent.CompletableFuture;
+
 /**
  * A transaction context.
  */
@@ -29,6 +33,17 @@ public interface TransactionContext {
      * @param stateToken state token
      */
     void modifyItem(byte[] data, int mode, String[] precepts, int stateToken);
+
+    /**
+     * Modifies the item data in the transaction that is associated with the context asynchronously.
+     *
+     * @param data       item data
+     * @param mode       modify mode (INSERT, UPDATE, UPSERT, DELETE)
+     * @param precepts   precepts (i.e. "id=serial()", "updated_at=now()")
+     * @param stateToken state token
+     * @return the {@link CompletableFuture}
+     */
+    CompletableFuture<RpcResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
      * Invoke select query in the transaction that is associated with the context.

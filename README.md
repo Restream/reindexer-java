@@ -52,7 +52,7 @@ public class Item {
         Reindexer db = Configuration.builder()
                 .url("cproto://localhost:6534/testdb")
                 .connectionPoolSize(1)
-                .connectionTimeout(30L)
+                .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
 
         // Create new namespace with name 'items', which will store objects of type 'Item'
@@ -177,17 +177,15 @@ tx.commit();
 // Create new transaction object
 Transaction<Item> tx = db.beginTransaction("items", Item.class);
 // Prepare transaction object async
-tx.upsertAsync(new Item(100, "Vasya", Arrays.asList(6, 1, 8), 2019), result -> {});
-tx.upsertAsync(new Item(101, "Vova", Arrays.asList(7, 2, 9), 2020), result -> {
-    if (result.hasError()) {
-        logger.error(result.getError().getMessage());
-    }
-});
+tx.upsertAsync(new Item(100, "Vasya", Arrays.asList(6, 1, 8), 2019));
+tx.upsertAsync(new Item(101, "Vova", Arrays.asList(7, 2, 9), 2020))
+        .thenAccept(item -> processItem(item))
+        .exceptionally(e -> handleError(e));
 // Wait for async operations done, and apply transaction
 tx.commit();
 ```
 
-The second argument of `tx.upsertAsync` is completion function, which will be called after receiving server response. 
+The return value of `tx.upsertAsync` is `CompletableFuture`, which will be completed after receiving server response. 
 Also, if any error occurred during prepare process, then `tx.commit` should return an error. So it is enough, to 
 check error returned by `tx.commit` - to be sure, that all data has been successfully committed or not.
 

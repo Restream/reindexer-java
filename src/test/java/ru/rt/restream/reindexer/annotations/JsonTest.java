@@ -21,10 +21,15 @@ import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.clas
 import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.HttpClients;
 import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.io.entity.StringEntity;
-import com.google.gson.*;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -38,6 +43,7 @@ import ru.rt.restream.reindexer.connector.ReindexerTest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -68,9 +74,8 @@ class JsonTest {
 
         this.db = Configuration.builder()
                 .url("cproto://" + "localhost:" + rpcPort + "/test_items")
-                .threadPoolSize(1)
                 .connectionPoolSize(4)
-                .requestTimeout(30L)
+                .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
     }
 
@@ -175,9 +180,9 @@ class JsonTest {
             if (o == null || getClass() != o.getClass()) return false;
             TestItem testItem = (TestItem) o;
             return Objects.equals(id, testItem.id)
-                    && Objects.equals(testValue, testItem.testValue)
-                    && Objects.equals(listIntegers, testItem.listIntegers)
-                    && Objects.equals(listNested, testItem.listNested);
+                   && Objects.equals(testValue, testItem.testValue)
+                   && Objects.equals(listIntegers, testItem.listIntegers)
+                   && Objects.equals(listNested, testItem.listNested);
         }
 
         @Override
@@ -207,8 +212,8 @@ class JsonTest {
             if (o == null || getClass() != o.getClass()) return false;
             Nested nested1 = (Nested) o;
             return Objects.equals(value, nested1.value)
-                    && Objects.equals(nested, nested1.nested)
-                    && Objects.equals(nestedList, nested1.nestedList);
+                   && Objects.equals(nested, nested1.nested)
+                   && Objects.equals(nestedList, nested1.nestedList);
         }
 
         @Override

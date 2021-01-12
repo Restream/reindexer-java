@@ -22,16 +22,13 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * An object that represents the context of a transaction.
@@ -51,14 +48,9 @@ public class Transaction<T> {
     private final Binding binding;
 
     /**
-     * The completion service to wait for a {@link DeferredResult} of type {@link T}.
-     */
-    private final CompletionService<DeferredResult<T>> completionService;
-
-    /**
      * The futures list.
      */
-    private final List<Future<DeferredResult<T>>> futures = new ArrayList<>();
+    private final List<CompletableFuture<T>> futures = new ArrayList<>();
 
     /**
      * Indicates that the current transaction is started.
@@ -71,11 +63,6 @@ public class Transaction<T> {
     private boolean finalized;
 
     /**
-     * The async request error.
-     */
-    private Exception asyncError;
-
-    /**
      * The transaction context.
      */
     private TransactionContext transactionContext;
@@ -85,12 +72,10 @@ public class Transaction<T> {
      *
      * @param namespace the namespace
      * @param binding   a binding to Reindexer instance
-     * @param executor  executor to run async requests
      */
-    public Transaction(ReindexerNamespace<T> namespace, Binding binding, Executor executor) {
+    public Transaction(ReindexerNamespace<T> namespace, Binding binding) {
         this.namespace = namespace;
         this.binding = binding;
-        this.completionService = new ExecutorCompletionService<>(executor);
     }
 
     /**
@@ -112,16 +97,15 @@ public class Transaction<T> {
      * Commits the current transaction.
      * Waits for worker threads to finish processing async requests.
      *
-     * @throws IllegalStateException if the current transaction is finalized
-     * @throws RuntimeException      if there is an error while processing async requests
+     * @throws IllegalStateException                    if the current transaction is finalized
+     * @throws java.util.concurrent.CompletionException if there is an error while processing async requests
      */
     public void commit() {
         checkFinalized();
         if (!started) {
             return;
         }
-        awaitResults();
-        checkAsyncError();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         transactionContext.commit();
         finalized = true;
         LOGGER.debug("rx: transaction finalized with commit");
@@ -136,9 +120,8 @@ public class Transaction<T> {
         if (!started || finalized) {
             return;
         }
-        awaitResults();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).exceptionally(e -> null).join();
         transactionContext.rollback();
-        asyncError = null;
         finalized = true;
         LOGGER.debug("rx: transaction finalized with rollback");
     }
@@ -146,38 +129,6 @@ public class Transaction<T> {
     private void checkFinalized() {
         if (finalized) {
             throw new IllegalStateException("Transaction is finalized");
-        }
-    }
-
-    private void checkAsyncError() {
-        if (asyncError != null) {
-            throw new RuntimeException(asyncError);
-        }
-    }
-
-    private void awaitResults() {
-        LOGGER.debug("rx: transaction awaiting for async results");
-        try {
-            while (!futures.isEmpty()) {
-                Future<DeferredResult<T>> future = completionService.take();
-                futures.remove(future);
-                DeferredResult<T> result = future.get();
-                if (result.hasError()) {
-                    asyncError = result.getError();
-                    LOGGER.error("rx: transaction async error, pending requests will be canceled", asyncError);
-                    break;
-                }
-            }
-        } catch (InterruptedException e) {
-            LOGGER.error("rx: transaction thread interrupted, pending requests will be canceled", e);
-            Thread.currentThread().interrupt();
-            asyncError = e;
-        } catch (ExecutionException e) {
-            LOGGER.error("rx: transaction async execution error, pending requests will be canceled", e);
-            asyncError = e;
-        } finally {
-            futures.forEach(f -> f.cancel(true));
-            futures.clear();
         }
     }
 
@@ -233,72 +184,89 @@ public class Transaction<T> {
      * Inserts the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
-     * @param item     the item data
-     * @param callback the {@link Consumer} which accepts a {@link DeferredResult} of type {@link T}
+     * @param item the item data
+     * @return the {@link CompletableFuture}
      * @throws IllegalStateException if the current transaction is finalized
      */
-    public void insertAsync(T item, Consumer<DeferredResult<T>> callback) {
+    public CompletableFuture<T> insertAsync(T item) {
         start();
-        modifyItemAsync(item, Reindexer.MODE_INSERT, callback);
+        return modifyItemAsync(item, Reindexer.MODE_INSERT);
     }
 
     /**
      * Updates the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
-     * @param item     the item data
-     * @param callback the {@link Consumer} which accepts a {@link DeferredResult} of type {@link T}
+     * @param item the item data
+     * @return the {@link CompletableFuture}
      * @throws IllegalStateException if the current transaction is finalized
      */
-    public void updateAsync(T item, Consumer<DeferredResult<T>> callback) {
+    public CompletableFuture<T> updateAsync(T item) {
         start();
-        modifyItemAsync(item, Reindexer.MODE_UPDATE, callback);
+        return modifyItemAsync(item, Reindexer.MODE_UPDATE);
     }
 
     /**
      * Inserts or updates the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
-     * @param item     the item data
-     * @param callback the {@link Consumer} which accepts a {@link DeferredResult} of type {@link T}
+     * @param item the item data
+     * @return the {@link CompletableFuture}
      * @throws IllegalStateException if the current transaction is finalized
      */
-    public void upsertAsync(T item, Consumer<DeferredResult<T>> callback) {
+    public CompletableFuture<T> upsertAsync(T item) {
         start();
-        modifyItemAsync(item, Reindexer.MODE_UPSERT, callback);
+        return modifyItemAsync(item, Reindexer.MODE_UPSERT);
     }
 
     /**
      * Deletes the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
-     * @param item     the item data
-     * @param callback the {@link Consumer} which accepts a {@link DeferredResult} of type {@link T}
+     * @param item the item data
+     * @return the {@link CompletableFuture}
      * @throws IllegalStateException if the current transaction is finalized
      */
-    public void deleteAsync(T item, Consumer<DeferredResult<T>> callback) {
+    public CompletableFuture<T> deleteAsync(T item) {
         start();
-        modifyItemAsync(item, Reindexer.MODE_DELETE, callback);
+        return modifyItemAsync(item, Reindexer.MODE_DELETE);
     }
 
-    private void modifyItemAsync(T item, int mode, Consumer<DeferredResult<T>> callback) {
-        Future<DeferredResult<T>> future = completionService.submit(() -> {
-            LOGGER.debug("rx: transaction async modifyItem processing started");
-            DeferredResult<T> result = new DeferredResult<>();
-            try {
-                modifyItem(item, mode);
-                result.setItem(item);
-            } catch (Exception e) {
-                LOGGER.error("rx: transaction async modifyItem processing error", e);
-                result.setError(e);
-            }
-            if (callback != null) {
-                callback.accept(result);
-            }
-            LOGGER.debug("rx: transaction async modifyItem processing finished with result={}", result);
-            return result;
-        });
+    private CompletableFuture<T> modifyItemAsync(T item, int mode) {
+        CompletableFuture<T> future = modifyItemAsyncInternal(item, mode, 1);
         futures.add(future);
+        return future;
+    }
+
+    private CompletableFuture<T> modifyItemAsyncInternal(T item, int mode, int retryCount) {
+        LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", item, mode, retryCount);
+        String[] precepts = namespace.getPrecepts();
+        PayloadType payloadType = namespace.getPayloadType();
+        int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+        ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
+        byte[] data = itemSerializer.serialize(item);
+        return transactionContext.modifyItemAsync(data, mode, precepts, stateToken)
+                .thenApplyAsync(rpcResponse -> {
+                    if (rpcResponse.hasError()) {
+                        throw ReindexerExceptionFactory.fromRpcResponse(rpcResponse);
+                    }
+                    return item;
+                })
+                .thenApply(CompletableFuture::completedFuture)
+                .exceptionally(error -> {
+                    if (error.getCause() instanceof StateInvalidatedException && retryCount > 0) {
+                        updatePayloadType();
+                        return modifyItemAsyncInternal(item, mode, retryCount - 1);
+                    }
+                    return failedFuture(error);
+                })
+                .thenCompose(Function.identity());
+    }
+
+    private CompletableFuture<T> failedFuture(Throwable t) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        future.completeExceptionally(t);
+        return future;
     }
 
     private void modifyItem(T item, int mode) {

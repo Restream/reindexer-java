@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * A connection with a specific reindexer instance. Uses reindexer rpc protocol.
  * Commands are executed and results are returned within the context of a connection.
@@ -29,6 +31,22 @@ public interface Connection extends AutoCloseable {
      * @return rpc call result
      */
     RpcResponse rpcCall(int command, Object... args);
+
+    /**
+     * Call a rpc command with specified arguments asynchronously.
+     *
+     * @param command command to invoke
+     * @param args    command arguments
+     * @return the {@link CompletableFuture}
+     */
+    CompletableFuture<RpcResponse> rpcCallAsync(int command, Object... args);
+
+    /**
+     * Returns true if the connection has an error.
+     *
+     * @return true if the connection has an error
+     */
+    boolean hasError();
 
     /**
      * Closes the connection.

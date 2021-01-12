@@ -18,24 +18,20 @@ package ru.rt.restream.reindexer;
 import ru.rt.restream.reindexer.binding.cproto.Cproto;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
+import java.time.Duration;
+
 /**
  * Represents approach for bootstrapping Reindexer.
  */
 public final class Configuration {
 
-    private static final int DEFAULT_THREAD_POOL_SIZE = 8;
-
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
-
-    private static final long DEFAULT_REQUEST_TIMEOUT = 60L;
 
     private String url;
 
-    private int threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
-
     private int connectionPoolSize = DEFAULT_CONNECTION_POOL_SIZE;
 
-    private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
+    private Duration requestTimeout = Duration.ofSeconds(60L);
 
     private Configuration() {
 
@@ -57,17 +53,6 @@ public final class Configuration {
     }
 
     /**
-     * Configure reindexer thread pool size. Defaults to 8.
-     *
-     * @param threadPoolSize the thread pool size
-     * @return the {@link Configuration} for further customizations
-     */
-    public Configuration threadPoolSize(int threadPoolSize) {
-        this.threadPoolSize = threadPoolSize;
-        return this;
-    }
-
-    /**
      * Configure reindexer connection pool size. Defaults to 8.
      *
      * @param connectionPoolSize the connection pool size
@@ -81,10 +66,10 @@ public final class Configuration {
     /**
      * Configure reindexer request timeout. Defaults to 60 seconds.
      *
-     * @param requestTimeout the request timeout in seconds
+     * @param requestTimeout the request timeout
      * @return the {@link Configuration} for further customizations
      */
-    public Configuration requestTimeout(long requestTimeout) {
+    public Configuration requestTimeout(Duration requestTimeout) {
         this.requestTimeout = requestTimeout;
         return this;
     }
@@ -102,7 +87,7 @@ public final class Configuration {
         String protocol = url.substring(0, url.indexOf(":"));
         switch (protocol) {
             case "cproto":
-                return new Reindexer(new Cproto(url, connectionPoolSize, requestTimeout), threadPoolSize);
+                return new Reindexer(new Cproto(url, connectionPoolSize, requestTimeout));
             case "http":
             case "builtin":
             case "builtinserver":

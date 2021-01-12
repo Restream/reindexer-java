@@ -15,26 +15,35 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
-import ru.rt.restream.reindexer.binding.Binding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A simple standalone connection pool.
  */
 public class ConnectionPool {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionPool.class);
+
+    /**
+     * Read/Write lock.
+     */
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
     /**
      * Scheduler for async I/O processing.
      */
-    private final ScheduledExecutorService scheduler;
+    private final ScheduledThreadPoolExecutor scheduler;
 
     /**
      * Available connections.
@@ -52,19 +61,34 @@ public class ConnectionPool {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * Name of a database to connect.
+     * Reindexer host.
      */
-    private final String database;
+    private final String host;
 
     /**
-     * Reindexer users login.
+     * Reindexer port.
+     */
+    private final int port;
+
+    /**
+     * Reindexer user.
      */
     private final String user;
 
     /**
-     * Reindexer users password.
+     * Reindexer password.
      */
     private final String password;
+
+    /**
+     * Reindexer database.
+     */
+    private final String database;
+
+    /**
+     * Request timeout.
+     */
+    private final Duration timeout;
 
     /**
      * Construct the connection pool instance to the given database URL.
@@ -73,9 +97,10 @@ public class ConnectionPool {
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public ConnectionPool(String url, int connectionPoolSize, long requestTimeout) {
+    public ConnectionPool(String url, int connectionPoolSize, Duration requestTimeout) {
         URI uri = URI.create(url);
-        database = uri.getPath().substring(1);
+        host = uri.getHost();
+        port = uri.getPort();
         String userInfo = uri.getUserInfo();
         if (userInfo != null) {
             String[] userInfoArray = userInfo.split(":");
@@ -83,24 +108,20 @@ public class ConnectionPool {
                 user = userInfoArray[0];
                 password = userInfoArray[1];
             } else {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Invalid username or password in the URL");
             }
         } else {
             user = "";
             password = "";
         }
-        scheduler = Executors.newScheduledThreadPool(connectionPoolSize * 2);
-        List<Connection> connections = new ArrayList<>(connectionPoolSize);
+        database = uri.getPath().substring(1);
+        timeout = requestTimeout;
+        scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1);
+        scheduler.setRemoveOnCancelPolicy(true);
+        connections = new ArrayList<>(connectionPoolSize);
         for (int i = 0; i < connectionPoolSize; i++) {
-            Connection connection = new PhysicalConnection(uri.getHost(), uri.getPort(), requestTimeout, scheduler);
-            login(connection);
-            connections.add(connection);
+            connections.add(new PhysicalConnection(host, port, user, password, database, timeout, scheduler));
         }
-        this.connections = Collections.unmodifiableList(connections);
-    }
-
-    private void login(Connection connection) {
-        connection.rpcCall(Binding.LOGIN, user, password, database);
     }
 
     /**
@@ -113,7 +134,28 @@ public class ConnectionPool {
         if (closed.get()) {
             throw new IllegalStateException("Connection pool is closed");
         }
-        return connections.get(next.getAndIncrement() % connections.size());
+        int id = next.getAndUpdate(i -> ++i < connections.size() ? i : 0);
+        Connection connection;
+        lock.readLock().lock();
+        try {
+            connection = connections.get(id);
+        } finally {
+            lock.readLock().unlock();
+        }
+        if (connection.hasError()) {
+            lock.writeLock().lock();
+            try {
+                connection = connections.get(id);
+                if (connection.hasError()) {
+                    connection = new PhysicalConnection(host, port, user, password, database, timeout, scheduler);
+                    connections.set(id, connection);
+                    LOGGER.debug("rx: connection-{} reconnected", id);
+                }
+            } finally {
+                lock.writeLock().unlock();
+            }
+        }
+        return connection;
     }
 
     /**
@@ -122,7 +164,12 @@ public class ConnectionPool {
      */
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            connections.forEach(Connection::close);
+            lock.readLock().lock();
+            try {
+                connections.forEach(Connection::close);
+            } finally {
+                lock.readLock().unlock();
+            }
             scheduler.shutdown();
         }
     }

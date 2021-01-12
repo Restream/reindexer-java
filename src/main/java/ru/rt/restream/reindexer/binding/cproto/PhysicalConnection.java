@@ -17,27 +17,33 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
+import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.exceptions.InvalidProtocolException;
 import ru.rt.restream.reindexer.exceptions.NetworkException;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A "Physical" connection with a specific reindexer instance. Uses reindexer rpc protocol.
@@ -47,11 +53,11 @@ public class PhysicalConnection implements Connection {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PhysicalConnection.class);
 
+    private static final int BUFFER_CAPACITY = 16 * 1024;
+
     private static final int QUEUE_SIZE = 512;
 
-    private static final long TASK_DELAY = 0L;
-
-    private static final long TASK_PERIOD = 10L;
+    private static final int MAX_SEQ_NUM = QUEUE_SIZE * 1000000;
 
     static final long CPROTO_MAGIC = 0xEEDD1132L;
 
@@ -63,13 +69,15 @@ public class PhysicalConnection implements Connection {
 
     static final int CPROTO_VERSION_MASK = 0x3FF;
 
-    private final AtomicLong seq = new AtomicLong(0L);
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    private final BlockingQueue<byte[]> requests = new ArrayBlockingQueue<>(QUEUE_SIZE);
+    private final Condition notEmptyBuffer = lock.writeLock().newCondition();
 
-    private final Map<Long, BlockingQueue<RpcResponse>> responses = new ConcurrentHashMap<>();
+    private ByteBuffer headBuffer = new ByteBuffer(BUFFER_CAPACITY);
 
-    private final List<Future<?>> futures = new ArrayList<>();
+    private ByteBuffer tailBuffer = new ByteBuffer(BUFFER_CAPACITY);
+
+    private Exception error;
 
     private final Socket clientSocket;
 
@@ -77,55 +85,37 @@ public class PhysicalConnection implements Connection {
 
     private final DataInputStream input;
 
-    private final long requestTimeout;
+    private final Duration timeout;
 
-    public PhysicalConnection(String host, int port, long requestTimeout, ScheduledExecutorService scheduler) {
+    private final ScheduledExecutorService scheduler;
+
+    private final BlockingQueue<Integer> sequences = new ArrayBlockingQueue<>(QUEUE_SIZE);
+
+    private final List<RpcRequest> requests = new ArrayList<>(QUEUE_SIZE);
+
+    private final ScheduledFuture<?> readTaskFuture;
+
+    private final ScheduledFuture<?> writeTaskFuture;
+
+    public PhysicalConnection(String host, int port, String user, String password, String database,
+                              Duration requestTimeout, ScheduledExecutorService scheduler) {
         try {
             clientSocket = new Socket(host, port);
             output = new DataOutputStream(clientSocket.getOutputStream());
             input = new DataInputStream(clientSocket.getInputStream());
-            this.requestTimeout = requestTimeout;
-            scheduleReadTask(scheduler);
-            scheduleWriteTask(scheduler);
-        } catch (IOException e) {
+            timeout = requestTimeout;
+            this.scheduler = scheduler;
+            for (int i = 0; i < QUEUE_SIZE; i++) {
+                requests.add(new RpcRequest());
+                sequences.add(i);
+            }
+            readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 1, TimeUnit.MILLISECONDS);
+            writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 1, TimeUnit.MILLISECONDS);
+            ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database);
+        } catch (Exception e) {
+            onError(e);
             throw new NetworkException(e);
         }
-    }
-
-    private void scheduleReadTask(ScheduledExecutorService scheduler) {
-        ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
-            try {
-                RpcResponse rpcResponse = readResponse(input);
-                long seqNum = rpcResponse.getSeqNum();
-                BlockingQueue<RpcResponse> output = responses.get(seqNum);
-                if (output != null) {
-                    output.add(rpcResponse);
-                }
-            } catch (EOFException e) {
-                // expected
-            } catch (IOException e) {
-                throw new ReindexerException(e);
-            } catch (Exception e) {
-                LOGGER.error("rx: read task error", e);
-            }
-        }, TASK_DELAY, TASK_PERIOD, TimeUnit.MILLISECONDS);
-        futures.add(future);
-    }
-
-    private void scheduleWriteTask(ScheduledExecutorService scheduler) {
-        ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
-            try {
-                byte[] request = requests.take();
-                output.write(request);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (IOException e) {
-                throw new ReindexerException(e);
-            } catch (Exception e) {
-                LOGGER.error("rx: write task error", e);
-            }
-        }, TASK_DELAY, TASK_PERIOD, TimeUnit.MILLISECONDS);
-        futures.add(future);
     }
 
     /**
@@ -137,51 +127,37 @@ public class PhysicalConnection implements Connection {
      */
     @Override
     public RpcResponse rpcCall(int command, Object... args) {
-        long seqNum = seq.getAndIncrement();
-        responses.put(seqNum, new ArrayBlockingQueue<>(1));
+        Exception error = getCurrentError();
+        if (error != null) {
+            throw new ReindexerException(error);
+        }
         try {
-            byte[] request = encode(command, seqNum, args);
-            if (!requests.offer(request, requestTimeout, TimeUnit.SECONDS)) {
-                throw new ReindexerException("Request queue is full");
+            Sequence seq = awaitSeqNum();
+            int reqId = seq.seqNum % QUEUE_SIZE;
+            RpcRequest rpcRequest = requests.get(reqId);
+            rpcRequest.seqNum = seq.seqNum;
+            try {
+                write(command, seq.seqNum, args);
+                for (; ; ) {
+                    BufferedResponse bufferedResponse = rpcRequest.reply.poll(seq.timeout.toMillis(), TimeUnit.MILLISECONDS);
+                    if (bufferedResponse == null) {
+                        throw new ReindexerException("Request timeout");
+                    }
+                    if (bufferedResponse.seqNum == seq.seqNum) {
+                        return readResponse(bufferedResponse.buffer);
+                    }
+                }
+            } finally {
+                rpcRequest.seqNum = MAX_SEQ_NUM;
+                sequences.add(nextSeqNum(seq.seqNum));
             }
-            RpcResponse rpcResponse = responses.get(seqNum).poll(requestTimeout, TimeUnit.SECONDS);
-            if (rpcResponse == null) {
-                throw new ReindexerException("Request timeout");
-            }
-            return rpcResponse;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ReindexerException("Interrupted while rpcCall", e);
-        } finally {
-            responses.remove(seqNum);
         }
     }
 
-    private RpcResponse readResponse(DataInputStream inputStream) throws IOException {
-        byte[] header = new byte[CPROTO_HDR_LEN];
-        inputStream.readFully(header);
-        ByteBuffer deserializer = new ByteBuffer(header).rewind();
-
-        long magic = deserializer.getUInt32();
-        int version = deserializer.getUInt16();
-        deserializer.getUInt16();
-        int size = (int) deserializer.getUInt32();
-        long rseq = deserializer.getUInt16();
-
-        if (magic != CPROTO_MAGIC) {
-            throw new InvalidProtocolException(String.format("Invalid cproto magic '%08X'", magic));
-        }
-
-        version &= CPROTO_VERSION_MASK;
-        if (version < CPROTO_VERSION) {
-            throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
-                                                             "This client expects reindexer server v1.9.8+", version));
-        }
-
-        byte[] body = new byte[size];
-        inputStream.readFully(body);
-
-        deserializer = new ByteBuffer(body).rewind();
+    private RpcResponse readResponse(ByteBuffer deserializer) {
         int code = (int) deserializer.getVarUInt();
         String message = deserializer.getVString();
         int argsCount = (int) deserializer.getVarUInt();
@@ -189,18 +165,7 @@ public class PhysicalConnection implements Connection {
         for (int i = 0; i < argsCount; i++) {
             responseArgs[i] = readArgument(deserializer);
         }
-
-        return new RpcResponse(code, rseq, message, responseArgs);
-    }
-
-    @Override
-    public void close() {
-        futures.forEach(f -> f.cancel(true));
-        try {
-            clientSocket.close();
-        } catch (IOException e) {
-            LOGGER.error("rx: connection close error", e);
-        }
+        return new RpcResponse(code, message, responseArgs);
     }
 
     private Object readArgument(ByteBuffer deserializer) {
@@ -221,7 +186,63 @@ public class PhysicalConnection implements Connection {
         }
     }
 
-    private byte[] encode(int command, long seq, Object... args) {
+    @Override
+    public CompletableFuture<RpcResponse> rpcCallAsync(int command, Object... args) {
+        CompletableFuture<RpcResponse> completion = new CompletableFuture<>();
+        Exception error = getCurrentError();
+        if (error != null) {
+            completion.completeExceptionally(error);
+            return completion;
+        }
+        try {
+            Sequence seq = awaitSeqNum();
+            int reqId = seq.seqNum % QUEUE_SIZE;
+            RpcRequest rpcRequest = requests.get(reqId);
+            rpcRequest.completionLock.lock();
+            try {
+                rpcRequest.completion = completion;
+                rpcRequest.seqNum = seq.seqNum;
+                rpcRequest.isAsync = true;
+                rpcRequest.timeoutTaskFuture = scheduler.schedule(new TimeoutTask(seq.seqNum),
+                        seq.timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } finally {
+                rpcRequest.completionLock.unlock();
+            }
+            write(command, seq.seqNum, args);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            completion.completeExceptionally(e);
+        } catch (Exception e) {
+            completion.completeExceptionally(e);
+        }
+        return completion;
+    }
+
+    private Sequence awaitSeqNum() throws InterruptedException {
+        Instant start = Instant.now();
+        Integer seqNum = sequences.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        if (seqNum == null) {
+            throw new ReindexerException("Request queue is full");
+        }
+        Duration remainingTimeout = timeout.minus(Duration.between(start, Instant.now()));
+        if (remainingTimeout.isNegative() || remainingTimeout.isZero()) {
+            sequences.add(seqNum);
+            throw new ReindexerException("Request timeout");
+        }
+        return new Sequence(seqNum, remainingTimeout);
+    }
+
+    private void write(int command, int seqNum, Object[] args) {
+        lock.writeLock().lock();
+        try {
+            headBuffer.writeBytes(encode(command, seqNum, args));
+            notEmptyBuffer.signalAll();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    private byte[] encode(int command, int seq, Object... args) {
 
         byte[] body = encodeArgs(args);
         byte[] header = encodeHeader(seq, command, body.length);
@@ -270,7 +291,7 @@ public class PhysicalConnection implements Connection {
         return buffer.bytes();
     }
 
-    private byte[] encodeHeader(long seq, int command, int size) {
+    private byte[] encodeHeader(int seq, int command, int size) {
         return new ByteBuffer()
                 .putUInt32(CPROTO_MAGIC)
                 .putUInt16(CPROTO_VERSION)
@@ -279,4 +300,269 @@ public class PhysicalConnection implements Connection {
                 .putUInt32(seq)
                 .bytes();
     }
+
+    private int nextSeqNum(int seqNum) {
+        int result = seqNum + QUEUE_SIZE;
+        if (isSeqNumValid(result)) {
+            return result;
+        }
+        return result - MAX_SEQ_NUM;
+    }
+
+    private boolean isSeqNumValid(int seqNum) {
+        return seqNum < MAX_SEQ_NUM;
+    }
+
+    @Override
+    public boolean hasError() {
+        return getCurrentError() != null;
+    }
+
+    private Exception getCurrentError() {
+        lock.readLock().lock();
+        try {
+            return error;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    private void onError(Exception error) {
+        lock.writeLock().lock();
+        try {
+            if (this.error == null) {
+                this.error = error;
+                close();
+                for (RpcRequest rpcRequest : requests) {
+                    if (rpcRequest.isAsync) {
+                        CompletableFuture<RpcResponse> completion = null;
+                        ScheduledFuture<?> timeoutTaskFuture = null;
+                        Integer seqNum = null;
+                        rpcRequest.completionLock.lock();
+                        try {
+                            if (rpcRequest.completion != null) {
+                                completion = rpcRequest.completion;
+                                rpcRequest.completion = null;
+                                timeoutTaskFuture = rpcRequest.timeoutTaskFuture;
+                                rpcRequest.timeoutTaskFuture = null;
+                                seqNum = rpcRequest.seqNum;
+                                rpcRequest.seqNum = MAX_SEQ_NUM;
+                                rpcRequest.isAsync = false;
+                            }
+                        } finally {
+                            rpcRequest.completionLock.unlock();
+                        }
+                        if (seqNum != null) {
+                            sequences.add(nextSeqNum(seqNum));
+                        }
+                        if (completion != null) {
+                            completion.completeExceptionally(error);
+                        }
+                        if (timeoutTaskFuture != null) {
+                            timeoutTaskFuture.cancel(true);
+                        }
+                    }
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public void close() {
+        if (readTaskFuture != null) {
+            readTaskFuture.cancel(true);
+        }
+        if (writeTaskFuture != null) {
+            writeTaskFuture.cancel(true);
+        }
+        if (clientSocket != null) {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                LOGGER.error("rx: connection close error", e);
+            }
+        }
+    }
+
+    private static class Sequence {
+
+        private final int seqNum;
+
+        private final Duration timeout;
+
+        private Sequence(int seqNum, Duration timeout) {
+            this.seqNum = seqNum;
+            this.timeout = timeout;
+        }
+
+    }
+
+    private static class RpcRequest {
+
+        private volatile int seqNum;
+
+        private volatile boolean isAsync;
+
+        private final BlockingQueue<BufferedResponse> reply = new LinkedBlockingQueue<>();
+
+        private final Lock completionLock = new ReentrantLock();
+
+        private CompletableFuture<RpcResponse> completion;
+
+        private ScheduledFuture<?> timeoutTaskFuture;
+
+    }
+
+    private static class BufferedResponse {
+
+        private final int seqNum;
+
+        private final ByteBuffer buffer;
+
+        private BufferedResponse(int seqNum, ByteBuffer buffer) {
+            this.seqNum = seqNum;
+            this.buffer = buffer;
+        }
+
+    }
+
+    private class ReadTask implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                byte[] header = new byte[CPROTO_HDR_LEN];
+                input.readFully(header);
+                ByteBuffer deserializer = new ByteBuffer(header).rewind();
+                long magic = deserializer.getUInt32();
+                if (magic != CPROTO_MAGIC) {
+                    throw new InvalidProtocolException(String.format("Invalid cproto magic '%08X'", magic));
+                }
+                int version = deserializer.getUInt16();
+                deserializer.getUInt16();
+                int size = (int) deserializer.getUInt32();
+                int rseq = deserializer.getUInt16();
+                version &= CPROTO_VERSION_MASK;
+                if (version < CPROTO_VERSION) {
+                    throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
+                                                                     "This client expects reindexer server v1.9.8+", version));
+                }
+                if (!isSeqNumValid(rseq)) {
+                    throw new InvalidProtocolException(String.format("Invalid seq num: %d", rseq));
+                }
+                int reqId = rseq % QUEUE_SIZE;
+                RpcRequest rpcRequest = requests.get(reqId);
+                if (rpcRequest.seqNum != rseq) {
+                    input.skipBytes(size);
+                    return;
+                }
+                byte[] body = new byte[size];
+                input.readFully(body);
+                deserializer = new ByteBuffer(body).rewind();
+                if (rpcRequest.isAsync) {
+                    CompletableFuture<RpcResponse> completion = null;
+                    ScheduledFuture<?> timeoutTaskFuture = null;
+                    Integer seqNum = null;
+                    rpcRequest.completionLock.lock();
+                    try {
+                        if (rpcRequest.completion != null && rpcRequest.seqNum == rseq) {
+                            completion = rpcRequest.completion;
+                            rpcRequest.completion = null;
+                            timeoutTaskFuture = rpcRequest.timeoutTaskFuture;
+                            rpcRequest.timeoutTaskFuture = null;
+                            seqNum = rpcRequest.seqNum;
+                            rpcRequest.seqNum = MAX_SEQ_NUM;
+                            rpcRequest.isAsync = false;
+                        }
+                    } finally {
+                        rpcRequest.completionLock.unlock();
+                    }
+                    if (seqNum != null) {
+                        sequences.add(nextSeqNum(seqNum));
+                    }
+                    if (completion != null) {
+                        completion.complete(readResponse(deserializer));
+                    }
+                    if (timeoutTaskFuture != null) {
+                        timeoutTaskFuture.cancel(true);
+                    }
+                } else {
+                    rpcRequest.reply.add(new BufferedResponse(rseq, deserializer));
+                }
+            } catch (Exception e) {
+                onError(e);
+            }
+        }
+
+    }
+
+    private class WriteTask implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                lock.writeLock().lock();
+                try {
+                    while (headBuffer.length() == 0) {
+                        notEmptyBuffer.await();
+                    }
+                    ByteBuffer head = headBuffer;
+                    headBuffer = tailBuffer;
+                    tailBuffer = head;
+                } finally {
+                    lock.writeLock().unlock();
+                }
+                output.write(tailBuffer.bytes());
+                tailBuffer.reset();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                onError(e);
+            } catch (Exception e) {
+                onError(e);
+            }
+        }
+
+    }
+
+    private class TimeoutTask implements Runnable {
+
+        private final int rseq;
+
+        private TimeoutTask(int rseq) {
+            this.rseq = rseq;
+        }
+
+        @Override
+        public void run() {
+            int reqId = rseq % QUEUE_SIZE;
+            RpcRequest rpcRequest = requests.get(reqId);
+            if (rpcRequest.isAsync) {
+                CompletableFuture<RpcResponse> completion = null;
+                Integer seqNum = null;
+                rpcRequest.completionLock.lock();
+                try {
+                    if (rpcRequest.completion != null && rpcRequest.seqNum == rseq) {
+                        completion = rpcRequest.completion;
+                        rpcRequest.completion = null;
+                        rpcRequest.timeoutTaskFuture = null;
+                        seqNum = rpcRequest.seqNum;
+                        rpcRequest.seqNum = MAX_SEQ_NUM;
+                        rpcRequest.isAsync = false;
+                    }
+                } finally {
+                    rpcRequest.completionLock.unlock();
+                }
+                if (seqNum != null) {
+                    sequences.add(nextSeqNum(seqNum));
+                }
+                if (completion != null) {
+                    completion.completeExceptionally(new ReindexerException("Request timeout"));
+                }
+            }
+        }
+
+    }
+
 }
