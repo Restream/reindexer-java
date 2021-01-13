@@ -17,12 +17,15 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -122,6 +125,7 @@ public class ConnectionPool {
         for (int i = 0; i < connectionPoolSize; i++) {
             connections.add(new PhysicalConnection(host, port, user, password, database, timeout, scheduler));
         }
+        scheduler.scheduleWithFixedDelay(new PingTask(), 0, 1, TimeUnit.MINUTES);
     }
 
     /**
@@ -172,6 +176,32 @@ public class ConnectionPool {
             }
             scheduler.shutdown();
         }
+    }
+
+    private class PingTask implements Runnable {
+
+        @Override
+        public void run() {
+            for (int i = 0; i < connections.size(); i++) {
+                Connection connection;
+                lock.readLock().lock();
+                try {
+                    connection = connections.get(i);
+                } finally {
+                    lock.readLock().unlock();
+                }
+                if (connection.hasError()) {
+                    continue;
+                }
+                try {
+                    ConnectionUtils.rpcCallNoResults(connection, Binding.PING);
+                    LOGGER.debug("rx: connection-{} ping ok", i);
+                } catch (Exception e) {
+                    LOGGER.error("rx: connection-{} ping error", i, e);
+                }
+            }
+        }
+
     }
 
 }
