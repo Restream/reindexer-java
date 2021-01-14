@@ -27,8 +27,8 @@
 
     <scm>
         <url>https://github.com/restream/reindexer-java</url>
-        <connection>scm:git:ssh://git@github.com/restream/reindexer-java.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/restream/reindexer-java.git</developerConnection>
+        <connection>scm:git:https://github.com/restream/reindexer-java</connection>
+        <developerConnection>scm:git:https://github.com/restream/reindexer-java.git</developerConnection>
     </scm>
 
     <developers>
@@ -68,7 +68,7 @@
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.4</version>
                         <configuration>
-                            <passphrase>${gpg.passphrase}</passphrase>
+                            <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
                         </configuration>
                         <executions>
                             <execution>
