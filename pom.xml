@@ -50,6 +50,7 @@
         <java.version>1.8</java.version>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.source>${java.version}</maven.compiler.source>
+        <gpg.passphrase>${env.MAVEN_GPG_PASSPHRASE}</gpg.passphrase>
     </properties>
 
     <profiles>
@@ -66,14 +67,9 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
+                        <version>1.4</version>
                         <configuration>
-                            <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
-                            <!-- Prevent `gpg` from using pinentry programs -->
-                            <gpgArguments>
-                                <arg>--pinentry-mode</arg>
-                                <arg>loopback</arg>
-                            </gpgArguments>
+                            <passphrase>${gpg.passphrase}</passphrase>
                         </configuration>
                         <executions>
                             <execution>
