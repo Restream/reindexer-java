@@ -15,8 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import ru.rt.restream.reindexer.annotations.Json;
+import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
 import ru.rt.restream.reindexer.binding.cproto.cjson.encdec.CjsonEncoder;
@@ -73,6 +73,9 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
             CjsonObject cjsonObject = new CjsonObject();
             List<Field> fields = BeanPropertyUtils.getInheritedFields(source.getClass());
             for (Field field : fields) {
+                if (field.isAnnotationPresent(Transient.class)) {
+                    continue;
+                }
                 Object fieldValue = readFieldValue(source, field);
                 if (fieldValue != null) {
                     CjsonElement cjsonElement = toCjson(fieldValue);
@@ -86,11 +89,7 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
     }
 
     private Object readFieldValue(Object source, Field field) {
-        try {
-            return FieldUtils.readField(field, source, true);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
+        return BeanPropertyUtils.getProperty(source, field.getName());
     }
 
 }

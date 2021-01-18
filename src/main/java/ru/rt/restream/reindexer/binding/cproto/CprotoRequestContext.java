@@ -52,6 +52,8 @@ public class CprotoRequestContext implements RequestContext {
 
     private static final int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
 
+    private static final int RESULTS_WITH_JOINED = 0x100;
+
     private final Connection connection;
 
     private QueryResult queryResult;
@@ -113,6 +115,7 @@ public class CprotoRequestContext implements RequestContext {
         boolean withItemId = (flags & RESULTS_WITH_ITEM_ID) != 0;
         boolean withNsId = (flags & RESULTS_WITH_NS_ID) != 0;
         boolean withPayloadTypes = (flags & RESULTS_WITH_PAYLOAD_TYPES) != 0;
+        boolean withJoined = (flags & RESULTS_WITH_JOINED) != 0;
 
         QueryResult queryResult = new QueryResult();
         queryResult.setJson(isJson);
@@ -123,6 +126,7 @@ public class CprotoRequestContext implements RequestContext {
         queryResult.setWithItemId(withItemId);
         queryResult.setWithNsId(withNsId);
         queryResult.setWithPayloadTypes(withPayloadTypes);
+        queryResult.setWithJoined(withJoined);
 
         List<PayloadType> payloadTypes = new ArrayList<>();
         queryResult.setPayloadTypes(payloadTypes);
