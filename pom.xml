@@ -148,6 +148,17 @@
                 </executions>
             </plugin>
         </plugins>
+
+        <resources>
+            <resource>
+                <filtering>false</filtering>
+                <directory>builtin-adapter/build</directory>
+                <includes>
+                    <include>*.dylib</include>
+                    <include>*.so</include>
+                </includes>
+            </resource>
+        </resources>
     </build>
 
     <dependencies>

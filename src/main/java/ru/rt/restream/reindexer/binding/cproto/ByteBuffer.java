@@ -264,6 +264,16 @@ public class ByteBuffer {
         return readIntBits(Integer.BYTES);
     }
 
+    /**
+     * Reads an unsigned 64-bit integer from the current position in the buffer.
+     * Increments buffer position.
+     *
+     * @return the long read
+     */
+    public long getUInt64() {
+        return readIntBits(Long.BYTES);
+    }
+
     private long readIntBits(int size) {
         if (position + size > buffer.length) {
             final String msg = String.format("Buffer underflow error: position %d, length %d, need %d", position,

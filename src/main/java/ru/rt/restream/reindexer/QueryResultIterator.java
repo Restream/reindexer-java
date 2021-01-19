@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.binding.cproto;
+package ru.rt.restream.reindexer;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.rt.restream.reindexer.binding.AggregationResult;
-import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.Query;
-import ru.rt.restream.reindexer.ReindexerNamespace;
-import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Transient;
+import ru.rt.restream.reindexer.binding.AggregationResult;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
+import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
+import ru.rt.restream.reindexer.binding.cproto.ItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
+import ru.rt.restream.reindexer.util.NativeUtils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -37,15 +36,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import java.util.List;
-
 /**
  * An iterator over a query result.
  * Maintains a cursor pointing to its current row of data. Initially the cursor is positioned before the first row.
  */
-public class CprotoIterator<T> implements CloseableIterator<T> {
+public class QueryResultIterator<T> implements CloseableIterator<T> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Transaction.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryResultIterator.class);
 
     private final ReindexerNamespace<T> namespace;
 
@@ -67,10 +64,10 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
     private boolean closed;
 
-    public CprotoIterator(ReindexerNamespace<T> namespace,
-                          RequestContext requestContext,
-                          Query<T> query,
-                          int fetchCount) {
+    public QueryResultIterator(ReindexerNamespace<T> namespace,
+                               RequestContext requestContext,
+                               Query<T> query,
+                               int fetchCount) {
         this.namespace = namespace;
         this.requestContext = requestContext;
         this.fetchCount = fetchCount;
@@ -121,8 +118,14 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         }
 
         ItemParams params = readItemParams();
-        int length = (int) buffer.getUInt32();
-        T item = itemReader.readItem(new ByteBuffer(buffer.getBytes(length)).rewind());
+        T item;
+        if (params.cptr != 0) {
+            ByteBuffer buffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), params.cptr, params.nsId);
+            item = itemReader.readItem(buffer);
+        } else {
+            int length = (int) buffer.getUInt32();
+            item = itemReader.readItem(new ByteBuffer(buffer.getBytes(length)).rewind());
+        }
 
         long subNsRes = -1L;
         if (queryResult.isWithJoined()) {
@@ -134,20 +137,27 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         Map<String, List<Object>> subItemsMap = new HashMap<>();
         for (int nsIndex = 0; nsIndex < subNsRes; nsIndex++) {
             List<ReindexerNamespace<?>> namespaces = query.getNamespaces();
-            ReindexerNamespace<?> subItemNamespace =  namespaces.get(nsIndex + nsIndexOffset);
+            int nsId = nsIndex + nsIndexOffset;
+            ReindexerNamespace<?> subItemNamespace = namespaces.get(nsId);
             CtagMatcher ctagMatcher = new CtagMatcher();
             PayloadType subItemPayloadType = subItemNamespace.getPayloadType();
             ctagMatcher.read(subItemPayloadType);
             Class<?> siClass = subItemNamespace.getItemClass();
             CjsonItemReader<?> subItemItemReader = new CjsonItemReader<>(siClass, ctagMatcher);
-            String joinField =  query.getJoinFields().get(nsIndex);
+            String joinField = query.getJoinFields().get(nsIndex);
             List<Object> subItems = subItemsMap.computeIfAbsent(joinField, s -> new ArrayList<>());
 
             int siRes = (int) buffer.getVarUInt();
             for (int i = 0; i < siRes; i++) {
                 ItemParams subItemParams = readItemParams();
-                int subItemLength = (int) buffer.getUInt32();
-                Object subItem = subItemItemReader.readItem(new ByteBuffer(buffer.getBytes(subItemLength)).rewind());
+                Object subItem;
+                if (subItemParams.cptr != 0) {
+                    ByteBuffer buffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), subItemParams.cptr, nsId);
+                    subItem = subItemItemReader.readItem(buffer);
+                } else {
+                    int subItemLength = (int) buffer.getUInt32();
+                    subItem = subItemItemReader.readItem(new ByteBuffer(buffer.getBytes(subItemLength)).rewind());
+                }
                 subItems.add(subItem);
             }
         }
@@ -219,6 +229,10 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
             params.rank = buffer.getVarUInt();
         }
 
+        if (queryResult.isWithResultsPtr()) {
+            params.cptr = buffer.getUInt64();
+        }
+
         return params;
     }
 
@@ -258,7 +272,8 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
         private long rank = -1;
         private long id = -1;
         private long version = -1;
-        private int nsId = -1;
+        private long cptr;
+        private int nsId = 0;
 
         public long getRank() {
             return rank;
@@ -270,6 +285,10 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
 
         public long getVersion() {
             return version;
+        }
+
+        public long getCptr() {
+            return cptr;
         }
 
         public int getNsId() {

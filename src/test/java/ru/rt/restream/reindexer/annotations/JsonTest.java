@@ -38,6 +38,7 @@ import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
+import ru.rt.restream.reindexer.connector.CprotoReindexerTest;
 import ru.rt.restream.reindexer.connector.ReindexerTest;
 
 import java.io.IOException;
@@ -69,7 +70,7 @@ class JsonTest {
     public void setUp() {
         restApiPort = String.valueOf(reindexer.getMappedPort(9088));
         rpcPort = String.valueOf(reindexer.getMappedPort(6534));
-        ReindexerTest.CreateDatabase createDatabase = new ReindexerTest.CreateDatabase();
+        CprotoReindexerTest.CreateDatabase createDatabase = new CprotoReindexerTest.CreateDatabase();
         createDatabase.setName("test_items");
         post("/db", createDatabase);
 

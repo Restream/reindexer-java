@@ -241,13 +241,13 @@ public class Transaction<T> {
         LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", item, mode, retryCount);
         String[] precepts = namespace.getPrecepts();
         PayloadType payloadType = namespace.getPayloadType();
-        int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+        int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
         ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
         byte[] data = itemSerializer.serialize(item);
         return transactionContext.modifyItemAsync(data, mode, precepts, stateToken)
                 .thenApplyAsync(rpcResponse -> {
                     if (rpcResponse.hasError()) {
-                        throw ReindexerExceptionFactory.fromRpcResponse(rpcResponse);
+                        throw ReindexerExceptionFactory.fromResponse(rpcResponse);
                     }
                     return item;
                 })
@@ -274,7 +274,7 @@ public class Transaction<T> {
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
-                int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+                int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
                 ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
                 byte[] data = itemSerializer.serialize(item);
                 transactionContext.modifyItem(data, mode, precepts, stateToken);

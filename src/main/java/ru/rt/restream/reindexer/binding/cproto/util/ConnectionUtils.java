@@ -16,7 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto.util;
 
 import ru.rt.restream.reindexer.binding.cproto.Connection;
-import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
+import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 
@@ -47,13 +47,13 @@ public final class ConnectionUtils {
      * @param connection the connection to use
      * @param command    the command to use
      * @param args       the command arguments
-     * @return the {@link RpcResponse}
+     * @return the {@link ReindexerResponse}
      * @throws ReindexerException in case of Reindexer error
      */
-    public static RpcResponse rpcCall(Connection connection, int command, Object... args) {
-        RpcResponse rpcResponse = connection.rpcCall(command, args);
+    public static ReindexerResponse rpcCall(Connection connection, int command, Object... args) {
+        ReindexerResponse rpcResponse = connection.rpcCall(command, args);
         if (rpcResponse.hasError()) {
-            throw ReindexerExceptionFactory.fromRpcResponse(rpcResponse);
+            throw ReindexerExceptionFactory.fromResponse(rpcResponse);
         }
         return rpcResponse;
     }

@@ -18,6 +18,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -121,7 +122,7 @@ public class Cproto implements Binding {
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
-        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
+        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
         return new CprotoRequestContext(rpcResponse, connection);
     }
@@ -139,7 +140,7 @@ public class Cproto implements Binding {
     @Override
     public TransactionContext beginTx(String namespaceName) {
         Connection connection = pool.getConnection();
-        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, START_TRANSACTION, namespaceName);
+        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, START_TRANSACTION, namespaceName);
         Object[] responseArguments = rpcResponse.getArguments();
         long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
         return new CprotoTransactionContext(transactionId, connection);

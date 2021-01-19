@@ -13,5 +13,22 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: Install Reindexer
+# TODO: Temporarily build reindexer from sources, since the new method "reindexer_cptr2cjson" has not yet been released.
+#        run: |
+#          curl http://repo.reindexer.org/RX-KEY.GPG | sudo apt-key add
+#          echo 'deb http://repo.reindexer.org/ubuntu-bionic /' | sudo tee -a /etc/apt/sources.list
+#          sudo apt-get update
+#          sudo apt-get install reindexer-dev
+        run: |
+          curl -L https://github.com/Restream/reindexer/raw/master/dependencies.sh | sudo bash -s
+          git clone --single-branch --branch unstable/add_cptr2cjson-188068 https://github.com/Restream/reindexer
+          cmake reindexer -Breindexer/build
+          cmake --build reindexer/build -- -j 4
+          sudo cmake --install reindexer/build
+      - name: Build Reindexer Builtin Adapter
+        run: |
+          cmake builtin-adapter -B builtin-adapter/build
+          cmake --build builtin-adapter/build
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
