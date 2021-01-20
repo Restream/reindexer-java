@@ -92,7 +92,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
-            if (reindex == null || "-".equals(reindex.name())) {
+            if (reindex == null || "-".equals(reindex.name()) || field.isAnnotationPresent(Transient.class)) {
                 continue;
             }
             String reindexPath = reindexBasePath + reindex.name();
@@ -101,9 +101,6 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             FieldInfo fieldInfo = getFieldInfo(field);
             if (subArray) {
                 fieldInfo.isArray = true;
-            }
-            if (field.getAnnotation(Joined.class) != null) {
-                continue;
             }
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
                 List<ReindexerIndex> nested = parseIndexes(field.getType(), true, reindexPath, jsonPath, joined);
@@ -114,14 +111,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 indexes.addAll(nested);
             } else {
                 String collate = reindex.collate();
-                CollateMode collateMode = Arrays.stream(CollateMode.values())
-                        .filter(cm -> cm.getName().equals(collate))
-                        .findFirst()
-                        .orElse(CollateMode.CUSTOM);
-                String sortOrder = "";
-                if (collateMode == CollateMode.CUSTOM) {
-                    sortOrder = collate;
-                }
+                CollateMode collateMode = getCollateMode(collate);
+                String sortOrder = getSortOrder(collateMode, collate);
                 String precept = null;
                 if (field.isAnnotationPresent(Serial.class)) {
                     if (!fieldInfo.isInt()) {
@@ -139,14 +130,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         Reindex[] composites = itemClass.getAnnotationsByType(Reindex.class);
         for (Reindex composite : composites) {
             String collate = composite.collate();
-            CollateMode collateMode = Arrays.stream(CollateMode.values())
-                    .filter(cm -> cm.getName().equals(collate))
-                    .findFirst()
-                    .orElse(CollateMode.CUSTOM);
-            String sortOrder = "";
-            if (collateMode == CollateMode.CUSTOM) {
-                sortOrder = collate;
-            }
+            CollateMode collateMode = getCollateMode(collate);
+            String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
                     composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null);
@@ -154,6 +139,21 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         return indexes;
+    }
+
+    private String getSortOrder(CollateMode collateMode, String collate) {
+        if (CollateMode.CUSTOM == collateMode) {
+            return collate;
+        }
+
+        return "";
+    }
+
+    private CollateMode getCollateMode(String collate) {
+        return Arrays.stream(CollateMode.values())
+                .filter(cm -> cm.getName().equals(collate))
+                .findFirst()
+                .orElse(CollateMode.CUSTOM);
     }
 
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,

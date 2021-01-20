@@ -15,7 +15,6 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemReader;
@@ -50,15 +49,15 @@ public class CjsonItemReader<T> implements ItemReader<T> {
         return readObject(element.getAsCjsonObject(), itemClass);
     }
 
-    private <V> V readObject(CjsonObject cjsonObject, Class<V> target) {
-        V instance = createInstance(target);
-        List<Field> fields = BeanPropertyUtils.getInheritedFields(target);
+    private <V> V readObject(CjsonObject cjsonObject, Class<V> itemClass) {
+        V instance = createInstance(itemClass);
+        List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Json json = field.getAnnotation(Json.class);
             String tagName = json == null ? field.getName() : json.value();
             Object value = getTargetValue(field, cjsonObject.getProperty(tagName));
             if (value != null) {
-                writeField(instance, field, value);
+                BeanPropertyUtils.setProperty(instance, field.getName(), value);
             }
         }
         return instance;
@@ -67,8 +66,13 @@ public class CjsonItemReader<T> implements ItemReader<T> {
     private Object getTargetValue(Field field, CjsonElement property) {
         Class<?> fieldType = field.getType();
         if (property.isNull()) {
+            if (fieldType == List.class) {
+                return new ArrayList<>();
+            }
             return null;
-        } else if (fieldType == List.class) {
+        }
+
+        if (fieldType == List.class) {
             CjsonArray array = property.getAsCjsonArray();
             ArrayList<Object> elements = new ArrayList<>();
             ParameterizedType genericType = (ParameterizedType) field.getGenericType();
@@ -108,19 +112,11 @@ public class CjsonItemReader<T> implements ItemReader<T> {
         }
     }
 
-    private <V> V createInstance(Class<V> itemClass) {
+    private static <T> T createInstance(Class<T> beanClass) {
         try {
-            Constructor<V> constructor = itemClass.getDeclaredConstructor();
+            Constructor<T> constructor = beanClass.getDeclaredConstructor();
             constructor.setAccessible(true);
             return constructor.newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void writeField(Object instance, Field field, Object value) {
-        try {
-            FieldUtils.writeField(field, instance, value, true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

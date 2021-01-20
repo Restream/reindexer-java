@@ -17,9 +17,8 @@ package ru.rt.restream.reindexer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.TransactionContext;
-import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
@@ -45,7 +44,7 @@ public class Transaction<T> {
     /**
      * Binding to Reindexer instance.
      */
-    private final Binding binding;
+    private final Reindexer reindexer;
 
     /**
      * The futures list.
@@ -71,11 +70,11 @@ public class Transaction<T> {
      * Creates an instance.
      *
      * @param namespace the namespace
-     * @param binding   a binding to Reindexer instance
+     * @param reindexer   a binding to Reindexer instance
      */
-    public Transaction(ReindexerNamespace<T> namespace, Binding binding) {
+    public Transaction(ReindexerNamespace<T> namespace, Reindexer reindexer) {
         this.namespace = namespace;
-        this.binding = binding;
+        this.reindexer = reindexer;
     }
 
     /**
@@ -88,7 +87,7 @@ public class Transaction<T> {
         if (started) {
             return;
         }
-        transactionContext = binding.beginTx(namespace.getName());
+        transactionContext = reindexer.getBinding().beginTx(namespace.getName());
         started = true;
         LOGGER.debug("rx: transaction started");
     }
@@ -303,7 +302,7 @@ public class Transaction<T> {
      * @return a {@link Query} with the current transaction
      */
     public Query<T> query() {
-        return new Query<>(binding, namespace, transactionContext);
+        return new Query<>(reindexer, namespace, transactionContext);
     }
 
 }

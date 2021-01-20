@@ -20,7 +20,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Specifies that the property or field is not persistent. It is used to annotate a property or field of an
+ * item class. That field can be used to read join results.
+ */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Joined {
+public @interface Transient {
 }

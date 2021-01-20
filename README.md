@@ -151,6 +151,113 @@ db.query("items", Item.class)
     .execute();
 ```
 
+### Joins
+Reindexer can join documents from multiple namespaces into a single result:
+
+```java
+    import ru.rt.restream.reindexer.annotations.Transient;
+
+public class Actor {
+
+    @Reindex(name = "id", isPrimaryKey = true)
+    private Integer id;
+
+    @Reindex(name = "name")
+    private String name;
+
+    @Reindex(name = "is_visible")
+    private boolean visible;
+
+}
+
+public class ItemWithJoin {
+
+    @Reindex(name = "id", isPrimaryKey = true)
+    private Integer id;
+
+    @Reindex(name = "name")
+    private String name;
+
+    private List<Integer> actorsIds;
+
+    private String actorName;
+
+    @Transient
+    private List<Actor> joinedActors;
+
+    @Transient
+    private Actor joinedActor;
+    
+}
+    
+    
+    //Select all items inner join actors on Actor.id in ItemWithJoin.actorIds
+    CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+            .join(db.query("actors", Actor.class)
+                    .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
+            .execute();
+
+    //Select all items inner join visible actors on Actor.id in ItemWithJoin.actorIds
+    CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+            .join(db.query("actors", Actor.class).where("is_visible", EQ, true)
+                    .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
+            .execute();
+
+    //Select all items inner join actors on Actor.name equal ItemWithJoin.actorName
+    CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+            .join(db.query("actors", Actor.class)
+                    .on("actorName", Query.Condition.EQ, "name"), "joinedActor")
+            .execute();
+
+```
+
+Join query may have from one to several On conditions connected with **And** (by default), or **Or** operators:
+
+```java
+    CloseableIterator<ItemWithJoin> items = db.query("items_with_join",ItemWithJoin.class)
+        .join(db.query("actors", Actor.class)
+        .on("actorsIds",Query.Condition.SET,"id")
+        .on("actorName",Query.Condition.SET,"name"),"joinedActors")
+        .execute();
+```
+
+An InnerJoin combines data from two namespaces where there is a match on the joining fields in both namespaces. A LeftJoin returns all valid items from the namespaces on the left side of the LeftJoin keyword, along with the values from the table on the right side, or nothing if a matching item doesn't exist.  
+InnerJoins can be used as a condition in Where clause:
+```java
+        Query<ItemWithJoin> query1 = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", RANGE, 0, 100)
+                .or()
+                .innerJoin(db.query("actors", Actor.class)
+                        .where("name", EQ, "Test")
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .or()
+                .innerJoin(db.query("actors", Actor.class)
+                        .where("id", RANGE, 200, 300)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .execute();  
+
+        Query<ItemWithJoin> query2 = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", RANGE, 0, 100)
+                .or()
+                .openBracket()
+                .innerJoin(db.query("actors", Actor.class)
+                        .where("name", EQ, "Test")
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .innerJoin(db.query("actors", Actor.class)
+                        .where("id", RANGE, 200, 300)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .closeBracket();
+        
+        Query<ItemWithJoin> query3 = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", RANGE, 0, 100)
+                .or()
+                .innerJoin(db.query("actors", Actor.class)
+                        .where("id", RANGE, 200, 300)
+                        .on("actorsIds", SET, "id")
+                        .limit(0), "joinedActors");
+```
+Note that usually Or operator implements short-circuiting for Where conditions: if the previous condition is true the next one is not evaluated. But in case of InnerJoin it works differently: in query1 (from the example above) both InnerJoin conditions are evaluated despite the result of WhereInt. Limit(0) as part of InnerJoin (query3 from the example above) does not join any data - it works like a filter only to verify conditions.
+
 ### Transactions and batch update
 
 Reindexer supports transactions. Transaction are performs atomic namespace update. There are synchronous and 

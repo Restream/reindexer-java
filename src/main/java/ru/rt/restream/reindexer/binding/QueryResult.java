@@ -43,6 +43,8 @@ public class QueryResult {
 
     private List<PayloadType> payloadTypes;
 
+    private boolean withJoined;
+
     /**
      * Encoded query result data.
      */
@@ -126,5 +128,13 @@ public class QueryResult {
 
     public void setPayloadTypes(List<PayloadType> payloadTypes) {
         this.payloadTypes = payloadTypes;
+    }
+
+    public boolean isWithJoined() {
+        return withJoined;
+    }
+
+    public void setWithJoined(boolean withJoined) {
+        this.withJoined = withJoined;
     }
 }

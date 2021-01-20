@@ -15,7 +15,6 @@
  */
 package ru.rt.restream.reindexer;
 
-import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -24,9 +23,10 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
@@ -37,12 +37,6 @@ import java.util.stream.StreamSupport;
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_DROP_FIELD;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_END;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_JOIN_CONDITION;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_JOIN_ON;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_UPDATE_FIELD_V2;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 
@@ -53,6 +47,27 @@ public class Query<T> {
     private static final int OP_OR = 1;
     private static final int OP_AND = 2;
     private static final int OP_NOT = 3;
+
+    private static final int QUERY_CONDITION = 0;
+    private static final int QUERY_DISTINCT = 1;
+    private static final int QUERY_SORT_INDEX = 2;
+    private static final int QUERY_JOIN_ON = 3;
+    private static final int QUERY_LIMIT = 4;
+    private static final int QUERY_OFFSET = 5;
+    private static final int QUERY_REQ_TOTAL = 6;
+    private static final int QUERY_DEBUG_LEVEL = 7;
+    private static final int QUERY_AGGREGATION = 8;
+    private static final int QUERY_SELECT_FILTER = 9;
+    private static final int QUERY_SELECT_FUNCTION = 10;
+    private static final int QUERY_END = 11;
+    private static final int QUERY_EXPLAIN = 12;
+    private static final int QUERY_EQUAL_POSITION = 13;
+    private static final int QUERY_UPDATE_FIELD = 14;
+    private static final int QUERY_OPEN_BRACKET = 18;
+    private static final int QUERY_CLOSE_BRACKET = 19;
+    private static final int QUERY_JOIN_CONDITION = 20;
+    private static final int QUERY_DROP_FIELD = 21;
+    private static final int QUERY_UPDATE_FIELD_V2 = 25;
 
     public enum Condition {
         ANY(0),
@@ -72,7 +87,7 @@ public class Query<T> {
         }
     }
 
-    private final Binding binding;
+    private final Reindexer reindexer;
 
     private final ByteBuffer buffer = new ByteBuffer();
 
@@ -86,20 +101,52 @@ public class Query<T> {
 
     private final List<Query<?>> joinQueries = new ArrayList<>();
 
-    private final List<String> joinToFields = new ArrayList<>();
+    private final List<String> joinFields = new ArrayList<>();
+
+    private final List<Query<?>> mergeQueries = new ArrayList<>();
+
+    private final List<ReindexerNamespace<?>> namespaces = new ArrayList<>();
+
+    private Deque<Integer> openedBrackets = new ArrayDeque<>();
+
+    private int queryCount = 0;
 
     private int joinType;
 
     private Query<?> root;
 
-    public Query(Binding binding, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
-        this.binding = binding;
+    public Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
+        this.reindexer = reindexer;
         this.namespace = namespace;
         this.transactionContext = transactionContext;
         buffer.putVString(namespace.getName());
     }
 
-    public<J> Query<T> join(Query<J> joinQuery, String field) {
+    /**
+     * Inner joins 2 queries, alias for innerJoin.
+     *
+     * @param <J>       type of joined items
+     * @param joinQuery query to join
+     * @param field     parameter serves as unique identifier for the join between queries. If left side namespace has
+     *                  {@link ru.rt.restream.reindexer.annotations.Transient} field with the same name, that field will
+     *                  be populated with join results
+     * @return this {@link Query} for further customizations
+     */
+    public <J> Query<T> join(Query<J> joinQuery, String field) {
+        return innerJoin(joinQuery, field);
+    }
+
+    /**
+     * Inner joins 2 queries.
+     *
+     * @param <J>       type of joined items
+     * @param joinQuery query to join
+     * @param field     parameter serves as unique identifier for the join between queries. If left side namespace has
+     *                  {@link ru.rt.restream.reindexer.annotations.Transient} field with the same name, that field will
+     *                  be populated with join results
+     * @return this {@link Query} for further customizations
+     */
+    public <J> Query<T> innerJoin(Query<J> joinQuery, String field) {
         if (nextOperation == OP_OR) {
             nextOperation = OP_AND;
             return join(joinQuery, field, OR_INNER_JOIN);
@@ -108,9 +155,23 @@ public class Query<T> {
         return join(joinQuery, field, INNER_JOIN);
     }
 
+    /**
+     * Left joins 2 queries.
+     *
+     * @param <J>       type of joined items
+     * @param joinQuery query to join
+     * @param field     parameter serves as unique identifier for the join between queries. If left side namespace has
+     *                  {@link ru.rt.restream.reindexer.annotations.Transient} field with the same name, that field will
+     *                  be populated with join results
+     * @return this {@link Query} for further customizations
+     */
+    public<J> Query<T> leftJoin(Query<J> joinQuery, String field) {
+        return join(joinQuery, field, LEFT_JOIN);
+    }
+
     private<J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
         if (joinQuery.root != null) {
-            throw new IllegalStateException("query.Join call on already joined query. You shoud create new Query");
+            throw new IllegalStateException("query.join call on already joined query. You should create new Query");
         }
 
         if (joinType != LEFT_JOIN) {
@@ -122,19 +183,17 @@ public class Query<T> {
         joinQuery.joinType = joinType;
         joinQuery.root = this;
         joinQueries.add(joinQuery);
-        joinToFields.add(field);
-        //q.joinHandlers = append(q.joinHandlers, nil)
+        joinFields.add(field);
         return this;
     }
 
-    public Query<T> on(String index, Condition condition, String joinIndex) {
-        Query<?> joinQuery = joinQueries.get(joinQueries.size() - 1);
-        joinQuery.buffer.putVarUInt32(QUERY_JOIN_ON);
-        joinQuery.buffer.putVarUInt32(joinQuery.nextOperation);
-        joinQuery.buffer.putVarUInt32(condition.code);
-        joinQuery.buffer.putVString(index);
-        joinQuery.buffer.putVString(joinIndex);
-        joinQuery.nextOperation = OP_AND;
+    public Query<T> on(String joinField, Condition condition, String joinIndex) {
+        buffer.putVarUInt32(QUERY_JOIN_ON);
+        buffer.putVarUInt32(nextOperation);
+        buffer.putVarUInt32(condition.code);
+        buffer.putVString(joinField);
+        buffer.putVString(joinIndex);
+        nextOperation = OP_AND;
         return this;
     }
 
@@ -147,12 +206,13 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> where(String indexName, Condition condition, Object... values) {
-        buffer.putVarUInt32(Consts.QUERY_CONDITION)
+        buffer.putVarUInt32(QUERY_CONDITION)
                 .putVString(indexName)
                 .putVarUInt32(nextOperation)
                 .putVarUInt32(condition.code);
 
         this.nextOperation = OP_AND;
+        this.queryCount++;
 
         if (values != null && values.length > 0) {
             buffer.putVarUInt32(values.length);
@@ -161,6 +221,36 @@ public class Query<T> {
             }
         }
 
+        return this;
+    }
+
+    /**
+     * Open bracket for where condition to DB query
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> openBracket() {
+        buffer.putVarUInt32(QUERY_OPEN_BRACKET);
+        buffer.putVarUInt32(nextOperation);
+        nextOperation = OP_AND;
+        this.openedBrackets.add(this.queryCount++);
+        return this;
+    }
+
+    /**
+     * Close bracket for where condition to DB query
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> closeBracket() {
+        if (nextOperation != OP_AND) {
+            throw new RuntimeException("Operation before close bracket");
+        }
+        if (openedBrackets.size() < 1) {
+            throw new RuntimeException("Close bracket before open it");
+        }
+        buffer.putVarUInt32(QUERY_CLOSE_BRACKET);
+        openedBrackets.pollLast();
         return this;
     }
 
@@ -198,8 +288,8 @@ public class Query<T> {
     }
 
     public Query<T> limit(int limit) {
-        if (limit > 0) {
-            buffer.putVarUInt32(Consts.QUERY_LIMIT)
+        if (limit >= 0) {
+            buffer.putVarUInt32(QUERY_LIMIT)
                     .putVarUInt32(limit);
         }
         return this;
@@ -207,7 +297,7 @@ public class Query<T> {
 
     public Query<T> offset(int offset) {
         if (offset > 0) {
-            buffer.putVarUInt32(Consts.QUERY_OFFSET)
+            buffer.putVarUInt32(QUERY_OFFSET)
                     .putVarUInt32(offset);
         }
         return this;
@@ -225,7 +315,7 @@ public class Query<T> {
      */
     public Query<T> sort(String index, boolean desc, Object... values) {
 
-        buffer.putVarUInt32(Consts.QUERY_SORT_INDEX)
+        buffer.putVarUInt32(QUERY_SORT_INDEX)
                 .putVString(index);
         if (desc) {
             buffer.putVarUInt32(1);
@@ -388,25 +478,45 @@ public class Query<T> {
     public CloseableIterator<T> execute() {
         buffer.putVarUInt32(QUERY_END);
 
+        namespaces.add(namespace);
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            namespaces.add(mergeQuery.namespace);
+        }
+
         for (Query<?> joinQuery : joinQueries) {
             buffer.putVarUInt32(joinQuery.joinType);
             buffer.writeBytes(joinQuery.buffer.bytes());
             buffer.putVarUInt32(QUERY_END);
+            namespaces.add(joinQuery.namespace);
         }
 
-        PayloadType payloadType = namespace.getPayloadType();
-        long[] ptVersions =  new long[]{payloadType == null ? 0 : payloadType.getStateToken()};
+        for (Query<?> mergeQuery : mergeQueries) {
+            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
+            for (Query<?> joinQuery : joinQueries) {
+                namespaces.add(joinQuery.namespace);
+            }
+        }
+
+        long[] ptVersions = namespaces.stream()
+                .map(ReindexerNamespace::getPayloadType)
+                .map(pt -> pt == null ? 0 : pt.getStateToken())
+                .mapToLong(Integer::longValue)
+                .toArray();
         RequestContext requestContext = transactionContext != null
                 ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions)
-                : binding.selectQuery(buffer.bytes(), fetchCount, ptVersions);
+                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions);
 
         QueryResult queryResult = requestContext.getQueryResult();
-        queryResult.getPayloadTypes().stream()
-                .filter(pt -> payloadType == null || payloadType.getVersion() < pt.getVersion())
-                .max(Comparator.comparing(PayloadType::getVersion))
-                .ifPresent(namespace::updatePayloadType);
+        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
+            ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
+            PayloadType currentPayloadType = namespace.getPayloadType();
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
+                namespace.updatePayloadType(payloadType);
+            }
+        }
 
-        return new CprotoIterator<>(namespace, requestContext, fetchCount);
+        return new CprotoIterator<>(namespace, requestContext, this, fetchCount);
     }
 
     /**
@@ -416,7 +526,7 @@ public class Query<T> {
         if (transactionContext != null) {
             transactionContext.deleteQuery(buffer.bytes());
         } else {
-            binding.deleteQuery(buffer.bytes());
+            reindexer.getBinding().deleteQuery(buffer.bytes());
         }
     }
 
@@ -483,7 +593,24 @@ public class Query<T> {
         if (transactionContext != null) {
             transactionContext.updateQuery(buffer.bytes());
         } else {
-            binding.updateQuery(buffer.bytes());
+            reindexer.getBinding().updateQuery(buffer.bytes());
         }
     }
+
+    public List<Query<?>> getJoinQueries() {
+        return joinQueries;
+    }
+
+    public List<Query<?>> getMergeQueries() {
+        return mergeQueries;
+    }
+
+    public List<ReindexerNamespace<?>> getNamespaces() {
+        return namespaces;
+    }
+
+    public List<String> getJoinFields() {
+        return joinFields;
+    }
+
 }

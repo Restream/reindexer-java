@@ -47,25 +47,6 @@ public class Consts {
     public static final int VALUE_COMPOSITE = 10;
     public static final int VALUE_TUPLE = 11;
 
-    public static final int QUERY_CONDITION = 0;
-    public static final int QUERY_DISTINCT = 1;
-    public static final int QUERY_SORT_INDEX = 2;
-    public static final int QUERY_JOIN_ON = 3;
-    public static final int QUERY_LIMIT = 4;
-    public static final int QUERY_OFFSET = 5;
-    public static final int QUERY_REQ_TOTAL = 6;
-    public static final int QUERY_DEBUG_LEVEL = 7;
-    public static final int QUERY_AGGREGATION = 8;
-    public static final int QUERY_SELECT_FILTER = 9;
-    public static final int QUERY_SELECT_FUNCTION = 10;
-    public static final int QUERY_END = 11;
-    public static final int QUERY_EXPLAIN = 12;
-    public static final int QUERY_EQUAL_POSITION = 13;
-    public static final int QUERY_UPDATE_FIELD = 14;
-    public static final int QUERY_JOIN_CONDITION = 20;
-    public static final int QUERY_DROP_FIELD = 21;
-    public static final int QUERY_UPDATE_FIELD_V2 = 25;
-
     public static final int LEFT_JOIN = 0;
     public static final int INNER_JOIN = 1;
     public static final int OR_INNER_JOIN = 2;

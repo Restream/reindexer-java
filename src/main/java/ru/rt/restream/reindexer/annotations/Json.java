@@ -30,6 +30,7 @@ public @interface Json {
 
     /**
      * Json field name
+     * @return json field name
      */
     String value();
 

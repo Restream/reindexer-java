@@ -17,8 +17,8 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.cproto.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
@@ -155,7 +155,7 @@ public class Reindexer {
      */
     public <T> Transaction<T> beginTransaction(String namespaceName, Class<T> itemClass) {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
-        Transaction<T> transaction = new Transaction<>(namespace, binding);
+        Transaction<T> transaction = new Transaction<>(namespace, this);
         transaction.start();
         return transaction;
     }
@@ -170,14 +170,15 @@ public class Reindexer {
      */
     public <T> Query<T> query(String namespaceName, Class<T> clazz) {
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, clazz);
-        return new Query<>(binding, namespace, null);
+        return new Query<>(this, namespace, null);
     }
 
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
         Pair<String, Class<?>> key = new Pair<>(namespaceName, itemClass);
         ReindexerNamespace<?> namespace = namespaceMap.get(key);
         if (namespace == null) {
-            String msg = String.format("Namespace '%s' is not exists.", namespaceName);
+            String msg = String.format("Namespace '%s', item class %s is not exists.", namespaceName,
+                    itemClass.getName());
             throw new IllegalArgumentException(msg);
         }
 
@@ -221,6 +222,10 @@ public class Reindexer {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public Binding getBinding() {
+        return binding;
     }
 
 }

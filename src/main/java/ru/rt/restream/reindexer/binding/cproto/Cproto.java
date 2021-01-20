@@ -122,7 +122,7 @@ public class Cproto implements Binding {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
-                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, new long[]{1});
+                fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
         return new CprotoRequestContext(rpcResponse, connection);
     }
 

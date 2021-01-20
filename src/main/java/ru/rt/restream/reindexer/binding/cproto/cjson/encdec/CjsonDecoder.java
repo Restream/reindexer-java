@@ -19,7 +19,7 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.*;
 
 /**
- * Decodes a сjson byte data to a CjsonElement.
+ * Decodes a cjson byte data to a CjsonElement.
  */
 public class CjsonDecoder {
 

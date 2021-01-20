@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.reindexer.Query.Condition.RANGE;
 
 @Testcontainers
 public class ReindexerTest {
@@ -215,7 +216,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -226,7 +226,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .execute();
@@ -244,7 +243,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemByOrCondition() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -255,7 +253,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77 или 78
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .or()
@@ -281,7 +278,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemsByNotCondition() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -292,7 +288,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элементы у которых id не равняется 77
         List<TestItem> queryItems = db.query("items", TestItem.class)
                 .not()
                 .where("id", EQ, 77)
@@ -303,8 +298,7 @@ public class ReindexerTest {
     }
 
     @Test
-    public void testSelectOneItemByCompositeIndex() {
-        //Вставить 100 элементов
+    public void testSelectItemsByConditionsInBracket() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -315,7 +309,42 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .or()
+                .openBracket()
+                .where("id", RANGE, 80, 90)
+                .where("value", EQ, "85Value")
+                .closeBracket()
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem byId = iterator.next();
+        assertThat(byId.id, is(77));
+        assertThat(byId.name, is("TestName77"));
+        assertThat(byId.value, is("77Value"));
+
+        TestItem byRangeAndValue = iterator.next();
+        assertThat(byRangeAndValue.id, is(85));
+        assertThat(byRangeAndValue.value, is("85Value"));
+
+        assertThat(iterator.hasNext(), is(false));
+
+    }
+
+    @Test
+    public void testSelectOneItemByCompositeIndex() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .whereComposite("id+name", EQ, 77, "TestName77")
                 .execute();
@@ -333,7 +362,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneByNestedIndexes() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -350,7 +378,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("nestedTest.test", EQ, 77)
                 .where("nestedTest.value", EQ, "nestedValue77")
@@ -369,7 +396,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneByNestedArrayIndex() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -393,7 +419,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("listNested.test", EQ, 77)
                 .where("listNested.value", EQ, "array77")
@@ -412,7 +437,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneByArrayItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -433,7 +457,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("integers", EQ, 77)
                 .execute();
@@ -451,7 +474,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneItemByThreePredicates() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -462,7 +484,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .where("name", EQ, "TestName77")
@@ -482,7 +503,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectOneItemByThreePredicatesWhenOneFieldIsNotMatching() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -493,7 +513,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .where("name", EQ, "TestName77")
@@ -506,7 +525,6 @@ public class ReindexerTest {
 
     @Test
     public void testDeleteOneItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -517,12 +535,10 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Удалить из БД элемент с id 77
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .delete();
 
-        //Выбрать из БД элемент с id 77
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .execute();
@@ -533,7 +549,6 @@ public class ReindexerTest {
 
     @Test
     public void testDeleteListItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -544,12 +559,10 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Удалить из БД элементы с id 77, 17, 7
         db.query("items", TestItem.class)
                 .where("id", EQ, 77, 17, 7)
                 .delete();
 
-        //Выбрать из БД элементы с id 77, 17, 7
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .where("id", EQ, 77, 17, 7)
                 .execute();
@@ -559,7 +572,6 @@ public class ReindexerTest {
 
     @Test
     public void testDeleteAllItems() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -570,11 +582,9 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Удалить из БД элементы с id 77, 17, 7
         db.query("items", TestItem.class)
                 .delete();
 
-        //Выбрать из БД элементы с id 77, 17, 7
         Iterator<TestItem> iterator = db.query("items", TestItem.class)
                 .execute();
 
@@ -583,7 +593,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemList() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -610,7 +619,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemWithLimit() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -639,7 +647,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemWithOffset() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -672,7 +679,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemWithDescSortOrder() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -702,7 +708,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemWithDescSortOrderWithTopValues() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -736,7 +741,6 @@ public class ReindexerTest {
 
     @Test
     public void testSelectItemListWithFetchCount_1() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -764,7 +768,6 @@ public class ReindexerTest {
 
     @Test
     public void testUpdateOneItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -775,7 +778,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Обновить поле объекта с id 77
         final String updatedName = "updated";
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
@@ -793,7 +795,6 @@ public class ReindexerTest {
 
     @Test
     public void testUpdateFieldToNullItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -805,7 +806,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Обновить поле объекта с id 77
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("nonIndex", null)
@@ -822,7 +822,6 @@ public class ReindexerTest {
 
     @Test
     public void testDropFieldToNullItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -834,7 +833,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Удалить поле объекта с id 77
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .drop("nonIndex")
@@ -851,7 +849,6 @@ public class ReindexerTest {
 
     @Test
     public void testUpdateItemList() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -862,7 +859,6 @@ public class ReindexerTest {
             db.upsert(namespaceName, testItem);
         }
 
-        //Обновить поля объектов с id 77, 17, 7
         final String updatedName = "updated";
         db.query("items", TestItem.class)
                 .where("id", EQ, 77, 17, 7)
@@ -885,7 +881,6 @@ public class ReindexerTest {
 
     @Test
     public void testUpdateAllItems() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -917,7 +912,6 @@ public class ReindexerTest {
 
     @Test
     public void testUpdateTwoFieldsOnOneItem() {
-        //Вставить 100 элементов
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -2044,7 +2038,7 @@ public class ReindexerTest {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (!(o instanceof TestItem)) return false;
             TestItem testItem = (TestItem) o;
             return Objects.equals(id, testItem.id) &&
                    Objects.equals(name, testItem.name) &&
@@ -2073,11 +2067,28 @@ public class ReindexerTest {
 
     }
 
-    private static class NestedTest {
+    public static class NestedTest {
+
         @Reindex(name = "value")
         private String value;
         @Reindex(name = "test")
         private Integer test;
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+
+        public Integer getTest() {
+            return test;
+        }
+
+        public void setTest(Integer test) {
+            this.test = test;
+        }
     }
 
     public static class ItemsResponse {

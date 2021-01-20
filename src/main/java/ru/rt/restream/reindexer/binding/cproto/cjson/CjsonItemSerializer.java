@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.binding.cproto;
+package ru.rt.restream.reindexer.binding.cproto.cjson;
 
-import ru.rt.restream.reindexer.binding.cproto.cjson.CJsonItemWriter;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
-import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
+import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 
 /**
  * Encodes item in cjson format and converts it to array of bytes.
