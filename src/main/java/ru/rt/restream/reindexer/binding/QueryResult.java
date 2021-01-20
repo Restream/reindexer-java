@@ -45,6 +45,8 @@ public class QueryResult {
 
     private boolean withJoined;
 
+    private List<AggregationResult> aggResults;
+
     /**
      * Encoded query result data.
      */
@@ -136,5 +138,13 @@ public class QueryResult {
 
     public void setWithJoined(boolean withJoined) {
         this.withJoined = withJoined;
+    }
+
+    public List<AggregationResult> getAggResults() {
+        return aggResults;
+    }
+
+    public void setAggResults(List<AggregationResult> aggResults) {
+        this.aggResults = aggResults;
     }
 }

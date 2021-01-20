@@ -48,6 +48,13 @@ public class Query<T> {
     private static final int OP_AND = 2;
     private static final int OP_NOT = 3;
 
+    private static final int AGG_SUM = 0;
+    private static final int AGG_AVG = 1;
+    private static final int AGG_FACET = 2;
+    private static final int AGG_MIN = 3;
+    private static final int AGG_MAX = 4;
+    private static final int AGG_DISTINCT = 5;
+
     private static final int QUERY_CONDITION = 0;
     private static final int QUERY_DISTINCT = 1;
     private static final int QUERY_SORT_INDEX = 2;
@@ -63,6 +70,9 @@ public class Query<T> {
     private static final int QUERY_EXPLAIN = 12;
     private static final int QUERY_EQUAL_POSITION = 13;
     private static final int QUERY_UPDATE_FIELD = 14;
+    private static final int QUERY_AGGREGATION_LIMIT = 15;
+    private static final int QUERY_AGGREGATION_OFFSET = 16;
+    private static final int QUERY_AGGREGATION_SORT = 17;
     private static final int QUERY_OPEN_BRACKET = 18;
     private static final int QUERY_CLOSE_BRACKET = 19;
     private static final int QUERY_JOIN_CONDITION = 20;
@@ -285,6 +295,114 @@ public class Query<T> {
     public Query<T> whereComposite(String indexName, Condition condition, Object... values) {
         where(indexName, condition, new Object[]{values});
         return this;
+    }
+
+    /**
+     * Get list of unique values of the field.
+     *
+     * @param field item field
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> aggregateDistinct(String field) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_DISTINCT).putVarUInt32(1).putVString(field);
+        return this;
+    }
+
+    /**
+     * Get sum field value.
+     *
+     * @param field item field
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> aggregateSum(String field) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_SUM).putVarUInt32(1).putVString(field);
+        return this;
+    }
+
+    /**
+     * Get average field value.
+     *
+     * @param field item field
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> aggregateAvg(String field) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_AVG).putVarUInt32(1).putVString(field);
+        return this;
+    }
+
+    /**
+     * Get minimum field value.
+     *
+     * @param field item field
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> aggregateMin(String field) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_MIN).putVarUInt32(1).putVString(field);
+        return this;
+    }
+
+    /**
+     * Get maximum field value.
+     *
+     * @param field item field
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> aggregateMax(String field) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_MAX).putVarUInt32(1).putVString(field);
+        return this;
+    }
+
+    /**
+     * Get fields facet value. Applicable to multiple data fields and the result of that could be sorted by any data
+     * column or 'count' and cut off by offset and limit. In order to support this functionality this method
+     * returns AggregationFacetRequest which has methods sort, limit and offset.
+     *
+     * @param fields any data column name or 'count', fields should not be empty
+     * @return the {@link AggregationFacetRequest} for further customizations
+     */
+    public AggregationFacetRequest aggregateFacet(String... fields) {
+        buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_FACET).putVarUInt32(fields.length);
+        for (String field : fields) {
+            buffer.putVString(field);
+        }
+
+        return new AggregationFacetRequest(this);
+    }
+
+    public static class AggregationFacetRequest {
+
+        private final Query<?> query;
+
+        public AggregationFacetRequest(Query<?> query) {
+            this.query = query;
+        }
+
+        public AggregationFacetRequest limit(int limit) {
+            query.buffer.putVarUInt32(QUERY_AGGREGATION_LIMIT).putVarUInt32(limit);
+            return this;
+        }
+
+        public AggregationFacetRequest offset(int offset) {
+            query.buffer.putVarUInt32(QUERY_AGGREGATION_OFFSET).putVarUInt32(offset);
+            return this;
+        }
+
+        /**
+         * Sort facets by field value.
+         *
+         * @param field item field. Use field 'count' to sort by facet's count value
+         * @param desc  true if descending order
+         */
+        public AggregationFacetRequest sort(String field, boolean desc) {
+            query.buffer.putVarUInt32(QUERY_AGGREGATION_SORT).putVString(field);
+            if (desc) {
+                query.buffer.putVarUInt32(1);
+            } else {
+                query.buffer.putVarUInt32(0);
+            }
+            return this;
+        }
+
     }
 
     public Query<T> limit(int limit) {
