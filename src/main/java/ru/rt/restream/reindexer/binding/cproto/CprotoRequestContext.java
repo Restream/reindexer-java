@@ -15,8 +15,10 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.binding.AggregationResult;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -24,8 +26,12 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadField;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * A request context which establish a connection to the Reindexer instance via RPC.
@@ -35,6 +41,8 @@ public class CprotoRequestContext implements RequestContext {
     private static final Logger LOGGER = LoggerFactory.getLogger(CprotoRequestContext.class);
 
     private static final int QUERY_RESULT_END = 0;
+
+    private static final int QUERY_RESULT_AGGREGATION = 1;
 
     private static final int FETCH_RESULTS = 50;
 
@@ -55,6 +63,8 @@ public class CprotoRequestContext implements RequestContext {
     private static final int RESULTS_WITH_JOINED = 0x100;
 
     private final Connection connection;
+
+    private final Gson gson = new Gson();
 
     private QueryResult queryResult;
 
@@ -169,17 +179,33 @@ public class CprotoRequestContext implements RequestContext {
             }
         }
 
-        readExtraResults(buffer);
+        Map<Integer, List<byte[]>> extraResults = readExtraResults(buffer);
+        List<byte[]> rawAggregations = extraResults.getOrDefault(QUERY_RESULT_AGGREGATION, new ArrayList<>());
+        List<AggregationResult> aggregationResults = rawAggregations.stream()
+                .map(this::deserializeAggResult)
+                .collect(Collectors.toList());
+        queryResult.setAggResults(aggregationResults);
         queryResult.setBuffer(new ByteBuffer(buffer.getBytes()).rewind());
         return queryResult;
     }
 
-    private void readExtraResults(ByteBuffer buffer) {
+    private AggregationResult deserializeAggResult(byte[] bytes) {
+        String json = new String(bytes, StandardCharsets.UTF_8);
+        return gson.fromJson(json, AggregationResult.class);
+    }
+
+    private Map<Integer, List<byte[]>> readExtraResults(ByteBuffer buffer) {
+        Map<Integer, List<byte[]>> extraResults = new HashMap<>();
         int tag = (int) buffer.getVarUInt();
         while (tag != QUERY_RESULT_END) {
             byte[] data = buffer.getBytes((int) buffer.getUInt32());
+
+            extraResults.computeIfAbsent(tag, t -> new ArrayList<>())
+                    .add(data);
+
             tag = (int) buffer.getVarUInt();
         }
+        return extraResults;
     }
 
 }

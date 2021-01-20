@@ -18,6 +18,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.binding.AggregationResult;
 import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.ReindexerNamespace;
@@ -35,6 +36,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import java.util.List;
 
 /**
  * An iterator over a query result.
@@ -232,6 +235,11 @@ public class CprotoIterator<T> implements CloseableIterator<T> {
     @Override
     public long size() {
         return queryResult.getQCount();
+    }
+
+    @Override
+    public List<AggregationResult> aggResults() {
+        return queryResult.getAggResults();
     }
 
     /**

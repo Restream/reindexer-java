@@ -15,7 +15,10 @@
  */
 package ru.rt.restream.reindexer;
 
+import ru.rt.restream.reindexer.binding.AggregationResult;
+
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * This interface is used by iterators that use releasable resources during iteration.
@@ -32,6 +35,13 @@ public interface CloseableIterator<E> extends Iterator<E>, AutoCloseable {
      * @return the iterator size
      */
     long size();
+
+    /**
+     * Returns aggregations result.
+     *
+     * @return aggregations result
+     * */
+    List<AggregationResult> aggResults();
 
     /**
      * Closes the iterator.
