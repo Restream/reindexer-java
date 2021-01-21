@@ -33,6 +33,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.Transaction;
@@ -45,6 +46,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -791,6 +794,248 @@ public class ReindexerTest {
         assertThat(iterator.hasNext(), is(true));
         TestItem updatedItem = iterator.next();
         assertThat(updatedItem.name, is(updatedName));
+    }
+
+    @Test
+    public void testUpdateItemObjectField() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            db.upsert(namespaceName, testItem);
+        }
+
+        NestedTest nested = new NestedTest();
+        nested.test = 5;
+        nested.value = "updated";
+        nested.nonIndex = "updatedNonIndex";
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("nestedTest", nested)
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        NestedTest result = updatedItem.nestedTest;
+        assertThat(result.test, is(nested.test));
+        assertThat(result.value, is(nested.value));
+        assertThat(result.nonIndex, is(nested.nonIndex));
+    }
+
+    @Test
+    public void testUpdateItemObjectFieldToNull() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            db.upsert(namespaceName, testItem);
+        }
+
+        NestedTest nested = new NestedTest();
+        nested.test = 5;
+        nested.value = "updated";
+        nested.nonIndex = "updatedNonIndex";
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("nestedTest", null)
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        NestedTest result = updatedItem.nestedTest;
+        assertThat(result, is(nullValue()));
+    }
+
+    @Test
+    public void testUpdateItemListObjectToEmptyList() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setListNested(Arrays.asList(new NestedTest(), new NestedTest(), new NestedTest()));
+            db.upsert(namespaceName, testItem);
+        }
+
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("listNested", Collections.emptyList())
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.getListNested().isEmpty(), is(true));
+    }
+
+    @Test
+    public void testUpdateItemListObjectToListWithSingleElement() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setListNested(Arrays.asList(new NestedTest(), new NestedTest(), new NestedTest()));
+            db.upsert(namespaceName, testItem);
+        }
+
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("listNested", Collections.singletonList(new NestedTest()))
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.getListNested().size(), is(1));
+    }
+
+    @Test
+    public void testUpdateItemListObjects() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setListNested(Arrays.asList(new NestedTest(), new NestedTest(), new NestedTest()));
+            db.upsert(namespaceName, testItem);
+        }
+
+        NestedTest nestedTest1 = new NestedTest();
+        nestedTest1.test = 1;
+        nestedTest1.value = "val1";
+        nestedTest1.nonIndex = "non1";
+        NestedTest nestedTest2 = new NestedTest();
+        nestedTest2.test = 2;
+        nestedTest2.value = "val2";
+        nestedTest2.nonIndex = "non2";
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("listNested", Arrays.asList(nestedTest1, nestedTest2))
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.getListNested().size(), is(2));
+    }
+
+    @Test
+    public void testUpdateItemFieldListPrimitives() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setIntegers(Arrays.asList(5, 4, 3, 2, 1));
+            db.upsert(namespaceName, testItem);
+        }
+
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("integers", Arrays.asList(55, 44, 33, 22, 11))
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.integers, contains(55, 44, 33, 22, 11));
+    }
+
+    @Test
+    public void testUpdateItemListPrimitivesToEmpty() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setIntegers(Arrays.asList(5, 4, 3, 2, 1));
+            db.upsert(namespaceName, testItem);
+        }
+
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("integers", Collections.emptyList())
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.integers.isEmpty(), is(true));
+    }
+
+    @Test
+    public void testInsertItemWithDoubleValue() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setDoubleValue((double) i);
+            db.upsert(namespaceName, testItem);
+        }
+
+        CloseableIterator<TestItem> execute = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        TestItem result = execute.next();
+        assertThat(result.doubleValue, is(77.0D));
+    }
+
+    @Test
+    public void testUpdateItemDoubleValue() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            db.upsert(namespaceName, testItem);
+        }
+
+       db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("doubleValue", 123.123D)
+                .update();
+
+        CloseableIterator<TestItem> items = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        TestItem result = items.next();
+        assertThat(result.doubleValue, is(123.123D));
     }
 
     @Test
@@ -1978,6 +2223,7 @@ public class ReindexerTest {
         private List<NestedTest> listNested;
         @Reindex(name = "integers")
         private List<Integer> integers;
+        private Double doubleValue;
 
         public Integer getId() {
             return id;
@@ -2035,6 +2281,14 @@ public class ReindexerTest {
             this.integers = integers;
         }
 
+        public Double getDoubleValue() {
+            return doubleValue;
+        }
+
+        public void setDoubleValue(Double doubleValue) {
+            this.doubleValue = doubleValue;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -2073,6 +2327,7 @@ public class ReindexerTest {
         private String value;
         @Reindex(name = "test")
         private Integer test;
+        private String nonIndex;
 
         public String getValue() {
             return value;
@@ -2088,6 +2343,14 @@ public class ReindexerTest {
 
         public void setTest(Integer test) {
             this.test = test;
+        }
+
+        public String getNonIndex() {
+            return nonIndex;
+        }
+
+        public void setNonIndex(String nonIndex) {
+            this.nonIndex = nonIndex;
         }
     }
 
