@@ -22,6 +22,7 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.util.JsonSerializer;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
+import static ru.rt.restream.reindexer.binding.Consts.VALUE_STRING;
 
 public class Query<T> {
 
@@ -77,6 +79,7 @@ public class Query<T> {
     private static final int QUERY_CLOSE_BRACKET = 19;
     private static final int QUERY_JOIN_CONDITION = 20;
     private static final int QUERY_DROP_FIELD = 21;
+    private static final int QUERY_UPDATE_OBJECT = 22;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
 
     public enum Condition {
@@ -175,11 +178,11 @@ public class Query<T> {
      *                  be populated with join results
      * @return this {@link Query} for further customizations
      */
-    public<J> Query<T> leftJoin(Query<J> joinQuery, String field) {
+    public <J> Query<T> leftJoin(Query<J> joinQuery, String field) {
         return join(joinQuery, field, LEFT_JOIN);
     }
 
-    private<J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
+    private <J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
         if (joinQuery.root != null) {
             throw new IllegalStateException("query.join call on already joined query. You should create new Query");
         }
@@ -477,9 +480,29 @@ public class Query<T> {
         } else if (value instanceof String) {
             buffer.putVarUInt32(Consts.VALUE_STRING)
                     .putVString((String) value);
+        } else if (value instanceof Long) {
+            buffer.putVarUInt32(Consts.VALUE_INT_64)
+                    .putVarInt64((Long) value);
+        } else if (value instanceof Byte) {
+            buffer.putVarUInt32(Consts.VALUE_INT)
+                    .putVarInt64((Byte) value);
+        } else if (value instanceof Short) {
+            buffer.putVarUInt32(Consts.VALUE_INT)
+                    .putVarInt64((Short) value);
+        } else if (value instanceof Double) {
+            buffer.putVarUInt32(Consts.VALUE_DOUBLE)
+                    .putDouble((Double) value);
+        } else if (value instanceof Float) {
+            Float floatValue = (Float) value;
+            buffer.putVarUInt32(Consts.VALUE_DOUBLE)
+                    .putDouble(floatValue.doubleValue());
+        } else if (value instanceof Character) {
+            Character character = (Character) value;
+            buffer.putVarUInt32(Consts.VALUE_STRING)
+                    .putVString(character.toString());
         } else if (value instanceof Object[]) {
             buffer.putVarUInt32(Consts.VALUE_TUPLE);
-            final Object[] objects = (Object[]) value;
+            Object[] objects = (Object[]) value;
             buffer.putVarUInt32(objects.length);
             for (Object object : objects) {
                 putValue(object);
@@ -656,40 +679,121 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> set(String fieldName, Object value) {
+        if (!isPrimitive(value)) {
+            setObject(fieldName, value);
+            return this;
+        }
         int cmd = QUERY_UPDATE_FIELD;
         if (value instanceof Collection<?>) { //Not tested
             Collection<?> values = (Collection<?>) value;
             if (values.size() <= 1) {
                 cmd = QUERY_UPDATE_FIELD_V2;
-                buffer.putVarUInt32(0); //isArray
             }
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
-            buffer.putVarUInt32(values.size());
-            for (Object v : values) {
-                putValue(v);
+            if (values.size() == 0) {
+                buffer.putVarUInt32(0);
+                buffer.putVarUInt32(0);
+            } else {
+                if (cmd == QUERY_UPDATE_FIELD_V2) {
+                    buffer.putVarUInt32(1);
+                }
+                buffer.putVarUInt32(values.size());
+                for (Object v : values) {
+                    buffer.putVarUInt32(0);
+                    putValue(v);
+                }
             }
-        } else if (value != null && value.getClass().isArray()) { //not tested
+        } else if (value != null && value.getClass().isArray()) {
             Object[] values = (Object[]) value;
             if (values.length <= 1) {
                 cmd = QUERY_UPDATE_FIELD_V2;
-                buffer.putVarUInt32(0); //isArray
             }
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
-            buffer.putVarUInt32(values.length);
-            for (Object v : values) {
-                putValue(v);
+            if (values.length == 0) {
+                buffer.putVarUInt32(0);
+                buffer.putVarUInt32(0);
+            } else {
+                if (cmd == QUERY_UPDATE_FIELD_V2) {
+                    buffer.putVarUInt32(1);
+                }
+                buffer.putVarUInt32(values.length);
+                for (Object v : values) {
+                    buffer.putVarUInt32(0);
+                    putValue(v);
+                }
             }
         } else {
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
-            buffer.putVarUInt32(1); //size
-            buffer.putVarUInt32(0); //function/value flag
+            buffer.putVarUInt32(1);
+            buffer.putVarUInt32(0);
             putValue(value);
         }
 
         return this;
+    }
+
+    private void setObject(String fieldName, Object value) {
+        boolean isArray = false;
+        int count = 1;
+        List<String> jsons = new ArrayList<>();
+        if (value.getClass().isArray()) {
+            isArray = true;
+            Object[] array = (Object[]) value;
+            count = array.length;
+            for (Object element : array) {
+                String json = JsonSerializer.toJson(element);
+                jsons.add(json);
+            }
+        } else if (value instanceof Collection<?>) {
+            isArray = true;
+            Collection<?> collection = (Collection<?>) value;
+            count = collection.size();
+            for (Object element : collection) {
+                String json = JsonSerializer.toJson(element);
+                jsons.add(json);
+            }
+        } else {
+            String json = JsonSerializer.toJson(value);
+            jsons.add(json);
+        }
+
+        buffer.putVarUInt32(QUERY_UPDATE_OBJECT);
+        buffer.putVString(fieldName);
+        buffer.putVarUInt32(count);
+        buffer.putVarUInt32(isArray ? 1 : 0);
+        for (String json : jsons) {
+            buffer.putVarUInt32(0);
+            buffer.putVarUInt32(VALUE_STRING);
+            buffer.putVString(json);
+        }
+    }
+
+    private boolean isPrimitive(Object value) {
+        if (value instanceof Collection<?>) {
+            Collection<?> collection = (Collection<?>) value;
+            if (collection.isEmpty()) {
+                return true;
+            } else {
+                Object element = collection.iterator().next();
+                return isPrimitive(element);
+            }
+        } else if (value != null && value.getClass().isArray()) {
+            Object[] values = (Object[]) value;
+            if (values.length == 0) {
+                return true;
+            } else {
+                Object element = values[0];
+                return isPrimitive(element);
+            }
+        } else {
+            return value == null
+                   || value instanceof Boolean
+                   || value instanceof Number
+                   || value instanceof String;
+        }
     }
 
     /**
