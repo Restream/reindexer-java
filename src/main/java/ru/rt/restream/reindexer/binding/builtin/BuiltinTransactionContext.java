@@ -27,6 +27,7 @@ import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 /**
  * A transaction context which establish a connection to the Reindexer instance via {@link BuiltinAdapter}.
@@ -41,7 +42,7 @@ public class BuiltinTransactionContext implements TransactionContext {
 
     private final long transactionId;
 
-    private final long ctxId;
+    private final Supplier<Long> next;
 
     private final Duration timeout;
 
@@ -51,14 +52,15 @@ public class BuiltinTransactionContext implements TransactionContext {
      * @param adapter       the {@link BuiltinAdapter} to use
      * @param rx            the Reindexer instance pointer
      * @param transactionId the transaction id
-     * @param ctxId         the context id
+     * @param next          the context id generator
      * @param timeout       the execution timeout
      */
-    public BuiltinTransactionContext(BuiltinAdapter adapter, long rx, long transactionId, long ctxId, Duration timeout) {
+    public BuiltinTransactionContext(BuiltinAdapter adapter, long rx, long transactionId,
+                                     Supplier<Long> next, Duration timeout) {
         this.adapter = adapter;
         this.rx = rx;
         this.transactionId = transactionId;
-        this.ctxId = ctxId;
+        this.next = next;
         this.timeout = timeout;
     }
 
@@ -87,7 +89,7 @@ public class BuiltinTransactionContext implements TransactionContext {
 
     @Override
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        ReindexerResponse response = adapter.selectQuery(rx, transactionId, timeout.toMillis(), queryData, ptVersions, false);
+        ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, false);
         checkResponse(response);
         return new BuiltinRequestContext(response);
     }
@@ -107,7 +109,7 @@ public class BuiltinTransactionContext implements TransactionContext {
     @Override
     public void commit() {
         try {
-            ReindexerResponse response = adapter.commitTx(rx, transactionId, ctxId, timeout.toMillis());
+            ReindexerResponse response = adapter.commitTx(rx, transactionId, next.get(), timeout.toMillis());
             checkResponse(response);
         } catch (Exception e) {
             LOGGER.error("rx: commit error", e);
