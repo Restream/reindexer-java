@@ -50,6 +50,8 @@
         <java.version>1.8</java.version>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.source>${java.version}</maven.compiler.source>
+        <cmake.source.directory>${project.basedir}/builtin-adapter</cmake.source.directory>
+        <cmake.binary.directory>${project.build.directory}/builtin-adapter/build</cmake.binary.directory>
     </properties>
 
     <profiles>
@@ -147,12 +149,35 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>com.googlecode.cmake-maven-project</groupId>
+                <artifactId>cmake-maven-plugin</artifactId>
+                <version>3.4.1-b1</version>
+                <configuration>
+                    <generator>Unix Makefiles</generator>
+                    <sourcePath>${cmake.source.directory}</sourcePath>
+                    <targetPath>${cmake.binary.directory}</targetPath>
+                    <projectDirectory>${cmake.binary.directory}</projectDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>cmake-generate</id>
+                        <goals>
+                            <goal>generate</goal>
+                            <goal>compile</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
 
         <resources>
             <resource>
                 <filtering>false</filtering>
-                <directory>builtin-adapter/build</directory>
+                <directory>${project.build.directory}/builtin-adapter/build</directory>
                 <includes>
                     <include>*.dylib</include>
                     <include>*.so</include>
