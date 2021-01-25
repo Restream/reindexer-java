@@ -15,8 +15,8 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Consts;
-import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,14 +24,14 @@ import java.util.function.Function;
 
 public class ReindexerExceptionFactory {
 
-    private static final Map<Integer, Function<RpcResponse, ReindexerException>> FACTORIES = new HashMap<>();
+    private static final Map<Integer, Function<ReindexerResponse, ReindexerException>> FACTORIES = new HashMap<>();
 
     static {
         FACTORIES.put(Consts.ERR_CONFLICT, r -> new IndexConflictException(r.getErrorMessage()));
         FACTORIES.put(Consts.ERR_STATE_INVALIDATED, r -> new StateInvalidatedException(r.getErrorMessage()));
     }
 
-    public static ReindexerException fromRpcResponse(RpcResponse response) {
+    public static ReindexerException fromResponse(ReindexerResponse response) {
         if (response.getCode() == 0) {
             throw new IllegalArgumentException("Not an error response");
         }

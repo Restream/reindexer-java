@@ -20,7 +20,6 @@ import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
-import ru.rt.restream.reindexer.binding.cproto.CprotoIterator;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 
@@ -657,7 +656,7 @@ public class Query<T> {
             }
         }
 
-        return new CprotoIterator<>(namespace, requestContext, this, fetchCount);
+        return new QueryResultIterator<>(namespace, requestContext, this, fetchCount);
     }
 
     /**

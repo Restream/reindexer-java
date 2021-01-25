@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
@@ -126,7 +127,7 @@ public class PhysicalConnection implements Connection {
      * @return rpc call result
      */
     @Override
-    public RpcResponse rpcCall(int command, Object... args) {
+    public ReindexerResponse rpcCall(int command, Object... args) {
         Exception error = getCurrentError();
         if (error != null) {
             throw new ReindexerException(error);
@@ -157,7 +158,7 @@ public class PhysicalConnection implements Connection {
         }
     }
 
-    private RpcResponse readResponse(ByteBuffer deserializer) {
+    private ReindexerResponse readResponse(ByteBuffer deserializer) {
         int code = (int) deserializer.getVarUInt();
         String message = deserializer.getVString();
         int argsCount = (int) deserializer.getVarUInt();
@@ -165,7 +166,7 @@ public class PhysicalConnection implements Connection {
         for (int i = 0; i < argsCount; i++) {
             responseArgs[i] = readArgument(deserializer);
         }
-        return new RpcResponse(code, message, responseArgs);
+        return new ReindexerResponse(code, message, responseArgs);
     }
 
     private Object readArgument(ByteBuffer deserializer) {
@@ -187,8 +188,8 @@ public class PhysicalConnection implements Connection {
     }
 
     @Override
-    public CompletableFuture<RpcResponse> rpcCallAsync(int command, Object... args) {
-        CompletableFuture<RpcResponse> completion = new CompletableFuture<>();
+    public CompletableFuture<ReindexerResponse> rpcCallAsync(int command, Object... args) {
+        CompletableFuture<ReindexerResponse> completion = new CompletableFuture<>();
         Exception error = getCurrentError();
         if (error != null) {
             completion.completeExceptionally(error);
@@ -335,7 +336,7 @@ public class PhysicalConnection implements Connection {
                 close();
                 for (RpcRequest rpcRequest : requests) {
                     if (rpcRequest.isAsync) {
-                        CompletableFuture<RpcResponse> completion = null;
+                        CompletableFuture<ReindexerResponse> completion = null;
                         ScheduledFuture<?> timeoutTaskFuture = null;
                         Integer seqNum = null;
                         rpcRequest.completionLock.lock();
@@ -409,7 +410,7 @@ public class PhysicalConnection implements Connection {
 
         private final Lock completionLock = new ReentrantLock();
 
-        private CompletableFuture<RpcResponse> completion;
+        private CompletableFuture<ReindexerResponse> completion;
 
         private ScheduledFuture<?> timeoutTaskFuture;
 
@@ -462,7 +463,7 @@ public class PhysicalConnection implements Connection {
                 input.readFully(body);
                 deserializer = new ByteBuffer(body).rewind();
                 if (rpcRequest.isAsync) {
-                    CompletableFuture<RpcResponse> completion = null;
+                    CompletableFuture<ReindexerResponse> completion = null;
                     ScheduledFuture<?> timeoutTaskFuture = null;
                     Integer seqNum = null;
                     rpcRequest.completionLock.lock();
@@ -539,7 +540,7 @@ public class PhysicalConnection implements Connection {
             int reqId = rseq % QUEUE_SIZE;
             RpcRequest rpcRequest = requests.get(reqId);
             if (rpcRequest.isAsync) {
-                CompletableFuture<RpcResponse> completion = null;
+                CompletableFuture<ReindexerResponse> completion = null;
                 Integer seqNum = null;
                 rpcRequest.completionLock.lock();
                 try {

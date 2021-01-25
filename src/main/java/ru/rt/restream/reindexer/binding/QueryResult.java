@@ -31,6 +31,8 @@ public class QueryResult {
 
     private long count;
 
+    private long resultsPtr;
+
     private boolean isJson;
 
     private boolean withRank;
@@ -40,6 +42,8 @@ public class QueryResult {
     private boolean withNsId;
 
     private boolean withPayloadTypes;
+
+    private boolean withResultsPtr;
 
     private List<PayloadType> payloadTypes;
 
@@ -74,6 +78,14 @@ public class QueryResult {
 
     public void setCount(long count) {
         this.count = count;
+    }
+
+    public long getResultsPtr() {
+        return resultsPtr;
+    }
+
+    public void setResultsPtr(long resultsPtr) {
+        this.resultsPtr = resultsPtr;
     }
 
     public boolean isJson() {
@@ -122,6 +134,14 @@ public class QueryResult {
 
     public void setWithPayloadTypes(boolean withPayloadTypes) {
         this.withPayloadTypes = withPayloadTypes;
+    }
+
+    public boolean isWithResultsPtr() {
+        return withResultsPtr;
+    }
+
+    public void setWithResultsPtr(boolean withResultsPtr) {
+        this.withResultsPtr = withResultsPtr;
     }
 
     public List<PayloadType> getPayloadTypes() {

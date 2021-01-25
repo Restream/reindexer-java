@@ -15,7 +15,7 @@
  */
 package ru.rt.restream.reindexer.binding;
 
-import ru.rt.restream.reindexer.binding.cproto.RpcResponse;
+import ru.rt.restream.reindexer.ReindexerResponse;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -43,7 +43,7 @@ public interface TransactionContext {
      * @param stateToken state token
      * @return the {@link CompletableFuture}
      */
-    CompletableFuture<RpcResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken);
+    CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken);
 
     /**
      * Invoke select query in the transaction that is associated with the context.

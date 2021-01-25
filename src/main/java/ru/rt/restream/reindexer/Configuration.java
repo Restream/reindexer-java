@@ -15,6 +15,7 @@
  */
 package ru.rt.restream.reindexer;
 
+import ru.rt.restream.reindexer.binding.builtin.Builtin;
 import ru.rt.restream.reindexer.binding.cproto.Cproto;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
@@ -88,10 +89,11 @@ public final class Configuration {
         switch (protocol) {
             case "cproto":
                 return new Reindexer(new Cproto(url, connectionPoolSize, requestTimeout));
-            case "http":
             case "builtin":
+                return new Reindexer(new Builtin(url, requestTimeout));
+            case "http":
             case "builtinserver":
-                throw new UnimplementedException();
+                throw new UnimplementedException("Protocol: '" + protocol + "' is not suppored");
             default:
                 throw new IllegalArgumentException();
         }

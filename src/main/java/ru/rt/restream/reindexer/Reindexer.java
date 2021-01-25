@@ -205,7 +205,7 @@ public class Reindexer {
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
-                int stateToken = payloadType == null ? -1 : payloadType.getStateToken();
+                int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
                 ItemSerializer<T> serializer = new CjsonItemSerializer<>(payloadType);
                 byte[] data = serializer.serialize(item);
                 binding.modifyItem(namespace.getName(), data, mode, percepts, stateToken);

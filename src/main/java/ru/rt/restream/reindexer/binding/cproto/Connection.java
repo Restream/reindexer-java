@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import ru.rt.restream.reindexer.ReindexerResponse;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -30,7 +32,7 @@ public interface Connection extends AutoCloseable {
      * @param args    command arguments
      * @return rpc call result
      */
-    RpcResponse rpcCall(int command, Object... args);
+    ReindexerResponse rpcCall(int command, Object... args);
 
     /**
      * Call a rpc command with specified arguments asynchronously.
@@ -39,7 +41,7 @@ public interface Connection extends AutoCloseable {
      * @param args    command arguments
      * @return the {@link CompletableFuture}
      */
-    CompletableFuture<RpcResponse> rpcCallAsync(int command, Object... args);
+    CompletableFuture<ReindexerResponse> rpcCallAsync(int command, Object... args);
 
     /**
      * Returns true if the connection has an error.

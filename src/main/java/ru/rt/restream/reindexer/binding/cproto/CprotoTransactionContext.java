@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
@@ -67,7 +68,7 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public CompletableFuture<RpcResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken) {
+    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
         return connection.rpcCallAsync(ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken, transactionId);
     }
@@ -98,7 +99,7 @@ public class CprotoTransactionContext implements TransactionContext {
     @Override
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
-        RpcResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
+        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
         return new CprotoRequestContext(rpcResponse, connection);
     }
