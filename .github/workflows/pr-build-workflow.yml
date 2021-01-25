@@ -26,9 +26,5 @@ jobs:
           cmake reindexer -Breindexer/build
           cmake --build reindexer/build -- -j 4
           sudo cmake --install reindexer/build
-      - name: Build Reindexer Builtin Adapter
-        run: |
-          cmake builtin-adapter -B builtin-adapter/build
-          cmake --build builtin-adapter/build
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
