@@ -152,7 +152,7 @@ public class Builtin implements Binding {
                 txId = (long) arg;
             }
         }
-        return new BuiltinTransactionContext(adapter, rx, txId, next.getAndIncrement(), timeout);
+        return new BuiltinTransactionContext(adapter, rx, txId, next::getAndIncrement, timeout);
     }
 
     private void checkResponse(ReindexerResponse response) {
