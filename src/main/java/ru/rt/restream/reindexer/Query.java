@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -34,6 +36,14 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static ru.rt.restream.reindexer.QueryLogBuilder.AggregateType.AVG;
+import static ru.rt.restream.reindexer.QueryLogBuilder.AggregateType.DISTINCT;
+import static ru.rt.restream.reindexer.QueryLogBuilder.AggregateType.MAX;
+import static ru.rt.restream.reindexer.QueryLogBuilder.AggregateType.MIN;
+import static ru.rt.restream.reindexer.QueryLogBuilder.AggregateType.SUM;
+import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.DELETE;
+import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.SELECT;
+import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.UPDATE;
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
@@ -43,6 +53,7 @@ import static ru.rt.restream.reindexer.binding.Consts.VALUE_STRING;
 
 public class Query<T> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Query.class);
     private static final int DEFAULT_FETCH_COUNT = 100;
 
     private static final int OP_OR = 1;
@@ -121,6 +132,8 @@ public class Query<T> {
 
     private Deque<Integer> openedBrackets = new ArrayDeque<>();
 
+    private final QueryLogBuilder logBuilder = new QueryLogBuilder();
+
     private int queryCount = 0;
 
     private int joinType;
@@ -128,6 +141,7 @@ public class Query<T> {
     private Query<?> root;
 
     public Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
+        logBuilder.namespace(namespace.getName());
         this.reindexer = reindexer;
         this.namespace = namespace;
         this.transactionContext = transactionContext;
@@ -182,6 +196,7 @@ public class Query<T> {
     }
 
     private <J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
+        logBuilder.join(joinQuery.logBuilder, field, joinType);
         if (joinQuery.root != null) {
             throw new IllegalStateException("query.join call on already joined query. You should create new Query");
         }
@@ -200,6 +215,7 @@ public class Query<T> {
     }
 
     public Query<T> on(String joinField, Condition condition, String joinIndex) {
+        logBuilder.on(nextOperation, joinField, condition.code, joinIndex);
         buffer.putVarUInt32(QUERY_JOIN_ON);
         buffer.putVarUInt32(nextOperation);
         buffer.putVarUInt32(condition.code);
@@ -218,6 +234,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> where(String indexName, Condition condition, Object... values) {
+        logBuilder.where(nextOperation, indexName, condition.code, values);
         buffer.putVarUInt32(QUERY_CONDITION)
                 .putVString(indexName)
                 .putVarUInt32(nextOperation)
@@ -242,6 +259,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> openBracket() {
+        logBuilder.openBracket(nextOperation);
         buffer.putVarUInt32(QUERY_OPEN_BRACKET);
         buffer.putVarUInt32(nextOperation);
         nextOperation = OP_AND;
@@ -255,6 +273,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> closeBracket() {
+        logBuilder.closeBracket();
         if (nextOperation != OP_AND) {
             throw new RuntimeException("Operation before close bracket");
         }
@@ -306,6 +325,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> aggregateDistinct(String field) {
+        logBuilder.aggregate(DISTINCT, field);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_DISTINCT).putVarUInt32(1).putVString(field);
         return this;
     }
@@ -317,6 +337,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> aggregateSum(String field) {
+        logBuilder.aggregate(SUM, field);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_SUM).putVarUInt32(1).putVString(field);
         return this;
     }
@@ -328,6 +349,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> aggregateAvg(String field) {
+        logBuilder.aggregate(AVG, field);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_AVG).putVarUInt32(1).putVString(field);
         return this;
     }
@@ -339,6 +361,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> aggregateMin(String field) {
+        logBuilder.aggregate(MIN, field);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_MIN).putVarUInt32(1).putVString(field);
         return this;
     }
@@ -350,6 +373,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> aggregateMax(String field) {
+        logBuilder.aggregate(MAX, field);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_MAX).putVarUInt32(1).putVString(field);
         return this;
     }
@@ -363,29 +387,26 @@ public class Query<T> {
      * @return the {@link AggregationFacetRequest} for further customizations
      */
     public AggregationFacetRequest aggregateFacet(String... fields) {
+        AggregationFacetRequest facet = new AggregationFacetRequest();
+        logBuilder.aggregate(facet, fields);
         buffer.putVarUInt32(QUERY_AGGREGATION).putVarUInt32(AGG_FACET).putVarUInt32(fields.length);
         for (String field : fields) {
             buffer.putVString(field);
         }
-
-        return new AggregationFacetRequest(this);
+        return facet;
     }
 
-    public static class AggregationFacetRequest {
-
-        private final Query<?> query;
-
-        public AggregationFacetRequest(Query<?> query) {
-            this.query = query;
-        }
+    public class AggregationFacetRequest {
 
         public AggregationFacetRequest limit(int limit) {
-            query.buffer.putVarUInt32(QUERY_AGGREGATION_LIMIT).putVarUInt32(limit);
+            logBuilder.facetLimit(this, limit);
+            buffer.putVarUInt32(QUERY_AGGREGATION_LIMIT).putVarUInt32(limit);
             return this;
         }
 
         public AggregationFacetRequest offset(int offset) {
-            query.buffer.putVarUInt32(QUERY_AGGREGATION_OFFSET).putVarUInt32(offset);
+            logBuilder.facetOffset(this, offset);
+            buffer.putVarUInt32(QUERY_AGGREGATION_OFFSET).putVarUInt32(offset);
             return this;
         }
 
@@ -396,11 +417,12 @@ public class Query<T> {
          * @param desc  true if descending order
          */
         public AggregationFacetRequest sort(String field, boolean desc) {
-            query.buffer.putVarUInt32(QUERY_AGGREGATION_SORT).putVString(field);
+            logBuilder.facetSort(this, field, desc);
+            buffer.putVarUInt32(QUERY_AGGREGATION_SORT).putVString(field);
             if (desc) {
-                query.buffer.putVarUInt32(1);
+                buffer.putVarUInt32(1);
             } else {
-                query.buffer.putVarUInt32(0);
+                buffer.putVarUInt32(0);
             }
             return this;
         }
@@ -409,6 +431,7 @@ public class Query<T> {
 
     public Query<T> limit(int limit) {
         if (limit >= 0) {
+            logBuilder.limit(limit);
             buffer.putVarUInt32(QUERY_LIMIT)
                     .putVarUInt32(limit);
         }
@@ -417,6 +440,7 @@ public class Query<T> {
 
     public Query<T> offset(int offset) {
         if (offset > 0) {
+            logBuilder.offset(offset);
             buffer.putVarUInt32(QUERY_OFFSET)
                     .putVarUInt32(offset);
         }
@@ -434,7 +458,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> sort(String index, boolean desc, Object... values) {
-
+        logBuilder.sort(index, desc, values);
         buffer.putVarUInt32(QUERY_SORT_INDEX)
                 .putVString(index);
         if (desc) {
@@ -616,6 +640,12 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public CloseableIterator<T> execute() {
+        logBuilder.type(SELECT);
+        if (LOGGER.isDebugEnabled()) {
+            debug();
+            LOGGER.debug(logBuilder.getSql());
+        }
+
         buffer.putVarUInt32(QUERY_END);
 
         namespaces.add(namespace);
@@ -663,6 +693,11 @@ public class Query<T> {
      * Will execute query, and delete items, matches query.
      */
     public void delete() {
+        logBuilder.type(DELETE);
+        if (LOGGER.isDebugEnabled()) {
+            debug();
+            LOGGER.debug(logBuilder.getSql());
+        }
         if (transactionContext != null) {
             transactionContext.deleteQuery(buffer.bytes());
         } else {
@@ -682,6 +717,7 @@ public class Query<T> {
             setObject(fieldName, value);
             return this;
         }
+        logBuilder.set(fieldName, value);
         int cmd = QUERY_UPDATE_FIELD;
         if (value instanceof Collection<?>) { //Not tested
             Collection<?> values = (Collection<?>) value;
@@ -758,7 +794,11 @@ public class Query<T> {
             String json = JsonSerializer.toJson(value);
             jsons.add(json);
         }
-
+        if (isArray) {
+            logBuilder.setObject(fieldName, jsons);
+        } else {
+            logBuilder.setObject(fieldName, jsons.get(0));
+        }
         buffer.putVarUInt32(QUERY_UPDATE_OBJECT);
         buffer.putVString(fieldName);
         buffer.putVarUInt32(count);
@@ -789,9 +829,9 @@ public class Query<T> {
             }
         } else {
             return value == null
-                   || value instanceof Boolean
-                   || value instanceof Number
-                   || value instanceof String;
+                    || value instanceof Boolean
+                    || value instanceof Number
+                    || value instanceof String;
         }
     }
 
@@ -802,8 +842,14 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> drop(String field) {
+        logBuilder.drop(field);
         buffer.putVarUInt32(QUERY_DROP_FIELD);
         buffer.putVString(field);
+        return this;
+    }
+
+    private Query<T> debug() {
+        buffer.putVarUInt32(QUERY_DEBUG_LEVEL).putVarUInt32(4); //4 - TRACE
         return this;
     }
 
@@ -811,6 +857,11 @@ public class Query<T> {
      * Will execute query, and update fields in items, which matches query.
      */
     public void update() {
+        logBuilder.type(UPDATE);
+        if (LOGGER.isDebugEnabled()) {
+            debug();
+            LOGGER.debug(logBuilder.getSql());
+        }
         if (transactionContext != null) {
             transactionContext.updateQuery(buffer.bytes());
         } else {
