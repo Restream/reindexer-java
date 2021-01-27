@@ -15,7 +15,9 @@
  */
 package ru.rt.restream.reindexer;
 
+import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.builtin.Builtin;
+import ru.rt.restream.reindexer.binding.builtin.server.BuiltinServer;
 import ru.rt.restream.reindexer.binding.cproto.Cproto;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
@@ -33,6 +35,10 @@ public final class Configuration {
     private int connectionPoolSize = DEFAULT_CONNECTION_POOL_SIZE;
 
     private Duration requestTimeout = Duration.ofSeconds(60L);
+
+    private Duration serverStartupTimeout = Duration.ofMinutes(3L);
+
+    private String serverConfigFile = "default-builtin-server-config.yml";
 
     private Configuration() {
 
@@ -76,6 +82,28 @@ public final class Configuration {
     }
 
     /**
+     * Configure reindexer server startup timeout. Defaults to 3 minutes.
+     *
+     * @param serverStartupTimeout the server startup timeout
+     * @return the {@link Configuration} for further customizations
+     */
+    public Configuration serverStartupTimeout(Duration serverStartupTimeout) {
+        this.serverStartupTimeout = serverStartupTimeout;
+        return this;
+    }
+
+    /**
+     * Configure reindexer server config file. Defaults to "default-builtin-server-config.yml".
+     *
+     * @param serverConfigFile the server config file
+     * @return the {@link Configuration} for further customizations
+     */
+    public Configuration serverConfigFile(String serverConfigFile) {
+        this.serverConfigFile = serverConfigFile;
+        return this;
+    }
+
+    /**
      * Build and return reindexer connector instance.
      *
      * @return configured reindexer connector instance
@@ -86,16 +114,19 @@ public final class Configuration {
         }
 
         String protocol = url.substring(0, url.indexOf(":"));
+        return new Reindexer(getBinding(protocol));
+    }
+
+    private Binding getBinding(String protocol) {
         switch (protocol) {
             case "cproto":
-                return new Reindexer(new Cproto(url, connectionPoolSize, requestTimeout));
+                return new Cproto(url, connectionPoolSize, requestTimeout);
             case "builtin":
-                return new Reindexer(new Builtin(url, requestTimeout));
-            case "http":
+                return new Builtin(url, requestTimeout);
             case "builtinserver":
-                throw new UnimplementedException("Protocol: '" + protocol + "' is not suppored");
+                return new BuiltinServer(url, serverConfigFile, serverStartupTimeout, requestTimeout);
             default:
-                throw new IllegalArgumentException();
+                throw new UnimplementedException("Protocol: '" + protocol + "' is not suppored");
         }
     }
 

@@ -14,4 +14,4 @@ add_library(${TARGET} SHARED BuiltinAdapter.cpp)
 
 include_directories(${JNI_INCLUDE_DIRS} ${REINDEXER_INCLUDE_DIRS})
 
-target_link_libraries(${TARGET} ${REINDEXER_LIBRARIES})
+target_link_libraries(${TARGET} reindexer_server_library reindexer_server_resources ${REINDEXER_LIBRARIES})

@@ -16,67 +16,41 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.classic.methods.HttpPost;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.HttpClients;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.io.entity.StringEntity;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.Reindexer;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 
 /**
  * Tests for Cproto implementation.
  */
-@Testcontainers
 public class CprotoAggregationTest extends AggregationTest {
 
-    @Container
-    public GenericContainer<?> reindexer = new GenericContainer<>(DockerImageName.parse("reindexer/reindexer:v2.14.1"))
-            .withExposedPorts(9088, 6534);
-
-    private String restApiPort = "9088";
-    private String rpcPort = "6534";
+    private Reindexer server;
 
     @BeforeEach
     public void setUp() {
-        restApiPort = String.valueOf(reindexer.getMappedPort(9088));
-        rpcPort = String.valueOf(reindexer.getMappedPort(6534));
-        CprotoReindexerTest.CreateDatabase createDatabase = new CprotoReindexerTest.CreateDatabase();
-        createDatabase.setName("test_items");
-        post("/db", createDatabase);
+        server = Configuration.builder()
+                .url("builtinserver://items")
+                .getReindexer();
         db = Configuration.builder()
-                .url("cproto://" + "localhost:" + rpcPort + "/test_items")
+                .url("cproto://localhost:6534/items")
                 .connectionPoolSize(4)
                 .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
     }
 
-    private void post(String path, Object body) {
-        HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
-            Gson gson = new GsonBuilder()
-                    .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                    .create();
-            String json = gson.toJson(body);
-            httpPost.setEntity(new StringEntity(json));
-            client.execute(httpPost);
-        } catch (IOException e) {
-            throw new RuntimeException(e.getLocalizedMessage(), e);
-        }
-    }
-
     @AfterEach
-    void tearDown() {
+    void tearDown() throws IOException {
+        if (server != null) {
+            server.close();
+            FileUtils.deleteDirectory(new File("/tmp/reindex/items"));
+        }
         if (db != null) {
             db.close();
         }

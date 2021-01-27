@@ -16,27 +16,22 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.classic.methods.HttpGet;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.classic.methods.HttpPost;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.HttpClients;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.io.entity.StringEntity;
-import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
+import org.apache.commons.io.FileUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -49,46 +44,28 @@ import static org.hamcrest.Matchers.is;
 /**
  * Tests for Cproto implementation.
  */
-@Testcontainers
 public class CprotoReindexerTest extends ReindexerTest {
 
-    @Container
-    public GenericContainer<?> reindexer = new GenericContainer<>(DockerImageName.parse("reindexer/reindexer:v2.14.1"))
-            .withExposedPorts(9088, 6534);
-
-    private String restApiPort = "9088";
-    private String rpcPort = "6534";
+    private Reindexer server;
 
     @BeforeEach
     public void setUp() {
-        restApiPort = String.valueOf(reindexer.getMappedPort(9088));
-        rpcPort = String.valueOf(reindexer.getMappedPort(6534));
-        CreateDatabase createDatabase = new CreateDatabase();
-        createDatabase.setName("test_items");
-        post("/db", createDatabase);
+        server = Configuration.builder()
+                .url("builtinserver://items")
+                .getReindexer();
         db = Configuration.builder()
-                .url("cproto://" + "localhost:" + rpcPort + "/test_items")
+                .url("cproto://localhost:6534/items")
                 .connectionPoolSize(4)
                 .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
     }
 
-    private void post(String path, Object body) {
-        HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
-            Gson gson = new GsonBuilder()
-                    .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                    .create();
-            String json = gson.toJson(body);
-            httpPost.setEntity(new StringEntity(json));
-            client.execute(httpPost);
-        } catch (IOException e) {
-            throw new RuntimeException(e.getLocalizedMessage(), e);
-        }
-    }
-
     @AfterEach
-    void tearDown() {
+    void tearDown() throws IOException {
+        if (server != null) {
+            server.close();
+            FileUtils.deleteDirectory(new File("/tmp/reindex/items"));
+        }
         if (db != null) {
             db.close();
         }
@@ -100,7 +77,7 @@ public class CprotoReindexerTest extends ReindexerTest {
 
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
-        NamespaceResponse namespaceResponse = get("/db/test_items/namespaces/items", NamespaceResponse.class);
+        NamespaceResponse namespaceResponse = get("/db/items/namespaces/items", NamespaceResponse.class);
         assertThat(namespaceResponse.name, is(namespaceName));
         assertThat(namespaceResponse.indexes.size(), is(9));
         assertThat(namespaceResponse.storage.enabled, is(true));
@@ -116,7 +93,7 @@ public class CprotoReindexerTest extends ReindexerTest {
     }
 
     private <T> T get(String path, Class<T> clazz) {
-        HttpGet httpGet = new HttpGet("http://localhost:" + restApiPort + "/api/v1" + path);
+        HttpGet httpGet = new HttpGet("http://localhost:9088/api/v1" + path);
         try (CloseableHttpClient client = HttpClients.createDefault();
              CloseableHttpResponse response = client.execute(httpGet)) {
             InputStream content = response.getEntity().getContent();
@@ -128,26 +105,11 @@ public class CprotoReindexerTest extends ReindexerTest {
         }
     }
 
-    public static class CreateDatabase {
-
-        private String name;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class NamespaceResponse {
         private String name;
         private StorageResponse storage;
         private List<IndexResponse> indexes;
 
-        @JsonIgnoreProperties(ignoreUnknown = true)
         private static class StorageResponse {
             private boolean enabled;
         }
@@ -176,7 +138,6 @@ public class CprotoReindexerTest extends ReindexerTest {
             this.indexes = indexes;
         }
 
-        @JsonIgnoreProperties(ignoreUnknown = true)
         private static class IndexResponse {
             private String name;
             @SerializedName("json_paths")

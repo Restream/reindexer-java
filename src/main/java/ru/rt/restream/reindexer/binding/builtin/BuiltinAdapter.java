@@ -80,6 +80,56 @@ public class BuiltinAdapter {
     public native void destroy(long rx);
 
     /**
+     * Initializes Reindexer server.
+     *
+     * @return the Reindexer server pointer
+     */
+    public native long initServer();
+
+    /**
+     * Destroys Reindexer server.
+     *
+     * @param svc the Reindexer server pointer
+     */
+    public native void destroyServer(long svc);
+
+    /**
+     * Starts Reindexer server.
+     *
+     * @param svc        the Reindexer server pointer
+     * @param yamlConfig the Reindexer config yaml
+     * @return the {@link ReindexerResponse} to use
+     */
+    public native ReindexerResponse startServer(long svc, String yamlConfig);
+
+    /**
+     * Stops Reindexer server.
+     *
+     * @param svc the Reindexer server pointer
+     * @return the {@link ReindexerResponse} to use
+     */
+    public native ReindexerResponse stopServer(long svc);
+
+    /**
+     * Returns true if Reindexer server is ready.
+     *
+     * @param svc the Reindexer server pointer
+     * @return true if Reindexer server is ready
+     */
+    public native boolean isServerReady(long svc);
+
+    /**
+     * Returns the Reindexer instance pointer.
+     *
+     * @param svc      the Reindexer server pointer
+     * @param database the Reindexer's database name
+     * @param user     the Reindexer's user
+     * @param password the Reindexer's password
+     * @return the Reindexer instance pointer
+     */
+    public native long getInstance(long svc, String database, String user, String password);
+
+    /**
      * Connects to Reindexer instance.
      *
      * @param rx      the Reindexer instance pointer
