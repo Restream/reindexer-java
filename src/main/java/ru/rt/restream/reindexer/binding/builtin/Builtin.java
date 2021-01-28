@@ -78,6 +78,19 @@ public class Builtin implements Binding {
         }
     }
 
+    /**
+     * Creates an instance.
+     *
+     * @param adapter the {@link BuiltinAdapter} to use
+     * @param rx      the Reindexer pointer
+     * @param timeout the execution timeout
+     */
+    public Builtin(BuiltinAdapter adapter, long rx, Duration timeout) {
+        this.adapter = adapter;
+        this.rx = rx;
+        this.timeout = timeout;
+    }
+
     @Override
     public void openNamespace(NamespaceDefinition namespace) {
         NamespaceDefinition.StorageOptions options = namespace.getStorage();

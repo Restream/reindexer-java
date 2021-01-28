@@ -94,6 +94,24 @@ JNIEXPORT jbyteArray JNICALL Java_ru_rt_restream_reindexer_util_NativeUtils_getB
 
 JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_util_NativeUtils_freeNativeBuffer(JNIEnv *, jclass, jlong);
 
+JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_initServer(JNIEnv *, jobject);
+
+JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_destroyServer(JNIEnv *, jobject,
+                                                                                                  jlong);
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_startServer(JNIEnv *, jobject,
+                                                                                                   jlong, jstring);
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_stopServer(JNIEnv *, jobject,
+                                                                                                  jlong);
+
+JNIEXPORT jboolean JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_isServerReady(JNIEnv *, jobject,
+                                                                                                      jlong);
+
+JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_getInstance(JNIEnv *, jobject,
+                                                                                                 jlong, jstring,
+                                                                                                 jstring, jstring);
+
 #ifdef __cplusplus
 }
 #endif

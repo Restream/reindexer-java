@@ -16,9 +16,9 @@
 
 package ru.rt.restream.reindexer.connector;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 import ru.rt.restream.reindexer.Configuration;
 
 import java.io.File;

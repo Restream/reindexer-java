@@ -2,3 +2,4 @@
 *.iml
 /target
 /builtin-adapter/build
+/builtin-adapter/cmake-build-debug

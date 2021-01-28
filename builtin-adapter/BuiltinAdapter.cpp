@@ -17,6 +17,7 @@
 #include "BuiltinAdapter.h"
 #include "core/cbinding/reindexer_c.h"
 #include "core/cbinding/reindexer_ctypes.h"
+#include "server/cbinding/server_c.h"
 
 reindexer_string rx_string(JNIEnv *env, jstring jstr) {
     return {
@@ -286,4 +287,48 @@ JNIEXPORT jbyteArray JNICALL Java_ru_rt_restream_reindexer_util_NativeUtils_getB
 JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_util_NativeUtils_freeNativeBuffer(JNIEnv *, jclass,
                                                                                        jlong resultsPtr) {
     reindexer_free_buffer({.results_ptr = static_cast<uintptr_t>(resultsPtr)});
+}
+
+JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_initServer(JNIEnv *, jobject) {
+    return init_reindexer_server();
+}
+
+JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_destroyServer(JNIEnv *, jobject,
+                                                                                                  jlong svc) {
+    destroy_reindexer_server(svc);
+}
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_startServer(JNIEnv *env, jobject,
+                                                                                                   jlong svc,
+                                                                                                   jstring yamlConfig) {
+    reindexer_string config = rx_string(env, yamlConfig);
+    jobject res = j_res(env, start_reindexer_server(svc, config));
+    env->ReleaseStringUTFChars(yamlConfig, reinterpret_cast<const char *>(config.p));
+    return res;
+}
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_stopServer(JNIEnv *env, jobject,
+                                                                                                  jlong svc) {
+    return j_res(env, stop_reindexer_server(svc));
+}
+
+JNIEXPORT jboolean JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_isServerReady(JNIEnv *, jobject,
+                                                                                                      jlong svc) {
+    return check_server_ready(svc);
+}
+
+JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_getInstance(JNIEnv *env, jobject,
+                                                                                                 jlong svc,
+                                                                                                 jstring database,
+                                                                                                 jstring user,
+                                                                                                 jstring password) {
+    uintptr_t rx = 0;
+    reindexer_string dbName = rx_string(env, database);
+    reindexer_string dbUser = rx_string(env, user);
+    reindexer_string dbPass = rx_string(env, password);
+    get_reindexer_instance(svc, dbName, dbUser, dbPass, &rx);
+    env->ReleaseStringUTFChars(database, reinterpret_cast<const char *>(dbName.p));
+    env->ReleaseStringUTFChars(user, reinterpret_cast<const char *>(dbUser.p));
+    env->ReleaseStringUTFChars(password, reinterpret_cast<const char *>(dbPass.p));
+    return rx;
 }

@@ -15,32 +15,28 @@
  */
 package ru.rt.restream.reindexer.annotations;
 
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.classic.methods.HttpGet;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.classic.methods.HttpPost;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.impl.classic.HttpClients;
-import com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.io.entity.StringEntity;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
+import org.apache.commons.io.FileUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
-import ru.rt.restream.reindexer.connector.CprotoReindexerTest;
-import ru.rt.restream.reindexer.connector.ReindexerTest;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -54,31 +50,33 @@ import java.util.Objects;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-@Testcontainers
 class JsonTest {
 
-    @Container
-    public GenericContainer<?> reindexer = new GenericContainer<>(DockerImageName.parse("reindexer/reindexer:v2.14.1"))
-            .withExposedPorts(9088, 6534);
+    private Reindexer server;
 
     private Reindexer db;
 
-    private String restApiPort = "9088";
-    private String rpcPort = "6534";
-
     @BeforeEach
     public void setUp() {
-        restApiPort = String.valueOf(reindexer.getMappedPort(9088));
-        rpcPort = String.valueOf(reindexer.getMappedPort(6534));
-        CprotoReindexerTest.CreateDatabase createDatabase = new CprotoReindexerTest.CreateDatabase();
-        createDatabase.setName("test_items");
-        post("/db", createDatabase);
-
+        server = Configuration.builder()
+                .url("builtinserver://items")
+                .getReindexer();
         this.db = Configuration.builder()
-                .url("cproto://" + "localhost:" + rpcPort + "/test_items")
+                .url("cproto://localhost:6534/items")
                 .connectionPoolSize(4)
                 .requestTimeout(Duration.ofSeconds(30L))
                 .getReindexer();
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        if (server != null) {
+            server.close();
+            FileUtils.deleteDirectory(new File("/tmp/reindex/items"));
+        }
+        if (db != null) {
+            db.close();
+        }
     }
 
     @Test
@@ -281,7 +279,7 @@ class JsonTest {
     }
 
     private void post(String path, Object body) {
-        HttpPost httpPost = new HttpPost("http://localhost:" + restApiPort + "/api/v1" + path);
+        HttpPost httpPost = new HttpPost("http://localhost:9088/api/v1" + path);
 
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             Gson gson = new GsonBuilder()
@@ -296,7 +294,7 @@ class JsonTest {
     }
 
     private JsonElement getItems() {
-        HttpGet httpGet = new HttpGet("http://localhost:" + restApiPort + "/api/v1/db/test_items/namespaces/items/items");
+        HttpGet httpGet = new HttpGet("http://localhost:9088/api/v1/db/items/namespaces/items/items");
 
         try (CloseableHttpClient client = HttpClients.createDefault();
              CloseableHttpResponse response = client.execute(httpGet)) {
@@ -306,12 +304,6 @@ class JsonTest {
         } catch (IOException e) {
             throw new RuntimeException(e.getLocalizedMessage(), e);
         }
-    }
-
-    public static class ItemsResponse {
-        @SerializedName("total_items")
-        private int totalItems;
-        private List<String> items;
     }
 
 }

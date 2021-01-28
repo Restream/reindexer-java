@@ -16,12 +16,7 @@
 package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.Configuration;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
