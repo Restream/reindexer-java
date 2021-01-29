@@ -196,7 +196,7 @@ public class Query<T> {
     }
 
     private <J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
-        logBuilder.join(joinQuery.logBuilder, field, joinType);
+        logBuilder.join(joinQuery.logBuilder, joinType);
         if (joinQuery.root != null) {
             throw new IllegalStateException("query.join call on already joined query. You should create new Query");
         }
@@ -415,6 +415,8 @@ public class Query<T> {
          *
          * @param field item field. Use field 'count' to sort by facet's count value
          * @param desc  true if descending order
+         *
+         * @return the {@link AggregationFacetRequest} for further customizations
          */
         public AggregationFacetRequest sort(String field, boolean desc) {
             logBuilder.facetSort(this, field, desc);

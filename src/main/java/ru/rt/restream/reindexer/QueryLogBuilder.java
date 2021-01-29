@@ -64,7 +64,6 @@ class QueryLogBuilder {
     private static class JoinEntry {
         private QueryLogBuilder joinQueryLogBuilder;
         private JoinType type;
-        public String field;
     }
 
     private static class SortEntry {
@@ -76,7 +75,7 @@ class QueryLogBuilder {
     private static class UpdateEntry {
         private String field;
         private Object value;
-        public boolean isJsonObject;
+        private boolean isJsonObject;
         private boolean drop;
     }
 
@@ -93,11 +92,34 @@ class QueryLogBuilder {
     }
 
     enum Condition {
-        ANY, EQ, LT, LE, GT, GE, RANGE, SET, ALLSET, EMPTY
+        ANY("NOT NULL"),
+        EQ("="),
+        LT("<"),
+        LE("<="),
+        GT(">"),
+        GE(">="),
+        RANGE("RANGE"),
+        SET("IN"),
+        ALLSET("ALLSET"),
+        EMPTY("IS NULL");
+
+        private final String name;
+
+        Condition(String name) {
+            this.name = name;
+        }
     }
 
     enum JoinType {
-        LEFT_JOIN, INNER_JOIN, OR_INNER_JOIN
+        LEFT_JOIN("LEFT JOIN"),
+        INNER_JOIN("INNER JOIN"),
+        OR_INNER_JOIN("OR INNER JOIN");
+
+        private final String name;
+
+        JoinType(String name) {
+            this.name = name;
+        }
     }
 
     /**
@@ -170,14 +192,12 @@ class QueryLogBuilder {
      * Add join to builder.
      *
      * @param joinQueryLogBuilder {@link QueryLogBuilder} of joined query
-     * @param field               item join field
      * @param joinTypeCode        code of join type. See {@link ru.rt.restream.reindexer.binding.Consts}
      */
-    void join(QueryLogBuilder joinQueryLogBuilder, String field, int joinTypeCode) {
+    void join(QueryLogBuilder joinQueryLogBuilder, int joinTypeCode) {
         JoinEntry joinEntry = new JoinEntry();
         joinEntry.type = getJoinType(joinTypeCode);
         joinEntry.joinQueryLogBuilder = joinQueryLogBuilder;
-        joinEntry.field = field;
         joinEntries.add(joinEntry);
         if (joinEntry.type != JoinType.LEFT_JOIN) {
             QueryEntry queryEntry = new QueryEntry();
@@ -495,7 +515,7 @@ class QueryLogBuilder {
         QueryLogBuilder joinQueryLogBuilder = joinEntry.joinQueryLogBuilder;
         JoinType type = joinEntry.type;
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(getJoinTypeLogValue(type))
+        stringBuilder.append(type.name)
                 .append(" ")
                 .append(joinQueryLogBuilder.whereEntries.isEmpty() ? joinQueryLogBuilder.namespace
                         : "(" + joinQueryLogBuilder.getSql() + ")")
@@ -509,7 +529,7 @@ class QueryLogBuilder {
             }
             stringBuilder.append(joinQueryLogBuilder.namespace)
                     .append(".").append(onEntry.values.get(0))
-                    .append(" ").append(getConditionLogValue(onEntry.condition))
+                    .append(" ").append(onEntry.condition.name)
                     .append(" ").append(namespace).append(".").append(onEntry.field);
         }
         if (joinQueryLogBuilder.onEntries.size() > 1) {
@@ -543,7 +563,7 @@ class QueryLogBuilder {
                     stringBuilder.append(" ").append(whereEntry.operation).append(" ");
                 }
                 stringBuilder.append(whereEntry.field)
-                        .append(" ").append(getConditionLogValue(whereEntry.condition));
+                        .append(" ").append(whereEntry.condition.name);
                 if (whereEntry.values.size() == 1) {
                     Object value = whereEntry.values.get(0);
                     stringBuilder.append(" ").append(value instanceof String ? addQuotes(value)
@@ -619,46 +639,6 @@ class QueryLogBuilder {
             }
         }
         return aggregateEntry.type.name() + "(" + stringBuilder.toString() + ")";
-    }
-
-    private String getJoinTypeLogValue(JoinType type) {
-        switch (type) {
-            case LEFT_JOIN:
-                return "LEFT JOIN";
-            case INNER_JOIN:
-                return "INNER JOIN";
-            case OR_INNER_JOIN:
-                return "OR INNER JOIN";
-            default:
-                throw new RuntimeException("Illegal join type: " + type.name());
-        }
-    }
-
-    private String getConditionLogValue(Condition condition) {
-        switch (condition) {
-            case ANY:
-                return "NOT NULL";
-            case EQ:
-                return ("=");
-            case LT:
-                return ("<");
-            case LE:
-                return ("<=");
-            case GT:
-                return (">");
-            case GE:
-                return (">=");
-            case RANGE:
-                return ("RANGE");
-            case SET:
-                return ("IN");
-            case ALLSET:
-                return ("ALLSET");
-            case EMPTY:
-                return ("IS NULL");
-            default:
-                throw new RuntimeException("Illegal condition: " + condition.name());
-        }
     }
 
     private String addQuotes(Object value) {
