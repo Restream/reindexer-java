@@ -10,7 +10,7 @@
 
     <groupId>com.github.restream</groupId>
     <artifactId>rx-connector</artifactId>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.5</version>
     <packaging>jar</packaging>
 
     <name>rx-connector</name>
@@ -122,7 +122,7 @@
                 <version>3.0.0-M5</version>
                 <configuration>
                     <!-- Activate the use of TCP to transmit events to the plugin. -->
-                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                 </configuration>
             </plugin>
 
