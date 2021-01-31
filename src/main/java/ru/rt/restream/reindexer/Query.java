@@ -46,6 +46,7 @@ import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.SELECT;
 import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.UPDATE;
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
+import static ru.rt.restream.reindexer.binding.Consts.MERGE;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
@@ -222,6 +223,18 @@ public class Query<T> {
         buffer.putVString(joinField);
         buffer.putVString(joinIndex);
         nextOperation = OP_AND;
+        return this;
+    }
+
+    /**
+     * Merge 2 queries of the same type.
+     *
+     * @param mergeQuery query to merge
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> merge(Query<T> mergeQuery) {
+        logBuilder.merge(mergeQuery.logBuilder);
+        mergeQueries.add(mergeQuery);
         return this;
     }
 
@@ -648,8 +661,6 @@ public class Query<T> {
             LOGGER.debug(logBuilder.getSql());
         }
 
-        buffer.putVarUInt32(QUERY_END);
-
         namespaces.add(namespace);
 
         for (Query<?> mergeQuery : mergeQueries) {
@@ -657,16 +668,32 @@ public class Query<T> {
         }
 
         for (Query<?> joinQuery : joinQueries) {
-            buffer.putVarUInt32(joinQuery.joinType);
-            buffer.writeBytes(joinQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
             namespaces.add(joinQuery.namespace);
         }
 
         for (Query<?> mergeQuery : mergeQueries) {
+            for (Query<?> joinQuery : mergeQuery.joinQueries) {
+                namespaces.add(joinQuery.namespace);
+            }
+        }
+
+        buffer.putVarUInt32(QUERY_END);
+
+        for (Query<?> joinQuery : joinQueries) {
+            buffer.putVarUInt32(joinQuery.joinType);
+            buffer.writeBytes(joinQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+        }
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            buffer.putVarUInt32(MERGE);
+            buffer.writeBytes(mergeQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
             List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
             for (Query<?> joinQuery : joinQueries) {
-                namespaces.add(joinQuery.namespace);
+                buffer.putVarUInt32(joinQuery.joinType);
+                buffer.writeBytes(joinQuery.buffer.bytes());
+                buffer.putVarUInt32(QUERY_END);
             }
         }
 
