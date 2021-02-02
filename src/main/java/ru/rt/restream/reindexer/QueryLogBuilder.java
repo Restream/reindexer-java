@@ -43,6 +43,7 @@ class QueryLogBuilder {
     private final List<AggregateEntry> aggregateEntries = new ArrayList<>();
     private final List<UpdateEntry> updateEntries = new ArrayList<>();
     private final Deque<QueryEntry> whereStack = new ArrayDeque<>();
+    private final List<QueryLogBuilder> mergeQueries = new ArrayList<>();
 
     private static class AggregateEntry {
         private AggregateType type;
@@ -155,6 +156,10 @@ class QueryLogBuilder {
                     .append(getWherePart(whereEntries));
         }
 
+        if (!mergeQueries.isEmpty()) {
+            stringBuilder.append(getMergePart());
+        }
+
         if (!sortEntries.isEmpty()) {
             stringBuilder.append(getOrderByPart(sortEntries));
         }
@@ -186,6 +191,15 @@ class QueryLogBuilder {
      */
     void type(QueryType type) {
         this.type = type;
+    }
+
+    /**
+     * Add merge to builder.
+     *
+     * @param mergeQueryLogBuilder {@link QueryLogBuilder} of merged query
+     */
+    public void merge(QueryLogBuilder mergeQueryLogBuilder) {
+        mergeQueries.add(mergeQueryLogBuilder);
     }
 
     /**
@@ -534,6 +548,14 @@ class QueryLogBuilder {
         }
         if (joinQueryLogBuilder.onEntries.size() > 1) {
             stringBuilder.append(")");
+        }
+        return stringBuilder.toString();
+    }
+
+    private String getMergePart() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (QueryLogBuilder mergeQuery : mergeQueries) {
+            stringBuilder.append(" MERGE(").append(mergeQuery.getSql()).append(")");
         }
         return stringBuilder.toString();
     }
