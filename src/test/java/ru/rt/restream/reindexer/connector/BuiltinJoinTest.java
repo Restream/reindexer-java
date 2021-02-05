@@ -19,7 +19,7 @@ package ru.rt.restream.reindexer.connector;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.ReindexerConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +33,7 @@ public class BuiltinJoinTest extends JoinTest {
 
     @BeforeEach
     void setUp() {
-        db = Configuration.builder()
+        db = ReindexerConfiguration.builder()
                 .url("builtin://" + TEST_DB_PATH)
                 .getReindexer();
     }

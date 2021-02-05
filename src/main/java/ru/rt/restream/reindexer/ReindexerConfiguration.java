@@ -26,7 +26,7 @@ import java.time.Duration;
 /**
  * Represents approach for bootstrapping Reindexer.
  */
-public final class Configuration {
+public final class ReindexerConfiguration {
 
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
 
@@ -40,21 +40,21 @@ public final class Configuration {
 
     private String serverConfigFile = "default-builtin-server-config.yml";
 
-    private Configuration() {
+    private ReindexerConfiguration() {
 
     }
 
-    public static Configuration builder() {
-        return new Configuration();
+    public static ReindexerConfiguration builder() {
+        return new ReindexerConfiguration();
     }
 
     /**
      * Configure reindexer database url.
      *
      * @param url a database url of the form protocol://host:port/database_name
-     * @return the {@link Configuration} for further customizations
+     * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public Configuration url(String url) {
+    public ReindexerConfiguration url(String url) {
         this.url = url;
         return this;
     }
@@ -63,9 +63,9 @@ public final class Configuration {
      * Configure reindexer connection pool size. Defaults to 8.
      *
      * @param connectionPoolSize the connection pool size
-     * @return the {@link Configuration} for further customizations
+     * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public Configuration connectionPoolSize(int connectionPoolSize) {
+    public ReindexerConfiguration connectionPoolSize(int connectionPoolSize) {
         this.connectionPoolSize = connectionPoolSize;
         return this;
     }
@@ -74,9 +74,9 @@ public final class Configuration {
      * Configure reindexer request timeout. Defaults to 60 seconds.
      *
      * @param requestTimeout the request timeout
-     * @return the {@link Configuration} for further customizations
+     * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public Configuration requestTimeout(Duration requestTimeout) {
+    public ReindexerConfiguration requestTimeout(Duration requestTimeout) {
         this.requestTimeout = requestTimeout;
         return this;
     }
@@ -85,9 +85,9 @@ public final class Configuration {
      * Configure reindexer server startup timeout. Defaults to 3 minutes.
      *
      * @param serverStartupTimeout the server startup timeout
-     * @return the {@link Configuration} for further customizations
+     * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public Configuration serverStartupTimeout(Duration serverStartupTimeout) {
+    public ReindexerConfiguration serverStartupTimeout(Duration serverStartupTimeout) {
         this.serverStartupTimeout = serverStartupTimeout;
         return this;
     }
@@ -96,9 +96,9 @@ public final class Configuration {
      * Configure reindexer server config file. Defaults to "default-builtin-server-config.yml".
      *
      * @param serverConfigFile the server config file
-     * @return the {@link Configuration} for further customizations
+     * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public Configuration serverConfigFile(String serverConfigFile) {
+    public ReindexerConfiguration serverConfigFile(String serverConfigFile) {
         this.serverConfigFile = serverConfigFile;
         return this;
     }
