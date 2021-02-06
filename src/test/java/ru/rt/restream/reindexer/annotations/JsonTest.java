@@ -31,7 +31,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.ReindexerConfiguration;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
@@ -58,10 +58,10 @@ class JsonTest {
 
     @BeforeEach
     public void setUp() {
-        server = Configuration.builder()
+        server = ReindexerConfiguration.builder()
                 .url("builtinserver://items")
                 .getReindexer();
-        this.db = Configuration.builder()
+        this.db = ReindexerConfiguration.builder()
                 .url("cproto://localhost:6534/items")
                 .connectionPoolSize(4)
                 .requestTimeout(Duration.ofSeconds(30L))

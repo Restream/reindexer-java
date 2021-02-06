@@ -18,7 +18,7 @@ package ru.rt.restream.reindexer.connector;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import ru.rt.restream.reindexer.Configuration;
+import ru.rt.restream.reindexer.ReindexerConfiguration;
 import ru.rt.restream.reindexer.Reindexer;
 
 import java.io.File;
@@ -31,10 +31,10 @@ public class CprotoMergeTest extends MergeTest {
 
     @BeforeEach
     public void setUp() {
-        server = Configuration.builder()
+        server = ReindexerConfiguration.builder()
                 .url("builtinserver://items")
                 .getReindexer();
-        db = Configuration.builder()
+        db = ReindexerConfiguration.builder()
                 .url("cproto://localhost:6534/items")
                 .connectionPoolSize(4)
                 .requestTimeout(Duration.ofSeconds(30L))
