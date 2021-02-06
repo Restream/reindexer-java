@@ -49,7 +49,7 @@ public class Item {
 
         // Init a database instance and choose the binding (builtin). Configure connection pool size and connection
         // timeout. Database should be created explicitly via reindexer_tool.
-        Reindexer db = Configuration.builder()
+        Reindexer db = ReindexerConfiguration.builder()
                 .url("cproto://localhost:6534/testdb")
                 .connectionPoolSize(1)
                 .requestTimeout(Duration.ofSeconds(30L))
