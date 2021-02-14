@@ -16,34 +16,17 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import ru.rt.restream.reindexer.ReindexerConfiguration;
+import ru.rt.restream.reindexer.db.DbLocator;
 
-import java.io.File;
-import java.io.IOException;
+import static ru.rt.restream.reindexer.db.DbLocator.Type.BUILTIN;
 
 /**
  * Tests for Builtin implementation.
  */
 public class BuiltinAggregationTest extends AggregationTest {
 
-    private static final String TEST_DB_PATH = "/tmp/reindex/test_items";
-
-    @BeforeEach
-    void setUp() {
-        db = ReindexerConfiguration.builder()
-                .url("builtin://" + TEST_DB_PATH)
-                .getReindexer();
+    @Override
+    protected DbLocator.Type getDbType() {
+        return BUILTIN;
     }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        if (db != null) {
-            db.close();
-            FileUtils.deleteDirectory(new File(TEST_DB_PATH));
-        }
-    }
-
 }

@@ -19,56 +19,31 @@ package ru.rt.restream.reindexer.connector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
-import org.apache.commons.io.FileUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.ReindexerConfiguration;
-import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
+import ru.rt.restream.reindexer.db.DbLocator;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.time.Duration;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
 /**
  * Tests for Cproto implementation.
  */
 public class CprotoReindexerTest extends ReindexerTest {
 
-    private Reindexer server;
-
-    @BeforeEach
-    public void setUp() {
-        server = ReindexerConfiguration.builder()
-                .url("builtinserver://items")
-                .getReindexer();
-        db = ReindexerConfiguration.builder()
-                .url("cproto://localhost:6534/items")
-                .connectionPoolSize(4)
-                .requestTimeout(Duration.ofSeconds(30L))
-                .getReindexer();
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        if (server != null) {
-            server.close();
-            FileUtils.deleteDirectory(new File("/tmp/reindex/items"));
-        }
-        if (db != null) {
-            db.close();
-        }
+    @Override
+    protected DbLocator.Type getDbType() {
+        return CPROTO;
     }
 
     @Test

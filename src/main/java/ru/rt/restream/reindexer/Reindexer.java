@@ -46,9 +46,9 @@ public class Reindexer {
 
     private final ReindexScanner reindexScanner = new ReindexAnnotationScanner();
 
-    private final Map<Pair<String, Class<?>>, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
+    protected final Map<Pair<String, Class<?>>, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
 
-    Reindexer(Binding binding) {
+    protected Reindexer(Binding binding) {
         this.binding = binding;
     }
 

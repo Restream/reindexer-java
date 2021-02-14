@@ -1,0 +1,23 @@
+storage:
+  path: /tmp/reindex/server
+  engine: leveldb
+  startwitherrors: false
+  autorepair: false
+net:
+  httpaddr: "0.0.0.0:9088"
+  rpcaddr: "0.0.0.0:6534"
+  security: false
+logger:
+  serverlog: "stdout"
+  corelog: "stdout"
+  httplog: "stdout"
+  rpclog: ""
+  loglevel: "error"
+system:
+debug:
+  pprof: false
+  allocs: false
+metrics:
+  prometheus: false
+  collect_period: 1000
+  clientsstats: false

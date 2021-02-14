@@ -18,19 +18,20 @@ package ru.rt.restream.reindexer.connector;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.Query;
-import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
+import ru.rt.restream.reindexer.db.DbBaseTest;
 
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public abstract class MergeTest {
-
-    protected Reindexer db;
+/**
+ * Base Merge test.
+ */
+public abstract class MergeTest extends DbBaseTest {
 
     @Test
     public void testMerge() {
