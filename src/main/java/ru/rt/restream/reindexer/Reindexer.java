@@ -177,8 +177,7 @@ public class Reindexer {
         Pair<String, Class<?>> key = new Pair<>(namespaceName, itemClass);
         ReindexerNamespace<?> namespace = namespaceMap.get(key);
         if (namespace == null) {
-            String msg = String.format("Namespace '%s', item class %s is not exists.", namespaceName,
-                    itemClass.getName());
+            String msg = String.format("Namespace '%s' is not opened, call openNamespace first", namespaceName);
             throw new IllegalArgumentException(msg);
         }
 
