@@ -17,11 +17,11 @@ package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
+import ru.rt.restream.reindexer.db.DbBaseTest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,9 +54,7 @@ import static ru.rt.restream.reindexer.Query.Condition.RANGE;
 /**
  * Base Reindexer test class.
  */
-public abstract class ReindexerTest {
-
-    protected Reindexer db;
+public abstract class ReindexerTest extends DbBaseTest {
 
     @Test
     public void testInsertItem() {

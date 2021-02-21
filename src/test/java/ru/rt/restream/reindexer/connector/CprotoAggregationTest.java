@@ -16,44 +16,18 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import ru.rt.restream.reindexer.ReindexerConfiguration;
-import ru.rt.restream.reindexer.Reindexer;
+import ru.rt.restream.reindexer.db.DbLocator;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
+import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
 /**
  * Tests for Cproto implementation.
  */
 public class CprotoAggregationTest extends AggregationTest {
 
-    private Reindexer server;
-
-    @BeforeEach
-    public void setUp() {
-        server = ReindexerConfiguration.builder()
-                .url("builtinserver://items")
-                .getReindexer();
-        db = ReindexerConfiguration.builder()
-                .url("cproto://localhost:6534/items")
-                .connectionPoolSize(4)
-                .requestTimeout(Duration.ofSeconds(30L))
-                .getReindexer();
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        if (server != null) {
-            server.close();
-            FileUtils.deleteDirectory(new File("/tmp/reindex/items"));
-        }
-        if (db != null) {
-            db.close();
-        }
+    @Override
+    protected DbLocator.Type getDbType() {
+        return CPROTO;
     }
 
 }
