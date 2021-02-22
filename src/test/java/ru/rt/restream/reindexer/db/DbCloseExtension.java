@@ -26,13 +26,13 @@ import static org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableRe
  * Closes Reindexer instances after completing all tests.
  */
 public class DbCloseExtension implements BeforeAllCallback, CloseableResource {
-    private boolean isTestsStarted = false;
+
+    private static boolean isTestsStarted;
 
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
+    public void beforeAll(ExtensionContext context) {
         if (!isTestsStarted) {
             isTestsStarted = true;
-
             // Registration of extension for invoke of this.close() after ending of all tests
             context.getRoot().getStore(GLOBAL).put("DbCloseExtension", this);
         }
@@ -42,4 +42,5 @@ public class DbCloseExtension implements BeforeAllCallback, CloseableResource {
     public void close() throws Throwable {
         DbLocator.closeAllDbInstances();
     }
+
 }

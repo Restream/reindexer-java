@@ -20,12 +20,9 @@ import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.binding.Binding;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
 /**
  * Only for test purposes.
- * Allow to remove all registered namespaces.
+ * Allows to remove all registered namespaces.
  */
 public class ClearDbReindexer extends Reindexer {
 
@@ -34,16 +31,16 @@ public class ClearDbReindexer extends Reindexer {
     }
 
     /**
-     * Remove all registered namespaces.
-     * Todo: to do refactoring after implementation of Reindexer.enumNamespaces
+     * Removes all registered namespaces.
+     * TODO: to do refactoring after implementation of Reindexer.enumNamespaces
      */
     void clear() {
-        Binding binding = this.getBinding();
+        Binding binding = getBinding();
         namespaceMap.values().stream()
                 .map(ReindexerNamespace::getName)
                 .distinct()
                 .forEach(binding::dropNamespace);
-
         namespaceMap.clear();
     }
+
 }

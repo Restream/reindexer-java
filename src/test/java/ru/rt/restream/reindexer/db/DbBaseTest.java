@@ -22,7 +22,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * A base class for all of the test classes that use Reindexer instance.
+ * A base class for all of the test classes that use the Reindexer instance.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(DbCloseExtension.class)
@@ -31,20 +31,28 @@ public abstract class DbBaseTest {
     protected ClearDbReindexer db;
 
     /**
-     * Return BUILTIN or CPROTO.
+     * Initializes the Reindexer instance before all tests.
      */
-    protected abstract DbLocator.Type getDbType();
-
     @BeforeAll
-    protected void initDb(){
+    void initDb() {
         db = DbLocator.getDb(getDbType());
     }
 
     /**
-     * Clear Reindexer instance after each test method.
+     * Returns a {@link DbLocator.Type} to use for obtaining a Reindexer instance.
+     *
+     * @return the {@link DbLocator.Type} to use for obtaining a Reindexer instance
+     */
+    protected abstract DbLocator.Type getDbType();
+
+    /**
+     * Clears the Reindexer instance after each test method.
      */
     @AfterEach
     void clearDb() {
-        db.clear();
+        if (db != null) {
+            db.clear();
+        }
     }
+
 }
