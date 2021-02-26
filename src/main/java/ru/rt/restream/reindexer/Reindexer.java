@@ -24,7 +24,6 @@ import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
-import ru.rt.restream.reindexer.exceptions.NamespaceExistsException;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 import ru.rt.restream.reindexer.util.Pair;
 
@@ -67,6 +66,22 @@ public class Reindexer {
      * @return object, that provides methods for manipulating namespace data
      */
     public <T> Namespace<T> openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
+        Pair<String, Class<?>> namespaceKey = new Pair<>(name, itemClass);
+        return (Namespace<T>) namespaceMap.computeIfAbsent(namespaceKey, k -> doOpenNamespace(name, options, itemClass));
+    }
+
+    /**
+     * Creates new namespace and indexes based on passed item class.
+     *
+     * @param <T>       the item type
+     * @param name      the namespace name
+     * @param options   namespace options
+     * @param itemClass the item class
+     *
+     * @return object, that provides methods for manipulating namespace data
+     */
+    private <T> ReindexerNamespace<T> doOpenNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
+
         ReindexerNamespace<T> namespace = ReindexerNamespace.<T>builder()
                 .name(name)
                 .itemClass(Objects.requireNonNull(itemClass))
@@ -80,7 +95,6 @@ public class Reindexer {
                 .reindexer(this)
                 .build();
 
-        registerNamespace(itemClass, namespace);
         try {
             binding.openNamespace(NamespaceDefinition.fromNamespace(namespace));
             for (ReindexerIndex index : namespace.getIndexes()) {
@@ -185,15 +199,6 @@ public class Reindexer {
             throw new RuntimeException("Wrong namespace item type");
         }
         return (ReindexerNamespace<T>) namespace;
-    }
-
-    private <T> void registerNamespace(Class<T> itemClass, ReindexerNamespace<T> namespace) {
-        Pair<String, Class<?>> key = new Pair<>(namespace.getName(), itemClass);
-        if (namespaceMap.containsKey(key)) {
-            throw new NamespaceExistsException();
-        }
-
-        namespaceMap.put(key, namespace);
     }
 
     @SuppressWarnings("unchecked")
