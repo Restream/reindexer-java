@@ -150,6 +150,16 @@ public class ReindexerNamespace<T> implements Namespace<T>{
         return reindexer.query(name, itemClass);
     }
 
+    @Override
+    public void putMeta(String key, String data) {
+        reindexer.getBinding().putMeta(name, key, data);
+    }
+
+    @Override
+    public String getMeta(String key) {
+        return reindexer.getBinding().getMeta(name, key);
+    }
+
     public static final class Builder<T> {
         private String name;
         private Class<T> itemClass;

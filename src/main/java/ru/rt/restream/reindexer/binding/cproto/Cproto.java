@@ -27,6 +27,7 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
@@ -144,6 +145,18 @@ public class Cproto implements Binding {
         Object[] responseArguments = rpcResponse.getArguments();
         long transactionId = responseArguments.length > 0 ? (long) responseArguments[0] : -1L;
         return new CprotoTransactionContext(transactionId, connection);
+    }
+
+    @Override
+    public void putMeta(String namespace, String key, String data) {
+        rpcCallNoResults(PUT_META, namespace, key, data);
+    }
+
+    @Override
+    public String getMeta(String namespace, String key) {
+        Connection connection = pool.getConnection();
+        ReindexerResponse response = ConnectionUtils.rpcCall(connection, GET_META, namespace, key);
+        return new String((byte[]) response.getArguments()[0], StandardCharsets.UTF_8);
     }
 
     /**

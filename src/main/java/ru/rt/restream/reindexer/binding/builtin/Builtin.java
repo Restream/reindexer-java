@@ -32,6 +32,7 @@ import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -166,6 +167,18 @@ public class Builtin implements Binding {
             }
         }
         return new BuiltinTransactionContext(adapter, rx, txId, next::getAndIncrement, timeout);
+    }
+
+    @Override
+    public void putMeta(String namespace, String key, String data) {
+        adapter.putMeta(rx, next.getAndIncrement(), timeout.toMillis(), namespace, key, data);
+    }
+
+    @Override
+    public String getMeta(String namespace, String key) {
+        ReindexerResponse response = adapter.getMeta(rx, next.getAndIncrement(), timeout.toMillis(), namespace, key);
+        checkResponse(response);
+        return new String((byte[])response.getArguments()[1], StandardCharsets.UTF_8);
     }
 
     private void checkResponse(ReindexerResponse response) {

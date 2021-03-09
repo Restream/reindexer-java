@@ -295,4 +295,29 @@ public class BuiltinAdapter {
      */
     public native ReindexerResponse updateQueryTx(long rx, long txId, byte[] data);
 
+    /**
+     * Associates the specified value with the specified key in reindexer namespace.
+     *
+     * @param rx        the Reindexer instance pointer
+     * @param ctxId     the context id
+     * @param timeout   the execution timeout
+     * @param namespace the namespace name
+     * @param key       key with which the specified value is to be associated
+     * @param data      value to be associated with the specified key
+     */
+    public native void putMeta(long rx, long ctxId, long timeout, String namespace, String key, String data);
+
+    /**
+     * Returns the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key.
+     *
+     * @param rx        the Reindexer instance pointer
+     * @param ctxId     the context id
+     * @param timeout   the execution timeout
+     * @param namespace the namespace name
+     * @param key       the key whose associated value is to be returned
+     * @return the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key
+     */
+    public native ReindexerResponse getMeta(long rx, long ctxId, long timeout, String namespace, String key);
 }

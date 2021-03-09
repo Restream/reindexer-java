@@ -166,6 +166,16 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
+    public void putMeta(String namespace, String key, String data) {
+        builtin.putMeta(namespace, key, data);
+    }
+
+    @Override
+    public String getMeta(String namespace, String key) {
+        return builtin.getMeta(namespace, key);
+    }
+
+    @Override
     public void close() {
         ReindexerResponse response = adapter.stopServer(svc);
         if (response.hasError()) {

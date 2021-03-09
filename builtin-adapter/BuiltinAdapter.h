@@ -112,6 +112,14 @@ JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAda
                                                                                                  jlong, jstring,
                                                                                                  jstring, jstring);
 
+JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_putMeta(JNIEnv *, jobject, jlong,
+                                                                                               jlong, jlong, jstring,
+                                                                                               jstring, jstring);
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_getMeta(JNIEnv *, jobject, jlong,
+                                                                                               jlong, jlong, jstring,
+                                                                                               jstring);
+
 #ifdef __cplusplus
 }
 #endif
