@@ -23,8 +23,19 @@ import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
+import ru.rt.restream.reindexer.util.JsonSerializer;
 
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -91,6 +102,32 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testInsertJsonItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+
+        db.insert(namespaceName, jsonItem, TestItem.class);
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
     public void testUpdateItem() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -105,6 +142,34 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setName("TestNameUpdated");
 
         db.update(namespaceName, testItem);
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        TestItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
+    public void testUpdateJsonItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        db.insert(namespaceName, testItem);
+
+        testItem.setName("TestNameUpdated");
+        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+
+        db.update(namespaceName, jsonItem, TestItem.class);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -139,6 +204,29 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testUpsertJsonItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+
+        db.upsert(namespaceName, jsonItem, TestItem.class);
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItem responseItem = iterator.next();
+        assertThat(responseItem.name, is(testItem.name));
+        assertThat(responseItem.id, is(testItem.id));
+    }
+
+    @Test
     public void testDeleteItem() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -151,6 +239,28 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.insert(namespaceName, testItem);
 
         db.delete(namespaceName, testItem);
+
+        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testDeleteJsonItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        db.insert(namespaceName, testItem);
+
+        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+
+        db.delete(namespaceName, jsonItem, TestItem.class);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)

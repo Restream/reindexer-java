@@ -81,10 +81,10 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts,
+    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts,
                            int stateToken) {
         byte[] packedPercepts = packPrecepts(precepts);
-        rpcCallNoResults(MODIFY_ITEM, namespaceName, Consts.FORMAT_C_JSON, data, mode,
+        rpcCallNoResults(MODIFY_ITEM, namespaceName, format, data, mode,
                 packedPercepts, stateToken, 0);
     }
 
