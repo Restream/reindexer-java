@@ -254,6 +254,20 @@ public class BuiltinAdapter {
     public native ReindexerResponse selectQuery(long rx, long ctxId, long timeout, byte[] data, long[] versions, boolean asJson);
 
     /**
+     * Executes sql-query (update or select).
+     *
+     * @param rx       the Reindexer instance pointer
+     * @param ctxId    the context id
+     * @param timeout  the execution timeout
+     * @param query    the SQL-query string
+     * @param asJson   'true' if response should be serialized in JSON format, defaults to CJSON
+     * @param versions the versions
+     * @return the {@link ReindexerResponse} to use
+     */
+    public native ReindexerResponse select(long rx, long ctxId, long timeout, String query, boolean asJson,
+                                           long[] versions);
+
+    /**
      * Executes delete query.
      *
      * @param rx      the Reindexer instance pointer

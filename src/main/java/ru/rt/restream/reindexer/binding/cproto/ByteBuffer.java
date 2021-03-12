@@ -453,6 +453,15 @@ public class ByteBuffer {
         size = 0;
     }
 
+    /**
+     * Skip bytes and increase position by 'length'.
+     *
+     * @param length bytes to skip
+     */
+    public void skip(int length) {
+        position += length;
+    }
+
     public int getPosition() {
         return position;
     }

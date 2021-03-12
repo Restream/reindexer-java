@@ -833,6 +833,82 @@ public abstract class JoinTest extends DbBaseTest {
         assertThat(resultByInnerJoinNameAndId.id, is(item3.id));
     }
 
+    @Test
+    public void testExecSqlWithJoinForOne() {
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        ItemWithJoin itemWithJoin = new ItemWithJoin();
+        itemWithJoin.id = 1;
+        itemWithJoin.name = "name";
+        itemWithJoin.actorName = "Test";
+        itemWithJoin.actorsIds = new ArrayList<>();
+        itemWithJoin.actorsIds.add(1);
+
+        Actor actor = new Actor();
+        actor.id = 1;
+        actor.name = "Test";
+        actor.visible = true;
+
+        db.upsert("items_with_join", itemWithJoin);
+        db.upsert("actors", actor);
+
+        CloseableIterator<ItemWithJoin> items = db.execSql(
+                "SELECT * FROM items_with_join INNER JOIN actors ON items_with_join.actorName = actors.name",
+                ItemWithJoin.class
+        );
+
+        assertThat(items.hasNext(), is(true));
+
+        ItemWithJoin result = items.next();
+        assertThat(result.id, is(itemWithJoin.id));
+        assertThat(result.name, is(itemWithJoin.name));
+        assertThat(result.actorName, is(itemWithJoin.actorName));
+
+        assertThat(items.hasNext(), is(false));
+    }
+
+    @Test
+    public void testExecSqlWithJoinForList() {
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        for (int i = 0; i < 100; i++) {
+            ItemWithJoin itemWithJoin = new ItemWithJoin();
+            itemWithJoin.id = i;
+            itemWithJoin.name = "name" + i;
+            itemWithJoin.actorName = "Test" + i;
+            itemWithJoin.actorsIds = new ArrayList<>();
+            itemWithJoin.actorsIds.add(1);
+
+            Actor actor = new Actor();
+            actor.id = i;
+            actor.name = "Test" + i;
+            actor.visible = true;
+
+            db.upsert("items_with_join", itemWithJoin);
+            db.upsert("actors", actor);
+        }
+
+        CloseableIterator<ItemWithJoin> items = db.execSql(
+                "SELECT * FROM items_with_join INNER JOIN actors ON items_with_join.actorName = actors.name",
+                ItemWithJoin.class
+        );
+
+        assertThat(items.hasNext(), is(true));
+
+        int count = 0;
+        for (int i = 0; i < 100; i++) {
+            ItemWithJoin next = items.next();
+            assertThat(next.getId(), is(i));
+            assertThat(next.getName(), is("name" + i));
+            assertThat(next.getActorName(), is("Test" + i));
+            count++;
+        }
+        assertThat(count, is(100));
+        assertThat(items.hasNext(), is(false));
+    }
+
     public static class Actor {
 
         @Reindex(name = "id", isPrimaryKey = true)
@@ -880,6 +956,7 @@ public abstract class JoinTest extends DbBaseTest {
 
         private List<Integer> actorsIds;
 
+        @Reindex(name = "actorName")
         private String actorName;
 
         @Transient

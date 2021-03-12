@@ -124,6 +124,17 @@ public interface Binding {
     void closeNamespace(String namespaceName);
 
     /**
+     * Invoke sql query. Supports update and select modes.
+     *
+     * @param query      sql query string
+     * @param asJson     'true' if response should be serialized in JSON format, defaults to CJSON
+     * @param fetchCount items count to fetch within a query request
+     * @param ptVersions payload type state tokens
+     * @return the request context
+     */
+    RequestContext select(String query, boolean asJson, int fetchCount, long[] ptVersions);
+
+    /**
      * Invoke select query.
      *
      * @param queryData  encoded query data (selected indexes, predicates, etc)

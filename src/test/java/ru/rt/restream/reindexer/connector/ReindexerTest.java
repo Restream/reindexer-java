@@ -2150,6 +2150,95 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(namespace.getMeta("key"), is(""));
     }
 
+    @Test
+    public void testExecSqlForOne() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        CloseableIterator<TestItem> iterator = db.execSql("SELECT * FROM items WHERE id = 123",
+                TestItem.class);
+        TestItem result = iterator.next();
+        assertThat(result.getId(), is(testItem.getId()));
+        assertThat(result.getName(), is(testItem.getName()));
+        assertThat(result.getNonIndex(), is(testItem.getNonIndex()));
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testExecSqlForList() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        Set<TestItem> expectedItems = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+            expectedItems.add(testItem);
+        }
+
+        CloseableIterator<TestItem> iterator = db.execSql("SELECT * FROM items",
+                TestItem.class);
+
+        while (iterator.hasNext()) {
+            TestItem responseItem = iterator.next();
+            assertThat(expectedItems.remove(responseItem), is(true));
+        }
+
+        assertThat(expectedItems.size(), is(0));
+    }
+
+    @Test
+    public void testUpdateSqlForOne() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        db.updateSql("UPDATE items SET name = 'upd' WHERE id = 123");
+
+        TestItem result = db.query("items", TestItem.class)
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(result.getName(), is("upd"));
+    }
+
+    @Test
+    public void testUpdateSqlForList() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            db.upsert(namespaceName, testItem);
+        }
+
+
+        db.updateSql("UPDATE items SET name = 'upd'");
+
+        List<TestItem> result = db.query("items", TestItem.class)
+                .toList();
+        assertThat(result.size(), is(100));
+        for (TestItem resultItem : result) {
+            assertThat(resultItem.getName(), is("upd"));
+        }
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
