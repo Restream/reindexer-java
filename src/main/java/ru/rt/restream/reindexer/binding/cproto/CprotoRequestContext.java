@@ -44,6 +44,8 @@ public class CprotoRequestContext implements RequestContext {
 
     private final Gson gson = new Gson();
 
+    private final boolean asJson;
+
     private QueryResult queryResult;
 
     private int requestId = -1;
@@ -54,9 +56,10 @@ public class CprotoRequestContext implements RequestContext {
      * @param rpcResponse the RPC response
      * @param connection  the connection in which the request was made
      */
-    public CprotoRequestContext(ReindexerResponse rpcResponse, Connection connection) {
+    public CprotoRequestContext(ReindexerResponse rpcResponse, Connection connection, boolean asJson) {
         this.queryResult = getQueryResult(rpcResponse);
         this.connection = connection;
+        this.asJson = asJson;
     }
 
     @Override
@@ -66,7 +69,9 @@ public class CprotoRequestContext implements RequestContext {
 
     @Override
     public void fetchResults(int offset, int limit) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, FETCH_RESULTS, requestId, flags, offset, fetchCount);
         queryResult = getQueryResult(rpcResponse);

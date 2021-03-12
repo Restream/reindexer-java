@@ -119,11 +119,13 @@ public class Cproto implements Binding {
 
     @Override
     public RequestContext select(String query, boolean asJson, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT_SQL, query, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection);
+        return new CprotoRequestContext(rpcResponse, connection, asJson);
     }
 
     /**
@@ -131,12 +133,13 @@ public class Cproto implements Binding {
      */
     @Override
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
-        int resultFormatFlag = asJson ? Consts.RESULTS_JSON : Consts.RESULTS_C_JSON;
-        int flags = resultFormatFlag | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection);
+        return new CprotoRequestContext(rpcResponse, connection, asJson);
     }
 
     @Override

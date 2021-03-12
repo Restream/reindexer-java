@@ -804,6 +804,12 @@ public class Query<T> {
                 : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, true);
 
         QueryResult queryResult = requestContext.getQueryResult();
+
+        // implements behavior as in go connector
+        if (queryResult.isJson() && queryResult.isWithJoined()) {
+            throw new RuntimeException("Sorry, not implemented: Can't return join query results as json");
+        }
+
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {
             ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
             PayloadType currentPayloadType = namespace.getPayloadType();
@@ -812,7 +818,7 @@ public class Query<T> {
             }
         }
 
-        return new JsonIterator(namespace, requestContext, this);
+        return new JsonIterator(requestContext, fetchCount);
     }
 
     /**

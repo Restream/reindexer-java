@@ -48,10 +48,12 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.*;
@@ -2374,24 +2376,33 @@ public abstract class ReindexerTest extends DbBaseTest {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
-        TestItem testItem = new TestItem();
-        testItem.setId(123);
-        testItem.setName("TestName");
-        testItem.setNonIndex("testNonIndex");
+        String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
 
-        String jsonItem = JsonSerializer.toJson(testItem);
-
-        db.insert(namespaceName, testItem);
+        for (int i = 1; i < 277; i++) {
+            db.insert(namespaceName, String.format(templateItem, i).getBytes(StandardCharsets.UTF_8), TestItem.class);
+        }
 
         JsonIterator iterator = db.query(namespaceName, TestItem.class)
-                .where("id", EQ, 123)
+                .where("id", LE, 250)
+                .sort("id",false)
                 .executeToJson();
 
-        assertThat(iterator.hasNext(), is(true));
+        assertThat(iterator.size(), is(250L));
 
-        String response = new String(iterator.next());
-        assertThat(response, is(jsonItem));
+        String response = iterator.next();
 
+        assertThat(response, is(String.format(templateItem, 1)));
+        iterator.close();
+
+        JsonIterator fetchAllIterator = db.query(namespaceName, TestItem.class)
+                .where("id", LE, 250)
+                .sort("id",false)
+                .executeToJson();
+
+        String fetchAllResponse = fetchAllIterator.fetchAll("items");
+        assertThat(fetchAllResponse, startsWith("{ \"items\": [{\"id\":1"));
+        assertThat(fetchAllResponse, containsString(String.format(templateItem, 1)));
+        assertThat(fetchAllResponse, containsString(String.format(templateItem, 250)));
     }
 
     public static class SerialIdTestItem {
