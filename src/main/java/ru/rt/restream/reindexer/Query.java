@@ -747,6 +747,75 @@ public class Query<T> {
     }
 
     /**
+     * Will execute query, and return slice of items.
+     *
+     * @return an iterator over a query result
+     */
+    public JsonIterator executeToJson() {
+        logBuilder.type(SELECT);
+        if (LOGGER.isDebugEnabled()) {
+            debug();
+            LOGGER.debug(logBuilder.getSql());
+        }
+
+        namespaces.add(namespace);
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            namespaces.add(mergeQuery.namespace);
+        }
+
+        for (Query<?> joinQuery : joinQueries) {
+            namespaces.add(joinQuery.namespace);
+        }
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            for (Query<?> joinQuery : mergeQuery.joinQueries) {
+                namespaces.add(joinQuery.namespace);
+            }
+        }
+
+        buffer.putVarUInt32(QUERY_END);
+
+        for (Query<?> joinQuery : joinQueries) {
+            buffer.putVarUInt32(joinQuery.joinType);
+            buffer.writeBytes(joinQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+        }
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            buffer.putVarUInt32(MERGE);
+            buffer.writeBytes(mergeQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
+            for (Query<?> joinQuery : joinQueries) {
+                buffer.putVarUInt32(joinQuery.joinType);
+                buffer.writeBytes(joinQuery.buffer.bytes());
+                buffer.putVarUInt32(QUERY_END);
+            }
+        }
+
+        long[] ptVersions = namespaces.stream()
+                .map(ReindexerNamespace::getPayloadType)
+                .map(pt -> pt == null ? 0 : pt.getStateToken())
+                .mapToLong(Integer::longValue)
+                .toArray();
+        RequestContext requestContext = transactionContext != null
+                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, true)
+                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, true);
+
+        QueryResult queryResult = requestContext.getQueryResult();
+        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
+            ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
+            PayloadType currentPayloadType = namespace.getPayloadType();
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
+                namespace.updatePayloadType(payloadType);
+            }
+        }
+
+        return new JsonIterator(namespace, requestContext, this);
+    }
+
+    /**
      * Will execute query, and delete items, matches query.
      */
     public void delete() {

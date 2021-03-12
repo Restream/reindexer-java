@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.JsonIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
@@ -2366,6 +2367,31 @@ public abstract class ReindexerTest extends DbBaseTest {
         for (TestItem resultItem : result) {
             assertThat(resultItem.getName(), is("upd"));
         }
+    }
+
+    @Test
+    public void testQueryExecuteJson() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        String jsonItem = JsonSerializer.toJson(testItem);
+
+        db.insert(namespaceName, testItem);
+
+        JsonIterator iterator = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .executeToJson();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        String response = new String(iterator.next());
+        assertThat(response, is(jsonItem));
+
     }
 
     public static class SerialIdTestItem {
