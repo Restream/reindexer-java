@@ -88,8 +88,8 @@ public class BuiltinTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, false);
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
+        ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, asJson);
         checkResponse(response);
         return new BuiltinRequestContext(response);
     }

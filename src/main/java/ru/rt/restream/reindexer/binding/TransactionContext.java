@@ -51,9 +51,10 @@ public interface TransactionContext {
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param fetchCount items count to fetch within a query request
      * @param ptVersions payload type state tokens
+     * @param asJson     true if response should be serialized in JSON format, defaults to CJSON
      * @return the request context
      */
-    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions);
+    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson);
 
     /**
      * Invoke update query in the transaction that is associated with the context.

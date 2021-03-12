@@ -731,8 +731,8 @@ public class Query<T> {
                 .mapToLong(Integer::longValue)
                 .toArray();
         RequestContext requestContext = transactionContext != null
-                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions)
-                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions);
+                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, false)
+                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, false);
 
         QueryResult queryResult = requestContext.getQueryResult();
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {

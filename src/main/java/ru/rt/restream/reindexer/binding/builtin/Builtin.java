@@ -143,9 +143,9 @@ public class Builtin implements Binding {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
         ReindexerResponse response = adapter.selectQuery(rx, next.getAndIncrement(), timeout.toMillis(), queryData,
-                ptVersions, false);
+                ptVersions, asJson);
         checkResponse(response);
         return new BuiltinRequestContext(response);
     }

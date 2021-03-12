@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
+import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
 /**
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
@@ -129,8 +130,9 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
+        int resultFormatFlag = asJson ? Consts.RESULTS_JSON : Consts.RESULTS_C_JSON;
+        int flags = resultFormatFlag | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
