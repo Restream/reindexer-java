@@ -54,6 +54,8 @@ public class BuiltinServer implements Binding {
 
     private final long svc;
 
+    private final Thread serverThread;
+
     /**
      * Creates an instance.
      *
@@ -66,7 +68,7 @@ public class BuiltinServer implements Binding {
         String yamlConfig = readYamlConfig(serverConfigFile);
         adapter = new BuiltinAdapter();
         svc = adapter.initServer();
-        Thread serverThread = new Thread(() -> {
+        serverThread = new Thread(() -> {
             ReindexerResponse response = adapter.startServer(svc, yamlConfig);
             if (response.hasError()) {
                 LOGGER.error("rx: startServer error: {}", response.getErrorMessage());
@@ -170,6 +172,12 @@ public class BuiltinServer implements Binding {
         ReindexerResponse response = adapter.stopServer(svc);
         if (response.hasError()) {
             throw ReindexerExceptionFactory.fromResponse(response);
+        }
+        try {
+            serverThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ReindexerException("Interrupted while server shutdown", e);
         }
         adapter.destroyServer(svc);
     }
