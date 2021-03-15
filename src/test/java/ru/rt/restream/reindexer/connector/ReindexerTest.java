@@ -23,15 +23,7 @@ import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -48,8 +40,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static ru.rt.restream.reindexer.Query.Condition.EQ;
-import static ru.rt.restream.reindexer.Query.Condition.RANGE;
+import static ru.rt.restream.reindexer.Query.Condition.*;
 
 /**
  * Base Reindexer test class.
@@ -2060,6 +2051,34 @@ public abstract class ReindexerTest extends DbBaseTest {
             List<Integer> ids = items.map(TestItem::getId).collect(Collectors.toList());
             assertThat(ids, contains(0, 1, 2, 3, 4));
         }
+    }
+
+    @Test
+    public void testQueryWhereCollection() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        for (int i = 0; i < 5; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            db.insert(namespaceName, testItem);
+        }
+
+        Collection<Integer> ids = new ArrayList<>();
+        ids.add(0);
+        ids.add(2);
+        ids.add(4);
+
+        List<Integer> result = db.query(namespaceName, TestItem.class)
+                .where("id", SET, ids)
+                .toList()
+                .stream()
+                .map(TestItem::getId)
+                .collect(Collectors.toList());
+
+        assertThat(result, containsInAnyOrder(0, 2, 4));
     }
 
     @Test

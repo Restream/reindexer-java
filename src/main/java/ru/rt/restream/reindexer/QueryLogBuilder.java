@@ -17,13 +17,7 @@ package ru.rt.restream.reindexer;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -250,6 +244,19 @@ class QueryLogBuilder {
      * @param conditionCode condition code. See {@link Query.Condition}
      * @param values        value(s) to which the condition applies
      */
+    void where(int operationCode, String field, int conditionCode, Collection<?> values) {
+        QueryEntry queryEntry = new QueryEntry();
+        queryEntry.operation = getOperation(operationCode);
+        queryEntry.field = field;
+        queryEntry.condition = getCondition(conditionCode);
+        queryEntry.values.addAll(values);
+        if (!whereStack.isEmpty()) {
+            QueryEntry parent = whereStack.getLast();
+            parent.children.add(queryEntry);
+        } else {
+            whereEntries.add(queryEntry);
+        }
+    }
     void where(int operationCode, String field, int conditionCode, Object... values) {
         QueryEntry queryEntry = new QueryEntry();
         queryEntry.operation = getOperation(operationCode);
