@@ -156,6 +156,26 @@ public interface Binding {
     TransactionContext beginTx(String namespaceName);
 
     /**
+     * Associates the specified value with the specified key in reindexer namespace.
+     *
+     * @param namespaceName  the namespace name
+     * @param key            key with which the specified value is to be associated
+     * @param data           value to be associated with the specified key
+     */
+    void putMeta(String namespaceName, String key, String data);
+
+    /**
+     * Returns the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key.
+     *
+     * @param namespaceName  the namespace name
+     * @param key            the key whose associated value is to be returned
+     * @return the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key
+     */
+    String getMeta(String namespaceName, String key);
+
+    /**
      * Closes binding to Reindexer instance.
      */
     void close();

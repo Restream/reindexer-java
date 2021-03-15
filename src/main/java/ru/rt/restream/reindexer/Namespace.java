@@ -61,7 +61,25 @@ public interface Namespace<T> {
      * Creates new Query for building request
      *
      * @return builder for building request
-     * */
+     */
     Query<T> query();
+
+    /**
+     * Associates the specified value with the specified key in reindexer namespace.
+     *
+     * @param key  key with which the specified value is to be associated
+     * @param data value to be associated with the specified key
+     */
+    void putMeta(String key, String data);
+
+    /**
+     * Returns the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key.
+     *
+     * @param key the key whose associated value is to be returned
+     * @return the value to which the specified key is mapped, or empty string if namespace contains no mapping for the
+     * key
+     */
+    String getMeta(String key);
 
 }

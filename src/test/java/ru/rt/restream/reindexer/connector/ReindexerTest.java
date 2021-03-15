@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
@@ -2105,6 +2106,29 @@ public abstract class ReindexerTest extends DbBaseTest {
                 .where("id", EQ, 123)
                 .exists();
         assertThat(exists, is(true));
+    }
+
+    @Test
+    public void testPutAndGetMeta() {
+        String namespaceName = "items";
+        String value = "value";
+
+        Namespace<TestItem> namespace = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(),
+                TestItem.class);
+
+        namespace.putMeta("key", value);
+
+        assertThat(namespace.getMeta("key"), is(value));
+    }
+
+    @Test
+    public void testGetMetaWhenNotExists() {
+        String namespaceName = "items";
+
+        Namespace<TestItem> namespace = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(),
+                TestItem.class);
+
+        assertThat(namespace.getMeta("key"), is(""));
     }
 
     public static class SerialIdTestItem {

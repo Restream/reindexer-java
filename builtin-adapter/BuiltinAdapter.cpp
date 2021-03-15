@@ -332,3 +332,33 @@ JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAda
     env->ReleaseStringUTFChars(password, reinterpret_cast<const char *>(dbPass.p));
     return rx;
 }
+
+JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_putMeta(JNIEnv *env, jobject,
+                                                                                            jlong rx,
+                                                                                            jlong ctxId,
+                                                                                            jlong timeout,
+                                                                                            jstring namespaceName,
+                                                                                            jstring key,
+                                                                                            jstring data) {
+    reindexer_string nsName = rx_string(env, namespaceName);
+    reindexer_string metaKey = rx_string(env, key);
+    reindexer_string metaData = rx_string(env, data);
+    reindexer_put_meta(rx, nsName, metaKey, metaData, rx_ctx(ctxId, timeout));
+    env->ReleaseStringUTFChars(namespaceName, reinterpret_cast<const char *>(nsName.p));
+    env->ReleaseStringUTFChars(key, reinterpret_cast<const char *>(metaKey.p));
+    env->ReleaseStringUTFChars(data, reinterpret_cast<const char *>(metaData.p));
+}
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_getMeta(JNIEnv *env, jobject,
+                                                                                               jlong rx,
+                                                                                               jlong ctxId,
+                                                                                               jlong timeout,
+                                                                                               jstring namespaceName,
+                                                                                               jstring key) {
+    reindexer_string nsName = rx_string(env, namespaceName);
+    reindexer_string metaKey = rx_string(env, key);
+    jobject res = j_res(env, reindexer_get_meta(rx, nsName, metaKey, rx_ctx(ctxId, timeout)));
+    env->ReleaseStringUTFChars(namespaceName, reinterpret_cast<const char *>(nsName.p));
+    env->ReleaseStringUTFChars(key, reinterpret_cast<const char *>(metaKey.p));
+    return res;
+}
