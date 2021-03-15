@@ -901,7 +901,7 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
-    public void testUpdateItemListPrimitivesToEmpty() {
+    public void testUpdateItemListPrimitivesToEmptyList() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -914,6 +914,32 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("integers", Collections.emptyList())
+                .update();
+
+        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        TestItem updatedItem = iterator.next();
+
+        assertThat(updatedItem.integers.isEmpty(), is(true));
+    }
+
+    @Test
+    public void testUpdateItemListPrimitivesToEmptyArray() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setIntegers(Arrays.asList(5, 4, 3, 2, 1));
+            db.upsert(namespaceName, testItem);
+        }
+
+        db.query("items", TestItem.class)
+                .where("id", EQ, 77)
+                .set("integers", new Integer[0])
                 .update();
 
         Iterator<TestItem> iterator = db.query("items", TestItem.class)

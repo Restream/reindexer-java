@@ -755,18 +755,13 @@ public class Query<T> {
             }
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
-            if (values.size() == 0) {
+            if (cmd == QUERY_UPDATE_FIELD_V2) {
+                buffer.putVarUInt32(1);
+            }
+            buffer.putVarUInt32(values.size());
+            for (Object v : values) {
                 buffer.putVarUInt32(0);
-                buffer.putVarUInt32(0);
-            } else {
-                if (cmd == QUERY_UPDATE_FIELD_V2) {
-                    buffer.putVarUInt32(1);
-                }
-                buffer.putVarUInt32(values.size());
-                for (Object v : values) {
-                    buffer.putVarUInt32(0);
-                    putValue(v);
-                }
+                putValue(v);
             }
         } else if (value != null && value.getClass().isArray()) {
             Object[] values = (Object[]) value;
@@ -775,18 +770,13 @@ public class Query<T> {
             }
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
-            if (values.length == 0) {
+            if (cmd == QUERY_UPDATE_FIELD_V2) {
+                buffer.putVarUInt32(1);
+            }
+            buffer.putVarUInt32(values.length);
+            for (Object v : values) {
                 buffer.putVarUInt32(0);
-                buffer.putVarUInt32(0);
-            } else {
-                if (cmd == QUERY_UPDATE_FIELD_V2) {
-                    buffer.putVarUInt32(1);
-                }
-                buffer.putVarUInt32(values.length);
-                for (Object v : values) {
-                    buffer.putVarUInt32(0);
-                    putValue(v);
-                }
+                putValue(v);
             }
         } else {
             buffer.putVarUInt32(cmd);
