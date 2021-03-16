@@ -148,6 +148,11 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
+    public RequestContext select(String query, boolean asJson, int fetchCount, long[] ptVersions) {
+        return builtin.select(query, asJson, fetchCount, ptVersions);
+    }
+
+    @Override
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
         return builtin.selectQuery(queryData, fetchCount, ptVersions);
     }

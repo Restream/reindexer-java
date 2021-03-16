@@ -362,3 +362,18 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
     env->ReleaseStringUTFChars(key, reinterpret_cast<const char *>(metaKey.p));
     return res;
 }
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_select (JNIEnv *env, jobject,
+                                                                                               jlong rx, jlong ctxId,
+                                                                                               jlong timeout,
+                                                                                               jstring query,
+                                                                                               jboolean asJson,
+                                                                                               jlongArray versions) {
+    reindexer_string cQuery = rx_string(env, query);
+    auto ptVersions = reinterpret_cast<int32_t *>(env->GetLongArrayElements(versions, nullptr));
+    int ptVersionsCount = env->GetArrayLength(versions);
+    jobject res = j_res(env, reindexer_select(rx, cQuery, asJson, ptVersions, ptVersionsCount, rx_ctx(ctxId, timeout)));
+    env->ReleaseStringUTFChars(query, reinterpret_cast<const char *>(cQuery.p));
+    env->ReleaseLongArrayElements(versions, reinterpret_cast<jlong *>(ptVersions), 0);
+    return res;
+}

@@ -120,6 +120,11 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
                                                                                                jlong, jlong, jstring,
                                                                                                jstring);
 
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_select (JNIEnv *, jobject,
+                                                                                               jlong, jlong, jlong,
+                                                                                               jstring, jboolean,
+                                                                                               jlongArray);
+
 #ifdef __cplusplus
 }
 #endif

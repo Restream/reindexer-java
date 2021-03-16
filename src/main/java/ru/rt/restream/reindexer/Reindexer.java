@@ -15,8 +15,12 @@
  */
 package ru.rt.restream.reindexer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.QueryResult;
+import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
@@ -25,13 +29,14 @@ import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
-import ru.rt.restream.reindexer.util.Pair;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Reindexer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Reindexer.class);
 
     static final int MODE_UPDATE = 0;
 
@@ -45,7 +50,7 @@ public class Reindexer {
 
     private final ReindexScanner reindexScanner = new ReindexAnnotationScanner();
 
-    protected final Map<Pair<String, Class<?>>, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
+    protected final Map<String, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
 
     protected Reindexer(Binding binding) {
         this.binding = binding;
@@ -66,8 +71,7 @@ public class Reindexer {
      * @return object, that provides methods for manipulating namespace data
      */
     public <T> Namespace<T> openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
-        Pair<String, Class<?>> namespaceKey = new Pair<>(name, itemClass);
-        return (Namespace<T>) namespaceMap.computeIfAbsent(namespaceKey, k -> doOpenNamespace(name, options, itemClass));
+        return (Namespace<T>) namespaceMap.computeIfAbsent(name, k -> doOpenNamespace(name, options, itemClass));
     }
 
     /**
@@ -174,6 +178,38 @@ public class Reindexer {
         return transaction;
     }
 
+    public<T> QueryResultIterator<T> execSql(String query, Class<T> itemClass) {
+        LOGGER.debug(query);
+        String[] words = query.split("\\s+");
+        String namespaceName = null;
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
+            if ("FROM".equals(word)) {
+                namespaceName = words[++i];
+                break;
+            }
+        }
+        if (namespaceName == null) {
+            throw new RuntimeException("Invalid select query, namespace name not found");
+        }
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
+        long [] ptVersions = new long[] {namespace.getPayloadType().getVersion()};
+        RequestContext ctx = binding.select(query, false, Integer.MAX_VALUE, ptVersions);
+        QueryResult queryResult = ctx.getQueryResult();
+        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
+            PayloadType currentPayloadType = namespace.getPayloadType();
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
+                namespace.updatePayloadType(payloadType);
+            }
+        }
+        return new QueryResultIterator<>(namespace, ctx, null, Integer.MAX_VALUE);
+    }
+
+    public void updateSql(String query) {
+        LOGGER.debug(query);
+        binding.select(query, false, 0, new long[] {0L});
+    }
+
     /**
      * Creates new Query for building request
      *
@@ -188,8 +224,7 @@ public class Reindexer {
     }
 
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
-        Pair<String, Class<?>> key = new Pair<>(namespaceName, itemClass);
-        ReindexerNamespace<?> namespace = namespaceMap.get(key);
+        ReindexerNamespace<?> namespace = namespaceMap.get(namespaceName);
         if (namespace == null) {
             String msg = String.format("Namespace '%s' is not opened, call openNamespace first", namespaceName);
             throw new IllegalArgumentException(msg);

@@ -136,29 +136,10 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
 
         Map<String, List<Object>> subItemsMap = new HashMap<>();
         for (int nsIndex = 0; nsIndex < subNsRes; nsIndex++) {
-            List<ReindexerNamespace<?>> namespaces = query.getNamespaces();
-            int nsId = nsIndex + nsIndexOffset;
-            ReindexerNamespace<?> subItemNamespace = namespaces.get(nsId);
-            CtagMatcher ctagMatcher = new CtagMatcher();
-            PayloadType subItemPayloadType = subItemNamespace.getPayloadType();
-            ctagMatcher.read(subItemPayloadType);
-            Class<?> siClass = subItemNamespace.getItemClass();
-            CjsonItemReader<?> subItemItemReader = new CjsonItemReader<>(siClass, ctagMatcher);
-            String joinField = query.getJoinFields().get(nsIndex);
-            List<Object> subItems = subItemsMap.computeIfAbsent(joinField, s -> new ArrayList<>());
-
-            int siRes = (int) buffer.getVarUInt();
-            for (int i = 0; i < siRes; i++) {
-                ItemParams subItemParams = readItemParams();
-                Object subItem;
-                if (subItemParams.cptr != 0) {
-                    ByteBuffer buffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), subItemParams.cptr, nsId);
-                    subItem = subItemItemReader.readItem(buffer);
-                } else {
-                    int subItemLength = (int) buffer.getUInt32();
-                    subItem = subItemItemReader.readItem(new ByteBuffer(buffer.getBytes(subItemLength)).rewind());
-                }
-                subItems.add(subItem);
+            if (query == null) {
+                skipSubItems();
+            } else {
+                readSubItems(nsIndexOffset, subItemsMap, nsIndex);
             }
         }
 
@@ -167,6 +148,45 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
         position++;
         return item;
 
+    }
+
+    private void readSubItems(int nsIndexOffset, Map<String, List<Object>> subItemsMap, int nsIndex) {
+        List<ReindexerNamespace<?>> namespaces = query.getNamespaces();
+        int nsId = nsIndex + nsIndexOffset;
+        ReindexerNamespace<?> subItemNamespace = namespaces.get(nsId);
+        PayloadType subItemPayloadType = subItemNamespace.getPayloadType();
+        CtagMatcher ctagMatcher = new CtagMatcher();
+        ctagMatcher.read(subItemPayloadType);
+        Class<?> siClass = subItemNamespace.getItemClass();
+        CjsonItemReader<?> subItemItemReader = new CjsonItemReader<>(siClass, ctagMatcher);
+        String joinField = query.getJoinFields().get(nsIndex);
+        List<Object> subItems = subItemsMap.computeIfAbsent(joinField, s -> new ArrayList<>());
+
+        int siRes = (int) buffer.getVarUInt();
+        for (int i = 0; i < siRes; i++) {
+            ItemParams subItemParams = readItemParams();
+            Object subItem;
+            if (subItemParams.cptr != 0) {
+                ByteBuffer buffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), subItemParams.cptr,
+                        nsId);
+                subItem = subItemItemReader.readItem(buffer);
+            } else {
+                int subItemLength = (int) buffer.getUInt32();
+                subItem = subItemItemReader.readItem(new ByteBuffer(buffer.getBytes(subItemLength)).rewind());
+            }
+            subItems.add(subItem);
+        }
+    }
+
+    private void skipSubItems() {
+        int siRes = (int) buffer.getVarUInt();
+        for (int i = 0; i < siRes; i++) {
+            ItemParams subItemParams = readItemParams();
+            if (subItemParams.cptr == 0) {
+                int subItemLength = (int) buffer.getUInt32();
+                buffer.skip(subItemLength);
+            }
+        }
     }
 
     private void writeJoinResult(T item, String fieldName, List<Object> subItems) {
