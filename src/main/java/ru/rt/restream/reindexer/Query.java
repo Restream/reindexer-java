@@ -246,6 +246,34 @@ public class Query<T> {
      * @param values    values to match
      * @return the {@link Query} for further customizations
      */
+    public Query<T> where(String indexName, Condition condition, Collection<?> values) {
+        logBuilder.where(nextOperation, indexName, condition.code, values);
+        buffer.putVarUInt32(QUERY_CONDITION)
+                .putVString(indexName)
+                .putVarUInt32(nextOperation)
+                .putVarUInt32(condition.code);
+
+        this.nextOperation = OP_AND;
+        this.queryCount++;
+
+        if (values != null && values.size() > 0) {
+            buffer.putVarUInt32(values.size());
+            for (Object key : values) {
+                putValue(key);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Queries are possible only on the indexed fields, marked with reindex annotation.
+     *
+     * @param indexName index name
+     * @param condition condition value {@link Condition}
+     * @param values    values to match
+     * @return the {@link Query} for further customizations
+     */
     public Query<T> where(String indexName, Condition condition, Object... values) {
         logBuilder.where(nextOperation, indexName, condition.code, values);
         buffer.putVarUInt32(QUERY_CONDITION)
