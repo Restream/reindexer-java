@@ -120,6 +120,16 @@ public class Reindexer {
     }
 
     /**
+     * Drop whole namespace from database.
+     *
+     * @param namespaceName namespace name to drop
+     */
+    public void dropNamespace(String namespaceName) {
+        namespaceMap.remove(namespaceName);
+        binding.dropNamespace(namespaceName);
+    }
+
+    /**
      * Inserts the given item data.
      *
      * @param <T>           the item type
