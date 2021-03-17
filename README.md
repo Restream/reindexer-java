@@ -1,8 +1,19 @@
 rx-connector
 ====================
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.restream/rx-connector/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.restream/rx-connector)
 
-Reindexer is an embeddable, in-memory, document-oriented database with a high-level Query builder interface. 
+Reindexer is an embeddable, in-memory, document-oriented database with a high-level Query builder interface.
 Rx-connector allows to connect to a Reindexer instance from java-application.
+
+## Maven
+
+```xml
+<dependency>
+    <groupId>com.github.restream</groupId>
+    <artifactId>rx-connector</artifactId>
+    <version>[LATEST_VERSION]</version>
+</dependency>
+```
 
 ## Usage
 
