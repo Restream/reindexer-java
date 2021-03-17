@@ -683,65 +683,13 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public CloseableIterator<T> execute() {
-        logBuilder.type(SELECT);
-        if (LOGGER.isDebugEnabled()) {
-            debug();
-            LOGGER.debug(logBuilder.getSql());
-        }
+        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
 
-        namespaces.add(namespace);
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            namespaces.add(mergeQuery.namespace);
-        }
-
-        for (Query<?> joinQuery : joinQueries) {
-            namespaces.add(joinQuery.namespace);
-        }
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            for (Query<?> joinQuery : mergeQuery.joinQueries) {
-                namespaces.add(joinQuery.namespace);
-            }
-        }
-
-        buffer.putVarUInt32(QUERY_END);
-
-        for (Query<?> joinQuery : joinQueries) {
-            buffer.putVarUInt32(joinQuery.joinType);
-            buffer.writeBytes(joinQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-        }
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            buffer.putVarUInt32(MERGE);
-            buffer.writeBytes(mergeQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
-            for (Query<?> joinQuery : joinQueries) {
-                buffer.putVarUInt32(joinQuery.joinType);
-                buffer.writeBytes(joinQuery.buffer.bytes());
-                buffer.putVarUInt32(QUERY_END);
-            }
-        }
-
-        long[] ptVersions = namespaces.stream()
-                .map(ReindexerNamespace::getPayloadType)
-                .map(pt -> pt == null ? 0 : pt.getStateToken())
-                .mapToLong(Integer::longValue)
-                .toArray();
         RequestContext requestContext = transactionContext != null
                 ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, false)
                 : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, false);
 
-        QueryResult queryResult = requestContext.getQueryResult();
-        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
-            ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
-            PayloadType currentPayloadType = namespace.getPayloadType();
-            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
-                namespace.updatePayloadType(payloadType);
-            }
-        }
+        updatePayloadTypes(requestContext.getQueryResult());
 
         return new QueryResultIterator<>(namespace, requestContext, this, fetchCount);
     }
@@ -752,53 +700,8 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public JsonIterator executeToJson() {
-        logBuilder.type(SELECT);
-        if (LOGGER.isDebugEnabled()) {
-            debug();
-            LOGGER.debug(logBuilder.getSql());
-        }
+        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
 
-        namespaces.add(namespace);
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            namespaces.add(mergeQuery.namespace);
-        }
-
-        for (Query<?> joinQuery : joinQueries) {
-            namespaces.add(joinQuery.namespace);
-        }
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            for (Query<?> joinQuery : mergeQuery.joinQueries) {
-                namespaces.add(joinQuery.namespace);
-            }
-        }
-
-        buffer.putVarUInt32(QUERY_END);
-
-        for (Query<?> joinQuery : joinQueries) {
-            buffer.putVarUInt32(joinQuery.joinType);
-            buffer.writeBytes(joinQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-        }
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            buffer.putVarUInt32(MERGE);
-            buffer.writeBytes(mergeQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
-            for (Query<?> joinQuery : joinQueries) {
-                buffer.putVarUInt32(joinQuery.joinType);
-                buffer.writeBytes(joinQuery.buffer.bytes());
-                buffer.putVarUInt32(QUERY_END);
-            }
-        }
-
-        long[] ptVersions = namespaces.stream()
-                .map(ReindexerNamespace::getPayloadType)
-                .map(pt -> pt == null ? 0 : pt.getStateToken())
-                .mapToLong(Integer::longValue)
-                .toArray();
         RequestContext requestContext = transactionContext != null
                 ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, true)
                 : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, true);
@@ -810,6 +713,12 @@ public class Query<T> {
             throw new RuntimeException("Sorry, not implemented: Can't return join query results as json");
         }
 
+        updatePayloadTypes(queryResult);
+
+        return new JsonIterator(requestContext, fetchCount);
+    }
+
+    private void updatePayloadTypes(QueryResult queryResult) {
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {
             ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
             PayloadType currentPayloadType = namespace.getPayloadType();
@@ -817,8 +726,56 @@ public class Query<T> {
                 namespace.updatePayloadType(payloadType);
             }
         }
+    }
 
-        return new JsonIterator(requestContext, fetchCount);
+    private long[] prepareQueryAndGetPayloadTypesVersions() {
+        logBuilder.type(SELECT);
+        if (LOGGER.isDebugEnabled()) {
+            debug();
+            LOGGER.debug(logBuilder.getSql());
+        }
+
+        namespaces.add(namespace);
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            namespaces.add(mergeQuery.namespace);
+        }
+
+        for (Query<?> joinQuery : joinQueries) {
+            namespaces.add(joinQuery.namespace);
+        }
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            for (Query<?> joinQuery : mergeQuery.joinQueries) {
+                namespaces.add(joinQuery.namespace);
+            }
+        }
+
+        buffer.putVarUInt32(QUERY_END);
+
+        for (Query<?> joinQuery : joinQueries) {
+            buffer.putVarUInt32(joinQuery.joinType);
+            buffer.writeBytes(joinQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+        }
+
+        for (Query<?> mergeQuery : mergeQueries) {
+            buffer.putVarUInt32(MERGE);
+            buffer.writeBytes(mergeQuery.buffer.bytes());
+            buffer.putVarUInt32(QUERY_END);
+            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
+            for (Query<?> joinQuery : joinQueries) {
+                buffer.putVarUInt32(joinQuery.joinType);
+                buffer.writeBytes(joinQuery.buffer.bytes());
+                buffer.putVarUInt32(QUERY_END);
+            }
+        }
+
+        return namespaces.stream()
+                .map(ReindexerNamespace::getPayloadType)
+                .map(pt -> pt == null ? 0 : pt.getStateToken())
+                .mapToLong(Integer::longValue)
+                .toArray();
     }
 
     /**

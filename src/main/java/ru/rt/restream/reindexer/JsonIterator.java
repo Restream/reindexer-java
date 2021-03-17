@@ -20,6 +20,7 @@ import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class JsonIterator implements CloseableIterator<String> {
@@ -69,10 +70,10 @@ public class JsonIterator implements CloseableIterator<String> {
         }
 
         int length = (int) buffer.getUInt32();
-        ByteBuffer result = new ByteBuffer(buffer.getBytes(length)).rewind();
+        byte[] result = buffer.getBytes(length);
 
         position++;
-        return new String(result.getBytes());
+        return new String(result, StandardCharsets.UTF_8);
 
     }
 

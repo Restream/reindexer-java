@@ -114,9 +114,9 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setName("TestName");
         testItem.setNonIndex("testNonIndex");
 
-        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+        String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.insert(namespaceName, jsonItem, TestItem.class);
+        db.insert(namespaceName, jsonItem);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -170,9 +170,9 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.insert(namespaceName, testItem);
 
         testItem.setName("TestNameUpdated");
-        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+        String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.update(namespaceName, jsonItem, TestItem.class);
+        db.update(namespaceName, jsonItem);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -216,9 +216,9 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setName("TestName");
         testItem.setNonIndex("testNonIndex");
 
-        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+        String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.upsert(namespaceName, jsonItem, TestItem.class);
+        db.upsert(namespaceName, jsonItem);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -261,9 +261,9 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         db.insert(namespaceName, testItem);
 
-        byte[] jsonItem = JsonSerializer.toJson(testItem).getBytes(StandardCharsets.UTF_8);
+        String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.delete(namespaceName, jsonItem, TestItem.class);
+        db.delete(namespaceName, jsonItem);
 
         Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
@@ -2379,7 +2379,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
 
         for (int i = 1; i < 277; i++) {
-            db.insert(namespaceName, String.format(templateItem, i).getBytes(StandardCharsets.UTF_8), TestItem.class);
+            db.insert(namespaceName, String.format(templateItem, i));
         }
 
         JsonIterator iterator = db.query(namespaceName, TestItem.class)
