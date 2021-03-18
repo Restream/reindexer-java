@@ -71,7 +71,14 @@ public class Reindexer {
      * @return object, that provides methods for manipulating namespace data
      */
     public <T> Namespace<T> openNamespace(String name, NamespaceOptions options, Class<T> itemClass) {
-        return (Namespace<T>) namespaceMap.computeIfAbsent(name, k -> doOpenNamespace(name, options, itemClass));
+        ReindexerNamespace<?> namespace = namespaceMap.computeIfAbsent(name,
+                k -> doOpenNamespace(name, options, itemClass));
+        if (namespace.getItemClass() != itemClass) {
+            String msg = String.format("Wrong namespace item type: namespace already opened with item class %s",
+                    namespace.getName());
+            throw new RuntimeException(msg);
+        }
+        return (Namespace<T>) namespace;
     }
 
     /**

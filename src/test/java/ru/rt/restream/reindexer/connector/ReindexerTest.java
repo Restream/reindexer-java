@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.*;
 
@@ -47,6 +48,24 @@ import static ru.rt.restream.reindexer.Query.Condition.*;
  * Base Reindexer test class.
  */
 public abstract class ReindexerTest extends DbBaseTest {
+
+    @Test
+    public void testReopenNamespaceWithWrongClass() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        assertThrows(RuntimeException.class,
+                () -> db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), NestedTest.class));
+    }
+
+    @Test
+    public void testReopenNamespaceWithSameClass() {
+        String namespaceName = "items";
+        Namespace<TestItem> namespace = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(),
+                TestItem.class);
+
+        assertSame(namespace, db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class));
+    }
 
     @Test
     public void testInsertItem() {
