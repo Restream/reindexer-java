@@ -15,14 +15,25 @@
  */
 package ru.rt.restream.reindexer.connector;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.JsonIterator;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -907,6 +918,94 @@ public abstract class JoinTest extends DbBaseTest {
         }
         assertThat(count, is(100));
         assertThat(items.hasNext(), is(false));
+    }
+
+    @Test
+    public void testQueryWithJoinAndExecuteJson() {
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        for (int i = 0; i < 3; i++) {
+            Actor actor = new Actor();
+            actor.id = i;
+            actor.name = "ActorName" + i;
+            actor.visible = true;
+            db.upsert("actors", actor);
+        }
+
+        for (int i = 0; i < 6; i++) {
+            ItemWithJoin itemWithJoin = new ItemWithJoin();
+            itemWithJoin.id = i;
+            itemWithJoin.name = "ItemName" + i;
+            int actorId = i % 3;
+            itemWithJoin.actorName = "ActorName" + actorId;
+            itemWithJoin.actorsIds = new ArrayList<>();
+            itemWithJoin.actorsIds.add(actorId);
+            db.upsert("items_with_join", itemWithJoin);
+        }
+
+        JsonIterator iterator = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .join(db.query("actors", Actor.class)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .executeToJson();
+
+        assertThat(iterator.hasNext(), is(true));
+
+        String jsonItem = iterator.next();
+
+        Gson gson = getGsonForJoinClasses();
+        ItemWithJoin item = gson.fromJson(jsonItem, ItemWithJoin.class);
+        Actor resultActor = item.getJoinedActors().get(0);
+
+        assertThat(item.id, is(1));
+        assertThat(item.name, is("ItemName1"));
+        assertThat(resultActor.getId(), is(1));
+        assertThat(resultActor.getName(), is("ActorName1"));
+        assertThat(resultActor.isVisible(), is(true));
+        iterator.close();
+
+        JsonIterator fetchAllIterator = db.query("items_with_join", ItemWithJoin.class)
+                .join(db.query("actors", Actor.class)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .executeToJson();
+        JsonObject jsonWithItems = new JsonParser().parse(fetchAllIterator.fetchAll("items")).getAsJsonObject();
+
+        ItemWithJoin[] items = gson.fromJson(jsonWithItems.getAsJsonArray("items"), ItemWithJoin[].class);
+
+        assertThat(items[5].id, is(5));
+        assertThat(items[5].name, is("ItemName5"));
+        assertThat(items[5].actorName, is("ActorName2"));
+        assertThat(items[5].joinedActors.get(0).name, is("ActorName2"));
+    }
+
+    private Gson getGsonForJoinClasses() {
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(ItemWithJoin.class, new JsonDeserializer<ItemWithJoin>() {
+            @Override
+            public ItemWithJoin deserialize(JsonElement json, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                JsonObject obj = json.getAsJsonObject();
+
+                ItemWithJoin item = new ItemWithJoin();
+                item.id = obj.get("id").getAsInt();
+                item.name = obj.get("name").getAsString();
+                item.actorName = obj.get("actorName").getAsString();
+                item.joinedActors = new ArrayList<>();
+                JsonArray joined_actors = obj.get("joined_actors").getAsJsonArray();
+                for (JsonElement jsonActor : joined_actors) {
+                    JsonObject joActor = jsonActor.getAsJsonObject();
+                    Actor actor = new Actor();
+                    actor.id = joActor.get("id").getAsInt();
+                    actor.name = joActor.get("name").getAsString();
+                    actor.visible = joActor.get("visible").getAsBoolean();
+                    item.joinedActors.add(actor);
+                }
+
+                return item;
+            }
+        });
+
+        return gsonBuilder.create();
     }
 
     public static class Actor {

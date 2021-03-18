@@ -69,6 +69,7 @@ public class JsonIterator implements CloseableIterator<String> {
             fetchResults();
         }
 
+        skipItemParams();
         int length = (int) buffer.getUInt32();
         byte[] result = buffer.getBytes(length);
 
@@ -142,6 +143,22 @@ public class JsonIterator implements CloseableIterator<String> {
         requestContext.fetchResults(position, fetchCount);
         queryResult = requestContext.getQueryResult();
         parseQueryResult(queryResult);
+    }
+
+    private void skipItemParams() {
+        if (queryResult.isWithItemId()) {
+            buffer.getVarUInt(); // skip Id
+            buffer.getVarUInt(); // skip version
+        }
+
+        if (queryResult.isWithNsId()) {
+            buffer.getVarUInt(); //skipNsId
+        }
+
+        // skip rank (used for full-text search)
+        if (queryResult.isWithRank()) {
+            buffer.getVarUInt();
+        }
     }
 
 }

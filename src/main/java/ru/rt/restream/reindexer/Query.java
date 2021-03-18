@@ -708,11 +708,6 @@ public class Query<T> {
 
         QueryResult queryResult = requestContext.getQueryResult();
 
-        // implements behavior as in go connector
-        if (queryResult.isJson() && queryResult.isWithJoined()) {
-            throw new RuntimeException("Sorry, not implemented: Can't return join query results as json");
-        }
-
         updatePayloadTypes(queryResult);
 
         return new JsonIterator(requestContext, fetchCount);
