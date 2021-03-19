@@ -24,6 +24,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import com.google.gson.annotations.SerializedName;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.JsonIterator;
@@ -954,7 +955,7 @@ public abstract class JoinTest extends DbBaseTest {
 
         String jsonItem = iterator.next();
 
-        Gson gson = getGsonForJoinClasses();
+        Gson gson = new Gson();
         ItemWithJoin item = gson.fromJson(jsonItem, ItemWithJoin.class);
         Actor resultActor = item.getJoinedActors().get(0);
 
@@ -977,35 +978,6 @@ public abstract class JoinTest extends DbBaseTest {
         assertThat(items[5].name, is("ItemName5"));
         assertThat(items[5].actorName, is("ActorName2"));
         assertThat(items[5].joinedActors.get(0).name, is("ActorName2"));
-    }
-
-    private Gson getGsonForJoinClasses() {
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(ItemWithJoin.class, new JsonDeserializer<ItemWithJoin>() {
-            @Override
-            public ItemWithJoin deserialize(JsonElement json, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-                JsonObject obj = json.getAsJsonObject();
-
-                ItemWithJoin item = new ItemWithJoin();
-                item.id = obj.get("id").getAsInt();
-                item.name = obj.get("name").getAsString();
-                item.actorName = obj.get("actorName").getAsString();
-                item.joinedActors = new ArrayList<>();
-                JsonArray joined_actors = obj.get("joined_actors").getAsJsonArray();
-                for (JsonElement jsonActor : joined_actors) {
-                    JsonObject joActor = jsonActor.getAsJsonObject();
-                    Actor actor = new Actor();
-                    actor.id = joActor.get("id").getAsInt();
-                    actor.name = joActor.get("name").getAsString();
-                    actor.visible = joActor.get("visible").getAsBoolean();
-                    item.joinedActors.add(actor);
-                }
-
-                return item;
-            }
-        });
-
-        return gsonBuilder.create();
     }
 
     public static class Actor {
@@ -1059,6 +1031,7 @@ public abstract class JoinTest extends DbBaseTest {
         private String actorName;
 
         @Transient
+        @SerializedName("joined_actors")
         private List<Actor> joinedActors;
 
         @Transient

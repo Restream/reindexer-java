@@ -27,7 +27,6 @@ import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -52,6 +51,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
@@ -1834,11 +1834,11 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         tx.commit();
 
-        JsonIterator iterator = db.query(namespaceName, TestItem.class).sort("id", false).executeToJson();
+        JsonIterator iterator = db.query(namespaceName, TestItem.class).executeToJson();
         String item0 = iterator.next();
         assertThat(iterator.size(), is(100L));
         assertThat(results, hasSize(100));
-        assertThat(item0, is(results.get(0)));
+        assertThat(item0, is(in(results)));
 
     }
 
