@@ -243,6 +243,19 @@ public class Transaction<T> {
     }
 
     /**
+     * Inserts the given json-formatted item data in the current transaction asynchronously.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @return the {@link CompletableFuture}
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public CompletableFuture<String> insertAsync(String json) {
+        start();
+        return modifyJsonItemAsync(json, Reindexer.MODE_INSERT);
+    }
+
+    /**
      * Updates the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
@@ -253,6 +266,19 @@ public class Transaction<T> {
     public CompletableFuture<T> updateAsync(T item) {
         start();
         return modifyItemAsync(item, Reindexer.MODE_UPDATE);
+    }
+
+    /**
+     * Updates the given json-formatted item data in the current transaction asynchronously.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @return the {@link CompletableFuture}
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public CompletableFuture<String> updateAsync(String json) {
+        start();
+        return modifyJsonItemAsync(json, Reindexer.MODE_UPDATE);
     }
 
     /**
@@ -269,6 +295,19 @@ public class Transaction<T> {
     }
 
     /**
+     * Inserts or updates the given json-formatted item data in the current transaction asynchronously.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @return the {@link CompletableFuture}
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public CompletableFuture<String> upsertAsync(String json) {
+        start();
+        return modifyJsonItemAsync(json, Reindexer.MODE_UPSERT);
+    }
+
+    /**
      * Deletes the given item data in the current transaction asynchronously.
      * Starts a transaction if not started.
      *
@@ -279,6 +318,19 @@ public class Transaction<T> {
     public CompletableFuture<T> deleteAsync(T item) {
         start();
         return modifyItemAsync(item, Reindexer.MODE_DELETE);
+    }
+
+    /**
+     * Deletes the given json-formatted item data in the current transaction asynchronously.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @return the {@link CompletableFuture}
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public CompletableFuture<String> deleteAsync(String json) {
+        start();
+        return modifyJsonItemAsync(json, Reindexer.MODE_DELETE);
     }
 
     private CompletableFuture<T> modifyItemAsync(T item, int mode) {
@@ -314,6 +366,42 @@ public class Transaction<T> {
 
     private CompletableFuture<T> failedFuture(Throwable t) {
         CompletableFuture<T> future = new CompletableFuture<>();
+        future.completeExceptionally(t);
+        return future;
+    }
+
+    private CompletableFuture<String> modifyJsonItemAsync(String json, int mode) {
+        CompletableFuture future = modifyJsonItemAsyncInternal(json, mode, 1);
+        futures.add(future);
+        return future;
+    }
+
+    private CompletableFuture<String> modifyJsonItemAsyncInternal(String json, int mode, int retryCount) {
+        LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", json, mode, retryCount);
+        String[] precepts = namespace.getPrecepts();
+        PayloadType payloadType = namespace.getPayloadType();
+        int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
+        byte[] jsonData = json.getBytes(StandardCharsets.UTF_8);
+        return transactionContext.modifyItemAsync(jsonData, Consts.FORMAT_JSON, mode, precepts, stateToken)
+                .thenApplyAsync(rpcResponse -> {
+                    if (rpcResponse.hasError()) {
+                        throw ReindexerExceptionFactory.fromResponse(rpcResponse);
+                    }
+                    return json;
+                })
+                .thenApply(CompletableFuture::completedFuture)
+                .exceptionally(error -> {
+                    if (error.getCause() instanceof StateInvalidatedException && retryCount > 0) {
+                        updatePayloadType();
+                        return modifyJsonItemAsyncInternal(json, mode, retryCount - 1);
+                    }
+                    return failedJsonFuture(error);
+                })
+                .thenCompose(Function.identity());
+    }
+
+    private CompletableFuture<String> failedJsonFuture(Throwable t) {
+        CompletableFuture<String> future = new CompletableFuture<>();
         future.completeExceptionally(t);
         return future;
     }

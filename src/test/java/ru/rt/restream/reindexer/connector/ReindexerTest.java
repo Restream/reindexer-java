@@ -15,6 +15,7 @@
  */
 package ru.rt.restream.reindexer.connector;
 
+import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
 import ru.rt.restream.reindexer.JsonIterator;
@@ -1813,6 +1814,35 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testTransactionInsertAsyncJsonWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<String> results = new CopyOnWriteArrayList<>();
+
+        Gson gson = new Gson();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setNonIndex("testNonIndex" + i);
+            String jsonItem = gson.toJson(testItem);
+            tx.insertAsync(jsonItem).thenAccept(results::add);
+        }
+
+        tx.commit();
+
+        JsonIterator iterator = db.query(namespaceName, TestItem.class).sort("id", false).executeToJson();
+        String item0 = iterator.next();
+        assertThat(iterator.size(), is(100L));
+        assertThat(results, hasSize(100));
+        assertThat(item0, is(results.get(0)));
+
+    }
+
+    @Test
     public void testTransactionInsertAsyncMultithreadingWithCommit() throws InterruptedException {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
@@ -1900,6 +1930,39 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testTransactionUpdateAsyncJsonWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        List<String> results = new CopyOnWriteArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        testItem.setName("TestNameUpdated");
+
+        Gson gson = new Gson();
+        String jsonItem = gson.toJson(testItem);
+        tx.updateAsync(jsonItem).thenAccept(results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results, contains(jsonItem));
+
+        TestItem item = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
     public void testTransactionUpdateAsyncWithRollback() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -1959,6 +2022,36 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testTransactionUpsertAsyncJsonWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        List<String> results = new CopyOnWriteArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+
+        Gson gson = new Gson();
+        String jsonItem = gson.toJson(testItem);
+        tx.upsertAsync(jsonItem).thenAccept(results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results, contains(jsonItem));
+
+        TestItem item = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
+    @Test
     public void testTransactionUpsertAsyncWithRollback() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -2003,6 +2096,35 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         assertThat(results, hasSize(1));
         assertThat(results, contains(testItem));
+
+        Optional<TestItem> item = db.query(namespaceName, TestItem.class)
+                .where("id", EQ, 123)
+                .findOne();
+        assertThat(item.isPresent(), is(false));
+    }
+
+    @Test
+    public void testTransactionDeleteAsyncJsonWithCommit() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        db.insert(namespaceName, testItem);
+
+        List<String> results = new CopyOnWriteArrayList<>();
+
+        Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
+        Gson gson = new Gson();
+        String jsonItem = gson.toJson(testItem);
+        tx.deleteAsync(jsonItem).thenAccept(results::add);
+
+        tx.commit();
+
+        assertThat(results, hasSize(1));
+        assertThat(results, contains(jsonItem));
 
         Optional<TestItem> item = db.query(namespaceName, TestItem.class)
                 .where("id", EQ, 123)
