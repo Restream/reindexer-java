@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
@@ -24,6 +25,7 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -144,6 +146,18 @@ public class Transaction<T> {
     }
 
     /**
+     * Inserts the given json-formatted item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void insert(String json) {
+        start();
+        modifyJsonItem(json, Reindexer.MODE_INSERT);
+    }
+
+    /**
      * Updates the given item data in the current transaction.
      * Starts a transaction if not started.
      *
@@ -153,6 +167,18 @@ public class Transaction<T> {
     public void update(T item) {
         start();
         modifyItem(item, Reindexer.MODE_UPDATE);
+    }
+
+    /**
+     * Updates the given json-formatted item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void update(String json) {
+        start();
+        modifyJsonItem(json, Reindexer.MODE_UPDATE);
     }
 
     /**
@@ -168,6 +194,18 @@ public class Transaction<T> {
     }
 
     /**
+     * Inserts or updates the given json-formatted item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void upsert(String json) {
+        start();
+        modifyJsonItem(json, Reindexer.MODE_UPSERT);
+    }
+
+    /**
      * Deletes the given item data in the current transaction.
      * Starts a transaction if not started.
      *
@@ -177,6 +215,18 @@ public class Transaction<T> {
     public void delete(T item) {
         start();
         modifyItem(item, Reindexer.MODE_DELETE);
+    }
+
+    /**
+     * Deletes the given json-formatted item data in the current transaction.
+     * Starts a transaction if not started.
+     *
+     * @param json the json-formatted item data
+     * @throws IllegalStateException if the current transaction is finalized
+     */
+    public void delete(String json) {
+        start();
+        modifyJsonItem(json, Reindexer.MODE_DELETE);
     }
 
     /**
@@ -244,7 +294,7 @@ public class Transaction<T> {
         int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
         ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
         byte[] data = itemSerializer.serialize(item);
-        return transactionContext.modifyItemAsync(data, mode, precepts, stateToken)
+        return transactionContext.modifyItemAsync(data, Consts.FORMAT_C_JSON, mode, precepts, stateToken)
                 .thenApplyAsync(rpcResponse -> {
                     if (rpcResponse.hasError()) {
                         throw ReindexerExceptionFactory.fromResponse(rpcResponse);
@@ -277,7 +327,24 @@ public class Transaction<T> {
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
                 ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
                 byte[] data = itemSerializer.serialize(item);
-                transactionContext.modifyItem(data, mode, precepts, stateToken);
+                transactionContext.modifyItem(data, Consts.FORMAT_C_JSON, mode, precepts, stateToken);
+                break;
+            } catch (StateInvalidatedException e) {
+                LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");
+                updatePayloadType();
+            }
+        }
+    }
+
+    private void modifyJsonItem(String json, int mode) {
+        LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", json, mode);
+        byte[] jsonData = json.getBytes(StandardCharsets.UTF_8);
+        String[] precepts = namespace.getPrecepts();
+        for (int i = 0; i < 2; i++) {
+            try {
+                PayloadType payloadType = namespace.getPayloadType();
+                int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
+                transactionContext.modifyItem(jsonData, Consts.FORMAT_JSON, mode, precepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");
