@@ -95,15 +95,18 @@ public class JsonIterator implements CloseableIterator<String> {
         }
 
         StringBuilder builder = new StringBuilder()
-                .append("{ \"")
+                .append("{\"")
                 .append(rootName)
-                .append("\": [");
+                .append("\":[");
 
-        while (hasNext()) {
-            builder.append(next()).append(',');
+        if (hasNext()) {
+            builder.append(next());
+            while (hasNext()) {
+                builder.append(',').append(next());
+            }
         }
 
-        builder.append("] }");
+        builder.append("]}");
 
         this.close();
 

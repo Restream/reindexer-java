@@ -2400,7 +2400,7 @@ public abstract class ReindexerTest extends DbBaseTest {
                 .executeToJson();
 
         String fetchAllResponse = fetchAllIterator.fetchAll("items");
-        assertThat(fetchAllResponse, startsWith("{ \"items\": [{\"id\":1"));
+        assertThat(fetchAllResponse, startsWith("{\"items\":[{\"id\":1"));
         assertThat(fetchAllResponse, containsString(String.format(templateItem, 1)));
         assertThat(fetchAllResponse, containsString(String.format(templateItem, 250)));
     }
