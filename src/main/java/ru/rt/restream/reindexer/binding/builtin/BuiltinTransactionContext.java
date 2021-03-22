@@ -65,19 +65,19 @@ public class BuiltinTransactionContext implements TransactionContext {
     }
 
     @Override
-    public void modifyItem(byte[] data, int mode, String[] precepts, int stateToken) {
-        ReindexerResponse response = modifyItemInternal(data, mode, precepts, stateToken);
+    public void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+        ReindexerResponse response = modifyItemInternal(data, format, mode, precepts, stateToken);
         checkResponse(response);
     }
 
     @Override
-    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken) {
-        return CompletableFuture.supplyAsync(() -> modifyItemInternal(data, mode, precepts, stateToken));
+    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+        return CompletableFuture.supplyAsync(() -> modifyItemInternal(data, format, mode, precepts, stateToken));
     }
 
-    private ReindexerResponse modifyItemInternal(byte[] data, int mode, String[] precepts, int stateToken) {
+    private ReindexerResponse modifyItemInternal(byte[] data, int format, int mode, String[] precepts, int stateToken) {
         ByteBuffer args = new ByteBuffer()
-                .putVarUInt32(Consts.FORMAT_C_JSON)
+                .putVarUInt32(format)
                 .putVarUInt32(mode)
                 .putVarUInt32(stateToken);
         args.putVarUInt32(precepts.length);
@@ -88,8 +88,8 @@ public class BuiltinTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, false);
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
+        ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, asJson);
         checkResponse(response);
         return new BuiltinRequestContext(response);
     }

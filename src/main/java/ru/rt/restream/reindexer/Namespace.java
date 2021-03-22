@@ -37,11 +37,25 @@ public interface Namespace<T> {
     void insert(T item);
 
     /**
+     * Inserts the given json-formatted item data
+     *
+     * @param item          the json-formatted item data
+     */
+    void insert(String item);
+
+    /**
      * Inserts or updates the given item data.
      *
      * @param item          the item data
      */
     void upsert(T item);
+
+    /**
+     * Inserts or updates the given json-formatted item data.
+     *
+     * @param item          the json-formatted item data
+     */
+    void upsert(String item);
 
     /**
      * Updates the given item data.
@@ -51,11 +65,25 @@ public interface Namespace<T> {
     void update(T item);
 
     /**
+     * Updates the given json-formatted item data.
+     *
+     * @param item          the json-formatted item data
+     */
+    void update(String item);
+
+    /**
      * Deletes the given item data.
      *
      * @param item          the item data
      */
     void delete(T item);
+
+    /**
+     * Deletes the given json-formatted item data.
+     *
+     * @param item          the json-formatted item data
+     */
+    void delete(String item);
 
     /**
      * Creates new Query for building request

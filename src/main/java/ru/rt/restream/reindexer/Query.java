@@ -683,6 +683,47 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public CloseableIterator<T> execute() {
+        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
+
+        RequestContext requestContext = transactionContext != null
+                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, false)
+                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, false);
+
+        updatePayloadTypes(requestContext.getQueryResult());
+
+        return new QueryResultIterator<>(namespace, requestContext, this, fetchCount);
+    }
+
+    /**
+     * Will execute query, and return slice of items.
+     *
+     * @return an iterator over a query result
+     */
+    public JsonIterator executeToJson() {
+        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
+
+        RequestContext requestContext = transactionContext != null
+                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, true)
+                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, true);
+
+        QueryResult queryResult = requestContext.getQueryResult();
+
+        updatePayloadTypes(queryResult);
+
+        return new JsonIterator(requestContext, fetchCount);
+    }
+
+    private void updatePayloadTypes(QueryResult queryResult) {
+        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
+            ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
+            PayloadType currentPayloadType = namespace.getPayloadType();
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
+                namespace.updatePayloadType(payloadType);
+            }
+        }
+    }
+
+    private long[] prepareQueryAndGetPayloadTypesVersions() {
         logBuilder.type(SELECT);
         if (LOGGER.isDebugEnabled()) {
             debug();
@@ -725,25 +766,11 @@ public class Query<T> {
             }
         }
 
-        long[] ptVersions = namespaces.stream()
+        return namespaces.stream()
                 .map(ReindexerNamespace::getPayloadType)
                 .map(pt -> pt == null ? 0 : pt.getStateToken())
                 .mapToLong(Integer::longValue)
                 .toArray();
-        RequestContext requestContext = transactionContext != null
-                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions)
-                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions);
-
-        QueryResult queryResult = requestContext.getQueryResult();
-        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
-            ReindexerNamespace<?> namespace = namespaces.get((int) payloadType.getNamespaceId());
-            PayloadType currentPayloadType = namespace.getPayloadType();
-            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
-                namespace.updatePayloadType(payloadType);
-            }
-        }
-
-        return new QueryResultIterator<>(namespace, requestContext, this, fetchCount);
     }
 
     /**

@@ -103,11 +103,12 @@ public interface Binding {
      *
      * @param namespaceName name of a namespace item belongs to
      * @param data          item data
+     * @param format        date format (Consts.FORMAT_C_JSON, Consts.FORMAT_JSON)
      * @param mode          modify mode (UPDATE, INSERT, UPSERT, DELETE)
      * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken    state token
      */
-    void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts, int stateToken);
+    void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken);
 
     /**
      * Drop a namespace by name.
@@ -140,9 +141,10 @@ public interface Binding {
      * @param queryData  encoded query data (selected indexes, predicates, etc)
      * @param fetchCount items count to fetch within a query request
      * @param ptVersions payload type state tokens
+     * @param asJson     true if response should be serialized in JSON format, defaults to CJSON
      * @return the request context
      */
-    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions);
+    RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson);
 
     /**
      * Invoke delete query.

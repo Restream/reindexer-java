@@ -61,16 +61,16 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public void modifyItem(byte[] data, int mode, String[] precepts, int stateToken) {
+    public void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
-        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken,
+        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken,
                 transactionId);
     }
 
     @Override
-    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int mode, String[] precepts, int stateToken) {
+    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
-        return connection.rpcCallAsync(ADD_TX_ITEM, FORMAT_C_JSON, data, mode, packedPrecepts, stateToken, transactionId);
+        return connection.rpcCallAsync(ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, transactionId);
     }
 
     private byte[] packPrecepts(String[] precepts) {
@@ -97,11 +97,13 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection);
+        return new CprotoRequestContext(rpcResponse, connection, asJson);
     }
 
     @Override

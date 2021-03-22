@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
@@ -30,6 +31,7 @@ import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -148,6 +150,16 @@ public class Reindexer {
     }
 
     /**
+     * Inserts the given json-formatted item data.
+     *
+     * @param namespaceName the namespace name
+     * @param json          the json-formatted item data
+     */
+    public void insert(String namespaceName, String json) {
+        modifyJsonItem(namespaceName, json, MODE_INSERT);
+    }
+
+    /**
      * Updates the given item data.
      *
      * @param <T>           the item type
@@ -156,6 +168,16 @@ public class Reindexer {
      */
     public <T> void update(String namespaceName, T item) {
         modifyItem(namespaceName, item, MODE_UPDATE);
+    }
+
+    /**
+     * Updates the given json-formatted item data.
+     *
+     * @param namespaceName the namespace name
+     * @param json          the json-formatted item data
+     */
+    public void update(String namespaceName, String json) {
+        modifyJsonItem(namespaceName, json, MODE_UPDATE);
     }
 
     /**
@@ -170,6 +192,16 @@ public class Reindexer {
     }
 
     /**
+     * Inserts or updates the given json-formatted item data.
+     *
+     * @param namespaceName the namespace name
+     * @param json          the json-formatted item data
+     */
+    public void upsert(String namespaceName, String json) {
+        modifyJsonItem(namespaceName, json, MODE_UPSERT);
+    }
+
+    /**
      * Deletes the given item data.
      *
      * @param <T>           the item type
@@ -178,6 +210,16 @@ public class Reindexer {
      */
     public <T> void delete(String namespaceName, T item) {
         modifyItem(namespaceName, item, MODE_DELETE);
+    }
+
+    /**
+     * Deletes the given json-formatted item data.
+     *
+     * @param namespaceName the namespace name
+     * @param json          the json-formatted item data
+     */
+    public void delete(String namespaceName, String json) {
+        modifyJsonItem(namespaceName, json, MODE_DELETE);
     }
 
     /**
@@ -253,6 +295,16 @@ public class Reindexer {
         return (ReindexerNamespace<T>) namespace;
     }
 
+    private <T> ReindexerNamespace<T> getNamespace(String namespaceName) {
+        ReindexerNamespace<?> namespace = namespaceMap.get(namespaceName);
+        if (namespace == null) {
+            String msg = String.format("Namespace '%s' is not opened, call openNamespace first", namespaceName);
+            throw new IllegalArgumentException(msg);
+        }
+
+        return (ReindexerNamespace<T>) namespace;
+    }
+
     @SuppressWarnings("unchecked")
     private <T> void modifyItem(String namespaceName, T item, int mode) {
         Class<T> itemClass = (Class<T>) item.getClass();
@@ -264,7 +316,24 @@ public class Reindexer {
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
                 ItemSerializer<T> serializer = new CjsonItemSerializer<>(payloadType);
                 byte[] data = serializer.serialize(item);
-                binding.modifyItem(namespace.getName(), data, mode, percepts, stateToken);
+                binding.modifyItem(namespace.getName(), data, Consts.FORMAT_C_JSON, mode, percepts, stateToken);
+                break;
+            } catch (StateInvalidatedException e) {
+                updatePayloadType(namespace);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void modifyJsonItem(String namespaceName, String json, int mode) {
+        ReindexerNamespace<T> namespace = getNamespace(namespaceName);
+        byte[] jsonData = json.getBytes(StandardCharsets.UTF_8);
+        String[] percepts = namespace.getPrecepts();
+        for (int i = 0; i < 2; i++) {
+            try {
+                PayloadType payloadType = namespace.getPayloadType();
+                int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
+                binding.modifyItem(namespace.getName(), jsonData, Consts.FORMAT_JSON, mode, percepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType(namespace);

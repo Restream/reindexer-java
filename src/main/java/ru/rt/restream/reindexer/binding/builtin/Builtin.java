@@ -108,10 +108,10 @@ public class Builtin implements Binding {
     }
 
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts, int stateToken) {
+    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken) {
         ByteBuffer args = new ByteBuffer()
                 .putVString(namespaceName)
-                .putVarUInt32(Consts.FORMAT_C_JSON)
+                .putVarUInt32(format)
                 .putVarUInt32(mode)
                 .putVarUInt32(stateToken);
         args.putVarUInt32(precepts.length);
@@ -143,9 +143,9 @@ public class Builtin implements Binding {
     }
 
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
         ReindexerResponse response = adapter.selectQuery(rx, next.getAndIncrement(), timeout.toMillis(), queryData,
-                ptVersions, false);
+                ptVersions, asJson);
         checkResponse(response);
         return new BuiltinRequestContext(response);
     }

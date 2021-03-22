@@ -131,7 +131,17 @@ public class ReindexerNamespace<T> implements Namespace<T>{
     }
 
     @Override
+    public void insert(String item) {
+        reindexer.insert(name, item);
+    }
+
+    @Override
     public void upsert(T item) {
+        reindexer.upsert(name, item);
+    }
+
+    @Override
+    public void upsert(String item) {
         reindexer.upsert(name, item);
     }
 
@@ -141,7 +151,17 @@ public class ReindexerNamespace<T> implements Namespace<T>{
     }
 
     @Override
+    public void update(String item) {
+        reindexer.update(name, item);
+    }
+
+    @Override
     public void delete(T item) {
+        reindexer.delete(name, item);
+    }
+
+    @Override
+    public void delete(String item) {
         reindexer.delete(name, item);
     }
 

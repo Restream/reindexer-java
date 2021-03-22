@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
+import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
 /**
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
@@ -81,10 +82,10 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int mode, String[] precepts,
+    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts,
                            int stateToken) {
         byte[] packedPercepts = packPrecepts(precepts);
-        rpcCallNoResults(MODIFY_ITEM, namespaceName, Consts.FORMAT_C_JSON, data, mode,
+        rpcCallNoResults(MODIFY_ITEM, namespaceName, format, data, mode,
                 packedPercepts, stateToken, 0);
     }
 
@@ -118,23 +119,27 @@ public class Cproto implements Binding {
 
     @Override
     public RequestContext select(String query, boolean asJson, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT_SQL, query, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection);
+        return new CprotoRequestContext(rpcResponse, connection, asJson);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions) {
-        int flags = Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+    public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
+        int flags = asJson
+                ? Consts.RESULTS_JSON
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection);
+        return new CprotoRequestContext(rpcResponse, connection, asJson);
     }
 
     @Override
