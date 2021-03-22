@@ -19,13 +19,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.TransactionContext;
-import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.ItemSerializerFactory;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +50,9 @@ public class Transaction<T> {
     /**
      * The futures list.
      */
-    private final List<CompletableFuture<T>> futures = new ArrayList<>();
+    private final List<CompletableFuture<?>> futures = new ArrayList<>();
+
+    private final ItemSerializerFactory serializerFactory = new ItemSerializerFactory();
 
     /**
      * Indicates that the current transaction is started.
@@ -142,7 +143,7 @@ public class Transaction<T> {
      */
     public void insert(T item) {
         start();
-        modifyItem(item, Reindexer.MODE_INSERT);
+        modifyItem(item, Reindexer.MODE_INSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -154,7 +155,7 @@ public class Transaction<T> {
      */
     public void insert(String json) {
         start();
-        modifyJsonItem(json, Reindexer.MODE_INSERT);
+        modifyItem(json, Reindexer.MODE_INSERT, Consts.FORMAT_JSON);
     }
 
     /**
@@ -166,7 +167,7 @@ public class Transaction<T> {
      */
     public void update(T item) {
         start();
-        modifyItem(item, Reindexer.MODE_UPDATE);
+        modifyItem(item, Reindexer.MODE_UPDATE, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -178,7 +179,7 @@ public class Transaction<T> {
      */
     public void update(String json) {
         start();
-        modifyJsonItem(json, Reindexer.MODE_UPDATE);
+        modifyItem(json, Reindexer.MODE_UPDATE, Consts.FORMAT_JSON);
     }
 
     /**
@@ -190,7 +191,7 @@ public class Transaction<T> {
      */
     public void upsert(T item) {
         start();
-        modifyItem(item, Reindexer.MODE_UPSERT);
+        modifyItem(item, Reindexer.MODE_UPSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -202,7 +203,7 @@ public class Transaction<T> {
      */
     public void upsert(String json) {
         start();
-        modifyJsonItem(json, Reindexer.MODE_UPSERT);
+        modifyItem(json, Reindexer.MODE_UPSERT, Consts.FORMAT_JSON);
     }
 
     /**
@@ -214,7 +215,7 @@ public class Transaction<T> {
      */
     public void delete(T item) {
         start();
-        modifyItem(item, Reindexer.MODE_DELETE);
+        modifyItem(item, Reindexer.MODE_DELETE, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -226,7 +227,7 @@ public class Transaction<T> {
      */
     public void delete(String json) {
         start();
-        modifyJsonItem(json, Reindexer.MODE_DELETE);
+        modifyItem(json, Reindexer.MODE_DELETE, Consts.FORMAT_JSON);
     }
 
     /**
@@ -239,7 +240,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<T> insertAsync(T item) {
         start();
-        return modifyItemAsync(item, Reindexer.MODE_INSERT);
+        return modifyItemAsync(item, Reindexer.MODE_INSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -252,7 +253,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<String> insertAsync(String json) {
         start();
-        return modifyJsonItemAsync(json, Reindexer.MODE_INSERT);
+        return modifyItemAsync(json, Reindexer.MODE_INSERT, Consts.FORMAT_JSON);
     }
 
     /**
@@ -265,7 +266,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<T> updateAsync(T item) {
         start();
-        return modifyItemAsync(item, Reindexer.MODE_UPDATE);
+        return modifyItemAsync(item, Reindexer.MODE_UPDATE, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -278,7 +279,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<String> updateAsync(String json) {
         start();
-        return modifyJsonItemAsync(json, Reindexer.MODE_UPDATE);
+        return modifyItemAsync(json, Reindexer.MODE_UPDATE, Consts.FORMAT_JSON);
     }
 
     /**
@@ -291,7 +292,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<T> upsertAsync(T item) {
         start();
-        return modifyItemAsync(item, Reindexer.MODE_UPSERT);
+        return modifyItemAsync(item, Reindexer.MODE_UPSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -304,7 +305,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<String> upsertAsync(String json) {
         start();
-        return modifyJsonItemAsync(json, Reindexer.MODE_UPSERT);
+        return modifyItemAsync(json, Reindexer.MODE_UPSERT, Consts.FORMAT_JSON);
     }
 
     /**
@@ -317,7 +318,7 @@ public class Transaction<T> {
      */
     public CompletableFuture<T> deleteAsync(T item) {
         start();
-        return modifyItemAsync(item, Reindexer.MODE_DELETE);
+        return modifyItemAsync(item, Reindexer.MODE_DELETE, Consts.FORMAT_C_JSON);
     }
 
     /**
@@ -330,23 +331,23 @@ public class Transaction<T> {
      */
     public CompletableFuture<String> deleteAsync(String json) {
         start();
-        return modifyJsonItemAsync(json, Reindexer.MODE_DELETE);
+        return modifyItemAsync(json, Reindexer.MODE_DELETE, Consts.FORMAT_JSON);
     }
 
-    private CompletableFuture<T> modifyItemAsync(T item, int mode) {
-        CompletableFuture<T> future = modifyItemAsyncInternal(item, mode, 1);
+    private <T> CompletableFuture<T> modifyItemAsync(T item, int mode, int itemFormat) {
+        CompletableFuture<T> future = modifyItemAsyncInternal(item, mode, 1, itemFormat);
         futures.add(future);
         return future;
     }
 
-    private CompletableFuture<T> modifyItemAsyncInternal(T item, int mode, int retryCount) {
+    private <T> CompletableFuture<T> modifyItemAsyncInternal(T item, int mode, int retryCount, int itemFormat) {
         LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", item, mode, retryCount);
         String[] precepts = namespace.getPrecepts();
         PayloadType payloadType = namespace.getPayloadType();
         int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-        ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
-        byte[] data = itemSerializer.serialize(item);
-        return transactionContext.modifyItemAsync(data, Consts.FORMAT_C_JSON, mode, precepts, stateToken)
+        ItemSerializer<T> serializer = serializerFactory.get(item.getClass(), payloadType);
+        byte[] data = serializer.serialize(item);
+        return transactionContext.modifyItemAsync(data, itemFormat, mode, precepts, stateToken)
                 .thenApplyAsync(rpcResponse -> {
                     if (rpcResponse.hasError()) {
                         throw ReindexerExceptionFactory.fromResponse(rpcResponse);
@@ -357,82 +358,29 @@ public class Transaction<T> {
                 .exceptionally(error -> {
                     if (error.getCause() instanceof StateInvalidatedException && retryCount > 0) {
                         updatePayloadType();
-                        return modifyItemAsyncInternal(item, mode, retryCount - 1);
+                        return modifyItemAsyncInternal(item, mode, retryCount - 1, itemFormat);
                     }
                     return failedFuture(error);
                 })
                 .thenCompose(Function.identity());
     }
 
-    private CompletableFuture<T> failedFuture(Throwable t) {
+    private <T> CompletableFuture<T> failedFuture(Throwable t) {
         CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(t);
         return future;
     }
 
-    private CompletableFuture<String> modifyJsonItemAsync(String json, int mode) {
-        CompletableFuture future = modifyJsonItemAsyncInternal(json, mode, 1);
-        futures.add(future);
-        return future;
-    }
-
-    private CompletableFuture<String> modifyJsonItemAsyncInternal(String json, int mode, int retryCount) {
-        LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", json, mode, retryCount);
-        String[] precepts = namespace.getPrecepts();
-        PayloadType payloadType = namespace.getPayloadType();
-        int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-        byte[] jsonData = json.getBytes(StandardCharsets.UTF_8);
-        return transactionContext.modifyItemAsync(jsonData, Consts.FORMAT_JSON, mode, precepts, stateToken)
-                .thenApplyAsync(rpcResponse -> {
-                    if (rpcResponse.hasError()) {
-                        throw ReindexerExceptionFactory.fromResponse(rpcResponse);
-                    }
-                    return json;
-                })
-                .thenApply(CompletableFuture::completedFuture)
-                .exceptionally(error -> {
-                    if (error.getCause() instanceof StateInvalidatedException && retryCount > 0) {
-                        updatePayloadType();
-                        return modifyJsonItemAsyncInternal(json, mode, retryCount - 1);
-                    }
-                    return failedJsonFuture(error);
-                })
-                .thenCompose(Function.identity());
-    }
-
-    private CompletableFuture<String> failedJsonFuture(Throwable t) {
-        CompletableFuture<String> future = new CompletableFuture<>();
-        future.completeExceptionally(t);
-        return future;
-    }
-
-    private void modifyItem(T item, int mode) {
+    private <T> void modifyItem(T item, int mode, int itemFormat) {
         LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", item, mode);
         String[] precepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-                ItemSerializer<T> itemSerializer = new CjsonItemSerializer<>(payloadType);
-                byte[] data = itemSerializer.serialize(item);
-                transactionContext.modifyItem(data, Consts.FORMAT_C_JSON, mode, precepts, stateToken);
-                break;
-            } catch (StateInvalidatedException e) {
-                LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");
-                updatePayloadType();
-            }
-        }
-    }
-
-    private void modifyJsonItem(String json, int mode) {
-        LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", json, mode);
-        byte[] jsonData = json.getBytes(StandardCharsets.UTF_8);
-        String[] precepts = namespace.getPrecepts();
-        for (int i = 0; i < 2; i++) {
-            try {
-                PayloadType payloadType = namespace.getPayloadType();
-                int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-                transactionContext.modifyItem(jsonData, Consts.FORMAT_JSON, mode, precepts, stateToken);
+                ItemSerializer<T> serializer = serializerFactory.get(item.getClass(), payloadType);
+                byte[] data = serializer.serialize(item);
+                transactionContext.modifyItem(data, itemFormat, mode, precepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");

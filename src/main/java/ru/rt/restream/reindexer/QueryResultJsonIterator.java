@@ -49,6 +49,7 @@ public class QueryResultJsonIterator implements CloseableIterator<String> {
     public boolean hasNext() {
         return position < queryResult.getQCount();
     }
+
     /**
      * Read next item as JSON. Moves the cursor to the next row.
      *
