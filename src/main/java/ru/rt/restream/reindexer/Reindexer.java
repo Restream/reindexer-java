@@ -23,7 +23,7 @@ import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
-import ru.rt.restream.reindexer.binding.cproto.cjson.ItemSerializerFactory;
+import ru.rt.restream.reindexer.binding.cproto.ItemSerializerFactory;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;

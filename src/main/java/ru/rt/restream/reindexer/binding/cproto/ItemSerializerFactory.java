@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.binding.cproto.cjson;
+package ru.rt.restream.reindexer.binding.cproto;
 
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.binding.cproto.json.JsonItemSerializer;
 
-import java.nio.charset.StandardCharsets;
+public class ItemSerializerFactory {
 
-/**
- * Converts json-formatted item to array of bytes.
- */
-public class JsonItemSerializer<T> implements ItemSerializer<T> {
+    public <T> ItemSerializer<T> get(Class<?> itemClass, PayloadType payloadType) {
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public byte[] serialize(T item) {
-        return ((String) item).getBytes(StandardCharsets.UTF_8);
+        return itemClass == String.class
+                ? new JsonItemSerializer<>()
+                : new CjsonItemSerializer<>(payloadType);
     }
-
 }
