@@ -23,7 +23,6 @@ import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
-import ru.rt.restream.reindexer.binding.cproto.ItemSerializerFactory;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
@@ -50,8 +49,6 @@ public class Reindexer {
     private final Binding binding;
 
     private final ReindexScanner reindexScanner = new ReindexAnnotationScanner();
-
-    private final ItemSerializerFactory serializerFactory = new ItemSerializerFactory();
 
     protected final Map<String, ReindexerNamespace<?>> namespaceMap = new ConcurrentHashMap<>();
 
@@ -307,16 +304,16 @@ public class Reindexer {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> void modifyItem(String namespaceName, T item, int mode, int itemFormat) {
+    private <T> void modifyItem(String namespaceName, T item, int mode, int format) {
         ReindexerNamespace<?> namespace = getNamespace(namespaceName);
         String[] percepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-                ItemSerializer<T> serializer = serializerFactory.get(item.getClass(), payloadType);
+                ItemSerializer<T> serializer = ItemSerializer.getInstance(item.getClass(), payloadType);
                 byte[] data = serializer.serialize(item);
-                binding.modifyItem(namespace.getName(), data, itemFormat, mode, percepts, stateToken);
+                binding.modifyItem(namespace.getName(), data, format, mode, percepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType(namespace);

@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.TransactionContext;
-import ru.rt.restream.reindexer.binding.cproto.ItemSerializerFactory;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
@@ -51,8 +50,6 @@ public class Transaction<T> {
      * The futures list.
      */
     private final List<CompletableFuture<?>> futures = new ArrayList<>();
-
-    private final ItemSerializerFactory serializerFactory = new ItemSerializerFactory();
 
     /**
      * Indicates that the current transaction is started.
@@ -334,20 +331,20 @@ public class Transaction<T> {
         return modifyItemAsync(json, Reindexer.MODE_DELETE, Consts.FORMAT_JSON);
     }
 
-    private <T> CompletableFuture<T> modifyItemAsync(T item, int mode, int itemFormat) {
-        CompletableFuture<T> future = modifyItemAsyncInternal(item, mode, 1, itemFormat);
+    private <E> CompletableFuture<E> modifyItemAsync(E item, int mode, int format) {
+        CompletableFuture<E> future = modifyItemAsyncInternal(item, mode, format, 1);
         futures.add(future);
         return future;
     }
 
-    private <T> CompletableFuture<T> modifyItemAsyncInternal(T item, int mode, int retryCount, int itemFormat) {
+    private <E> CompletableFuture<E> modifyItemAsyncInternal(E item, int mode, int format, int retryCount) {
         LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", item, mode, retryCount);
         String[] precepts = namespace.getPrecepts();
         PayloadType payloadType = namespace.getPayloadType();
         int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-        ItemSerializer<T> serializer = serializerFactory.get(item.getClass(), payloadType);
+        ItemSerializer<E> serializer = ItemSerializer.getInstance(item.getClass(), payloadType);
         byte[] data = serializer.serialize(item);
-        return transactionContext.modifyItemAsync(data, itemFormat, mode, precepts, stateToken)
+        return transactionContext.modifyItemAsync(data, format, mode, precepts, stateToken)
                 .thenApplyAsync(rpcResponse -> {
                     if (rpcResponse.hasError()) {
                         throw ReindexerExceptionFactory.fromResponse(rpcResponse);
@@ -358,29 +355,29 @@ public class Transaction<T> {
                 .exceptionally(error -> {
                     if (error.getCause() instanceof StateInvalidatedException && retryCount > 0) {
                         updatePayloadType();
-                        return modifyItemAsyncInternal(item, mode, retryCount - 1, itemFormat);
+                        return modifyItemAsyncInternal(item, mode, format,retryCount - 1);
                     }
                     return failedFuture(error);
                 })
                 .thenCompose(Function.identity());
     }
 
-    private <T> CompletableFuture<T> failedFuture(Throwable t) {
-        CompletableFuture<T> future = new CompletableFuture<>();
+    private <E> CompletableFuture<E> failedFuture(Throwable t) {
+        CompletableFuture<E> future = new CompletableFuture<>();
         future.completeExceptionally(t);
         return future;
     }
 
-    private <T> void modifyItem(T item, int mode, int itemFormat) {
+    private <E> void modifyItem(E item, int mode, int format) {
         LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", item, mode);
         String[] precepts = namespace.getPrecepts();
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
-                ItemSerializer<T> serializer = serializerFactory.get(item.getClass(), payloadType);
+                ItemSerializer<E> serializer = ItemSerializer.getInstance(item.getClass(), payloadType);
                 byte[] data = serializer.serialize(item);
-                transactionContext.modifyItem(data, itemFormat, mode, precepts, stateToken);
+                transactionContext.modifyItem(data, format, mode, precepts, stateToken);
                 break;
             } catch (StateInvalidatedException e) {
                 LOGGER.debug("rx: transaction modifyItem state invalidated, update payload type");

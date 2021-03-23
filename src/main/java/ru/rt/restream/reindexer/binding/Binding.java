@@ -103,7 +103,7 @@ public interface Binding {
      *
      * @param namespaceName name of a namespace item belongs to
      * @param data          item data
-     * @param format        date format (Consts.FORMAT_C_JSON, Consts.FORMAT_JSON)
+     * @param format        data format (Consts.FORMAT_C_JSON, Consts.FORMAT_JSON)
      * @param mode          modify mode (UPDATE, INSERT, UPSERT, DELETE)
      * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken    state token

@@ -22,14 +22,15 @@ import java.nio.charset.StandardCharsets;
 /**
  * Converts json-formatted item to array of bytes.
  */
-public class JsonItemSerializer<T> implements ItemSerializer<T> {
+public enum JsonItemSerializer implements ItemSerializer<String> {
+    INSTANCE;
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public byte[] serialize(T item) {
-        return ((String) item).getBytes(StandardCharsets.UTF_8);
+    public byte[] serialize(String item) {
+        return item.getBytes(StandardCharsets.UTF_8);
     }
 
 }
