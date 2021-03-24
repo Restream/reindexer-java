@@ -55,6 +55,7 @@ public class CprotoRequestContext implements RequestContext {
      *
      * @param rpcResponse the RPC response
      * @param connection  the connection in which the request was made
+     * @param asJson     'true' if response should be serialized in JSON format, defaults to CJSON
      */
     public CprotoRequestContext(ReindexerResponse rpcResponse, Connection connection, boolean asJson) {
         this.queryResult = getQueryResult(rpcResponse);

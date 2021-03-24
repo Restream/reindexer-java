@@ -18,7 +18,7 @@ package ru.rt.restream.reindexer.connector;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.JsonIterator;
+import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
@@ -1834,7 +1834,7 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         tx.commit();
 
-        JsonIterator iterator = db.query(namespaceName, TestItem.class).executeToJson();
+        QueryResultJsonIterator iterator = db.query(namespaceName, TestItem.class).executeToJson();
         String item0 = iterator.next();
         assertThat(iterator.size(), is(100L));
         assertThat(results, hasSize(100));
@@ -2504,7 +2504,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             db.insert(namespaceName, String.format(templateItem, i));
         }
 
-        JsonIterator iterator = db.query(namespaceName, TestItem.class)
+        QueryResultJsonIterator iterator = db.query(namespaceName, TestItem.class)
                 .where("id", LE, 250)
                 .sort("id",false)
                 .executeToJson();
@@ -2516,7 +2516,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(response, is(String.format(templateItem, 1)));
         iterator.close();
 
-        JsonIterator fetchAllIterator = db.query(namespaceName, TestItem.class)
+        QueryResultJsonIterator fetchAllIterator = db.query(namespaceName, TestItem.class)
                 .where("id", LE, 250)
                 .sort("id",false)
                 .executeToJson();

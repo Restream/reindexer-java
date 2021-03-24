@@ -15,10 +15,28 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.binding.cproto.json.JsonItemSerializer;
+
 /**
  * An interface for converting items to bytes.
  */
 public interface ItemSerializer<T> {
+
+
+    /**
+     * Return ItemSerializer.
+     *
+     * @param itemClass   type of item to serialize: String for Json, others for Cjson.
+     * @param payloadType payload type to read
+     * @return ItemSerializer, that can serialize the type of item to array of bytes.
+     */
+    static <T> ItemSerializer<T> getInstance(Class<?> itemClass, PayloadType payloadType) {
+        return itemClass == String.class
+                ? (ItemSerializer<T>) JsonItemSerializer.INSTANCE
+                : new CjsonItemSerializer<>(payloadType);
+    }
 
     /**
      * Serialize item to array of bytes.

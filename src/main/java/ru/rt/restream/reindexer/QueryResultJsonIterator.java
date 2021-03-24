@@ -23,7 +23,7 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class JsonIterator implements CloseableIterator<String> {
+public class QueryResultJsonIterator implements CloseableIterator<String> {
 
     private final RequestContext requestContext;
 
@@ -39,7 +39,7 @@ public class JsonIterator implements CloseableIterator<String> {
 
     private boolean closed;
 
-    public JsonIterator(RequestContext requestContext, int fetchCount) {
+    public QueryResultJsonIterator(RequestContext requestContext, int fetchCount) {
         this.requestContext = requestContext;
         this.fetchCount = fetchCount;
         parseQueryResult(requestContext.getQueryResult());
@@ -49,6 +49,7 @@ public class JsonIterator implements CloseableIterator<String> {
     public boolean hasNext() {
         return position < queryResult.getQCount();
     }
+
     /**
      * Read next item as JSON. Moves the cursor to the next row.
      *

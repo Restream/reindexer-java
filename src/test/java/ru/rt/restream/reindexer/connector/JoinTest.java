@@ -16,25 +16,18 @@
 package ru.rt.restream.reindexer.connector;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.JsonIterator;
+import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -945,7 +938,7 @@ public abstract class JoinTest extends DbBaseTest {
             db.upsert("items_with_join", itemWithJoin);
         }
 
-        JsonIterator iterator = db.query("items_with_join", ItemWithJoin.class)
+        QueryResultJsonIterator iterator = db.query("items_with_join", ItemWithJoin.class)
                 .where("id", EQ, 1)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", SET, "id"), "joinedActors")
@@ -966,7 +959,7 @@ public abstract class JoinTest extends DbBaseTest {
         assertThat(resultActor.isVisible(), is(true));
         iterator.close();
 
-        JsonIterator fetchAllIterator = db.query("items_with_join", ItemWithJoin.class)
+        QueryResultJsonIterator fetchAllIterator = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", SET, "id"), "joinedActors")
                 .executeToJson();

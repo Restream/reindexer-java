@@ -699,7 +699,7 @@ public class Query<T> {
      *
      * @return an iterator over a query result
      */
-    public JsonIterator executeToJson() {
+    public QueryResultJsonIterator executeToJson() {
         long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
 
         RequestContext requestContext = transactionContext != null
@@ -710,7 +710,7 @@ public class Query<T> {
 
         updatePayloadTypes(queryResult);
 
-        return new JsonIterator(requestContext, fetchCount);
+        return new QueryResultJsonIterator(requestContext, fetchCount);
     }
 
     private void updatePayloadTypes(QueryResult queryResult) {
