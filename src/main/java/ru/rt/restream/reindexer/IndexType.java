@@ -15,10 +15,48 @@
  */
 package ru.rt.restream.reindexer;
 
-import java.util.Arrays;
+/**
+ * Reindexer index type.
+ */
+public enum IndexType {
 
-public enum  IndexType {
-    HASH("hash"), TREE("tree"), TEXT("text"), TTL("ttl"), RTREE("rtree"), COLUMN("-"), DEFAULT(null);
+    /**
+     * Fast select by EQ and SET match. Used by default. Allows slow and ineffecient sorting by field.
+     */
+    HASH("hash"),
+
+    /**
+     * Fast select by RANGE, GT, and LT matches. A bit slower for EQ and SET matches than hash index.
+     * Allows fast sorting results by field.
+     */
+    TREE("tree"),
+
+    /**
+     * Full text search index.
+     */
+    TEXT("text"),
+
+    /**
+     * TTL index that works only with int64 fields. These indexes are quite convenient for representation of date fields
+     * (stored as UNIX timestamps) that expire after specified amount of seconds.
+     */
+    TTL("ttl"),
+
+    /**
+     * Available only DWITHIN match. Acceptable only for [2]double field type.
+     */
+    RTREE("rtree"),
+
+    /**
+     * Column index. Can't perform fast select because it's implemented with full-scan technique.
+     * Has the smallest memory overhead.
+     */
+    COLUMN("-"),
+
+    /**
+     * Default index type will be used.
+     */
+    DEFAULT(null);
 
     private final String name;
 
@@ -26,14 +64,11 @@ public enum  IndexType {
         this.name = name;
     }
 
+    /**
+     * Get the index type name.
+     */
     public String getName() {
         return name;
     }
 
-    public static IndexType fromName(String name) {
-        return Arrays.stream(IndexType.values())
-                .filter(type -> type.name.equals(name))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No such index"));
-    }
 }

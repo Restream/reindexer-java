@@ -462,10 +462,20 @@ public class ByteBuffer {
         position += length;
     }
 
+    /**
+     * Return current cursor position in byte buffer.
+     *
+     * @return current cursor position
+     */
     public int getPosition() {
         return position;
     }
 
+    /**
+     * Return the size of recorded bytes.
+     *
+     * @return size of recorded bytes
+     */
     public int length() {
         return size;
     }

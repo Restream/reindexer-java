@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
-import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;

@@ -17,11 +17,18 @@ package ru.rt.restream.reindexer;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * A builder to log executed {@link Query} objects.
+ * An internal builder to log executed {@link Query} objects.
  */
 class QueryLogBuilder {
 
@@ -192,7 +199,7 @@ class QueryLogBuilder {
      *
      * @param mergeQueryLogBuilder {@link QueryLogBuilder} of merged query
      */
-    public void merge(QueryLogBuilder mergeQueryLogBuilder) {
+    void merge(QueryLogBuilder mergeQueryLogBuilder) {
         mergeQueries.add(mergeQueryLogBuilder);
     }
 

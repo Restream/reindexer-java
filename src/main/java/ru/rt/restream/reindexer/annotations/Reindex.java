@@ -24,6 +24,11 @@ import java.lang.annotation.Target;
 
 import static ru.rt.restream.reindexer.IndexType.DEFAULT;
 
+/**
+ * Use the @Reindex annotation in code to create an index on a namespace. An index is a special structure defined for a
+ * namespace. Queries are possible only on the indexed fields, marked with reindex annotation. An annotation can be
+ * applied on an item class or on an item field. For the class it must define a set of subindexes.
+ */
 @Target({ElementType.FIELD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Reindex {
@@ -61,10 +66,26 @@ public @interface Reindex {
      */
     boolean isSparse() default false;
 
+    /**
+     * Index is a primary key. Item class must have at least 1 primary key.
+     *
+     * @return true, if index is a primary key
+     */
     boolean isPrimaryKey() default false;
 
+    /**
+     * Additional fields can be appended to index.
+     *
+     * @return true, if index is appendable
+     */
     boolean isAppendable() default false;
 
+    /**
+     * Index collate mode. Possible values - numeric, ascii, utf8, or custom. If custom collate mode used provide a
+     * sequence of letters, which defines a sort order.
+     *
+     * @return the sequence of letters, which defines an index sort order
+     */
     String collate() default "";
 
     /**

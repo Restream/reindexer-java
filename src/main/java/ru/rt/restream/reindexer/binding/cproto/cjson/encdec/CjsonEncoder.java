@@ -33,6 +33,11 @@ public class CjsonEncoder {
     private final ByteBuffer buffer = new ByteBuffer();
     private final CtagMatcher ctagMatcher;
 
+    /**
+     * Creates an instance.
+     *
+     * @param ctagMatcher item ctag matcher
+     */
     public CjsonEncoder(CtagMatcher ctagMatcher) {
         this.ctagMatcher = ctagMatcher;
     }

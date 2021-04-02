@@ -28,10 +28,15 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 /**
- * Converts object to json string.
+ * Converts an object to json string.
  */
 public class JsonSerializer {
 
+    /**
+     * Converts an object to json-formatted string.
+     *
+     * @param src the object to convert
+     */
     public static String toJson(Object src) {
         JsonElement jsonElement = toJsonElement(src);
         return jsonElement.toString();
@@ -95,9 +100,9 @@ public class JsonSerializer {
 
     private static boolean isPrimitive(Object o) {
         return o instanceof String
-               || o instanceof Boolean
-               || o instanceof Number
-               || o instanceof Character;
+                || o instanceof Boolean
+                || o instanceof Number
+                || o instanceof Character;
     }
 
 }

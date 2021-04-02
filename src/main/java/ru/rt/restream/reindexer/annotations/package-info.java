@@ -13,21 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.binding.cproto.json;
-
-import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
-
-import java.nio.charset.StandardCharsets;
 
 /**
- * Converts json-formatted item to array of bytes.
+ * This package defines common annotations and the classes that handle them.
  */
-public enum JsonItemSerializer implements ItemSerializer<String> {
-    INSTANCE;
-
-    @Override
-    public byte[] serialize(String item) {
-        return item.getBytes(StandardCharsets.UTF_8);
-    }
-
-}
+package ru.rt.restream.reindexer.annotations;

@@ -24,7 +24,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
+import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbLocator;
 
 import java.io.IOException;

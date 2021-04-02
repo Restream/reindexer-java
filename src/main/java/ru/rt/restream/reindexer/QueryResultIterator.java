@@ -19,7 +19,6 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.annotations.Transient;
-import ru.rt.restream.reindexer.binding.AggregationResult;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;

@@ -18,7 +18,10 @@ package ru.rt.restream.reindexer.binding;
 /**
  * Different constants. TODO: move to classes
  */
-public class Consts {
+public final class Consts {
+
+    private Consts() {
+    }
 
     public static final int ERROR = 1;
     public static final int WARNING = 2;

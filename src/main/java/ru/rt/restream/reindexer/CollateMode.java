@@ -15,8 +15,34 @@
  */
 package ru.rt.restream.reindexer;
 
-public enum  CollateMode {
-    NUMERIC("numeric"), ASCII("ascii"), UTF8("utf8"), CUSTOM("custom"), NONE("");
+/**
+ * Index collate mode.
+ */
+public enum CollateMode {
+    /**
+     * Index that provides values order in numeric sequence. The field type must be a string.
+     */
+    NUMERIC("numeric"),
+
+    /**
+     * Case-insensitive string index works with ASCII. The field type must be a string.
+     */
+    ASCII("ascii"),
+
+    /**
+     * Case-insensitive string index works with UTF8. The field type must be a string
+     */
+    UTF8("utf8"),
+
+    /**
+     * Custom order string index. The field type must be a string.
+     */
+    CUSTOM("custom"),
+
+    /**
+     * No collate mode.
+     */
+    NONE("");
 
     private final String name;
 
@@ -24,6 +50,9 @@ public enum  CollateMode {
         this.name = name;
     }
 
+    /**
+     * Get the collate mode name.
+     */
     public String getName() {
         return name;
     }

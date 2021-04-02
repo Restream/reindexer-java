@@ -28,6 +28,9 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Reads items from a {@link ByteBuffer}, that contains cjson-encoded data.
+ */
 public class CjsonItemReader<T> implements ItemReader<T> {
 
     private final Class<T> itemClass;

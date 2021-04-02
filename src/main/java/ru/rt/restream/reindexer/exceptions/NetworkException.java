@@ -15,19 +15,25 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Thrown on various network error.
+ */
 public class NetworkException extends ReindexerException {
 
-    public NetworkException() {
-    }
-
+    /**
+     * Constructs new exception.
+     *
+     * @param message error message
+     */
     public NetworkException(String message) {
         super(message);
     }
 
-    public NetworkException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
+    /**
+     * Constructs a new network exception with the specified cause
+     *
+     * @param cause the cause of error
+     */
     public NetworkException(Throwable cause) {
         super(cause);
     }

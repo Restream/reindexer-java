@@ -17,6 +17,9 @@ package ru.rt.restream.reindexer;
 
 import ru.rt.restream.reindexer.binding.Consts;
 
+/**
+ * Contains reindexer server response.
+ */
 public class ReindexerResponse {
 
     private final int code;
@@ -25,24 +28,51 @@ public class ReindexerResponse {
 
     private final Object[] arguments;
 
+    /**
+     * Creates new instance.
+     *
+     * @param code         if the value is different from '0' - the answer contains an error.
+     * @param errorMessage reindexer server error message.
+     * @param arguments    response arguments
+     */
     public ReindexerResponse(int code, String errorMessage, Object[] arguments) {
         this.code = code;
         this.errorMessage = errorMessage;
         this.arguments = arguments;
     }
 
+    /**
+     * Check if the current response contains an error.
+     *
+     * @return true, if reindexer response contains an error
+     */
     public boolean hasError() {
         return code != Consts.ERR_OK;
     }
 
+    /**
+     * Get the current response code.
+     *
+     * @return the current response code
+     */
     public int getCode() {
         return code;
     }
 
+    /**
+     * Get the current response error message.
+     *
+     * @return the current response error message
+     */
     public String getErrorMessage() {
         return errorMessage;
     }
 
+    /**
+     * Get the current response arguments.
+     *
+     * @return the current response arguments
+     */
     public Object[] getArguments() {
         return arguments;
     }

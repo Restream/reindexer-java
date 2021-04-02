@@ -15,8 +15,39 @@
  */
 package ru.rt.restream.reindexer;
 
-public enum  FieldType {
-    BOOL("bool"), INT("int"), INT64("int64"), DOUBLE("double"), STRING("string"), COMPOSITE("composite");
+/**
+ * Reindexer item field type.
+ */
+public enum FieldType {
+    /**
+     * Reindexer boolean type.
+     */
+    BOOL("bool"),
+
+    /**
+     * Reindexer integer type.
+     */
+    INT("int"),
+
+    /**
+     * Reindexer "long" type.
+     */
+    INT64("int64"),
+
+    /**
+     * Reindexer double type.
+     */
+    DOUBLE("double"),
+
+    /**
+     * Reindexer string type.
+     */
+    STRING("string"),
+
+    /**
+     * Reindexer composite type.
+     */
+    COMPOSITE("composite");
 
     private final String name;
 
@@ -24,6 +55,9 @@ public enum  FieldType {
         this.name = name;
     }
 
+    /**
+     * Get the current field type name.
+     */
     public String getName() {
         return name;
     }

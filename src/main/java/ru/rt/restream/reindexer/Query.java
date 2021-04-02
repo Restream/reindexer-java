@@ -52,6 +52,9 @@ import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_STRING;
 
+/**
+ * An instance of this class provides methods for building a query for database objects.
+ */
 public class Query<T> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Query.class);
@@ -93,17 +96,60 @@ public class Query<T> {
     private static final int QUERY_UPDATE_OBJECT = 22;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
 
+    /**
+     * Condition types.
+     */
     public enum Condition {
+        /**
+         * Index contains any non-null value.
+         */
         ANY(0),
+
+        /**
+         * Index contains a value equal to the passed to condition
+         */
         EQ(1),
+
+        /**
+         * Index contains a value, that is lower than the passed to condition
+         */
         LT(2),
+
+        /**
+         * Index contains a value, that is lower or equal to the value passed to condition
+         */
         LE(3),
+
+        /**
+         * Index contains a value, that is greater than the passed to condition
+         */
         GT(4),
+
+        /**
+         * Index contains a value, that is greater or equal to the value passed to condition
+         */
         GE(5),
+
+        /**
+         * Index contains a value, that is between the values passed to condition
+         */
         RANGE(6),
+
+        /**
+         * Index contains a value, that belongs to the set of values passed to condition
+         */
         SET(7),
+
+        /**
+         * Index contains all values from the set of values passed to condition
+         */
         ALLSET(8),
+
+        /**
+         * Index contains an empty value
+         */
         EMPTY(9);
+
         private final int code;
 
         Condition(int code) {
@@ -141,7 +187,7 @@ public class Query<T> {
 
     private Query<?> root;
 
-    public Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
+    Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
         logBuilder.namespace(namespace.getName());
         this.reindexer = reindexer;
         this.namespace = namespace;
@@ -215,6 +261,14 @@ public class Query<T> {
         return this;
     }
 
+    /**
+     * Specify the join condition.
+     *
+     * @param joinField the join field of the right side of the join
+     * @param condition the joining condition. {@link Condition}
+     * @param joinIndex the join index of the left side of join
+     * @return the {@link Query} for further customizations
+     */
     public Query<T> on(String joinField, Condition condition, String joinIndex) {
         logBuilder.on(nextOperation, joinField, condition.code, joinIndex);
         buffer.putVarUInt32(QUERY_JOIN_ON);
@@ -437,14 +491,29 @@ public class Query<T> {
         return facet;
     }
 
+    /**
+     * Builder for a facet aggregation.
+     */
     public class AggregationFacetRequest {
 
+        /**
+         * Limit facet aggregation results.
+         *
+         * @param limit facet aggregation limit
+         * @return the {@link AggregationFacetRequest} for further customizations
+         */
         public AggregationFacetRequest limit(int limit) {
             logBuilder.facetLimit(this, limit);
             buffer.putVarUInt32(QUERY_AGGREGATION_LIMIT).putVarUInt32(limit);
             return this;
         }
 
+        /**
+         * Set offset of the facet aggregation results.
+         *
+         * @param offset facet aggregation offset
+         * @return the {@link AggregationFacetRequest} for further customizations
+         */
         public AggregationFacetRequest offset(int offset) {
             logBuilder.facetOffset(this, offset);
             buffer.putVarUInt32(QUERY_AGGREGATION_OFFSET).putVarUInt32(offset);
@@ -456,7 +525,6 @@ public class Query<T> {
          *
          * @param field item field. Use field 'count' to sort by facet's count value
          * @param desc  true if descending order
-         *
          * @return the {@link AggregationFacetRequest} for further customizations
          */
         public AggregationFacetRequest sort(String field, boolean desc) {
@@ -472,6 +540,13 @@ public class Query<T> {
 
     }
 
+    /**
+     * Limit is used to retrieve records from the namespace in a database and limit the number of items returned based
+     * on a limit value
+     *
+     * @param limit limit value
+     * @return the {@link Query} for further customizations
+     */
     public Query<T> limit(int limit) {
         if (limit >= 0) {
             logBuilder.limit(limit);
@@ -481,6 +556,12 @@ public class Query<T> {
         return this;
     }
 
+    /**
+     * Skip the offset items before start.
+     *
+     * @param offset offset value
+     * @return the {@link Query} for further customizations
+     */
     public Query<T> offset(int offset) {
         if (offset > 0) {
             logBuilder.offset(offset);
@@ -943,18 +1024,30 @@ public class Query<T> {
         }
     }
 
+    /**
+     * Return joined queries.
+     */
     public List<Query<?>> getJoinQueries() {
         return joinQueries;
     }
 
+    /**
+     * Return merged queries.
+     */
     public List<Query<?>> getMergeQueries() {
         return mergeQueries;
     }
 
+    /**
+     * Get the namespace names that are used in the current query.
+     */
     public List<ReindexerNamespace<?>> getNamespaces() {
         return namespaces;
     }
 
+    /**
+     * Get the joined fields of the query.
+     */
     public List<String> getJoinFields() {
         return joinFields;
     }

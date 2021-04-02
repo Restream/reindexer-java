@@ -13,17 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-@Target({ElementType.TYPE, ElementType.FIELD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Reindexes {
-
-    Reindex[] value() default {};
-
-}
+/**
+ * This package defines classes that handle cjson item format.
+ */
+package ru.rt.restream.reindexer.binding.cproto.cjson;

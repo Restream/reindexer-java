@@ -21,11 +21,11 @@ import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
 import java.util.ArrayList;

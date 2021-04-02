@@ -26,6 +26,12 @@ public class CjsonDecoder {
     private final CtagMatcher ctagMatcher;
     private final ByteBuffer buffer;
 
+    /**
+     * Creates an instance.
+     *
+     * @param ctagMatcher item ctag matcher
+     * @param buffer      buffer with encoded cjson data
+     */
     public CjsonDecoder(CtagMatcher ctagMatcher, ByteBuffer buffer) {
         this.ctagMatcher = ctagMatcher;
         this.buffer = buffer;

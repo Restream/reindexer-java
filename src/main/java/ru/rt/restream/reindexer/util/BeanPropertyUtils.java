@@ -41,6 +41,9 @@ import java.util.function.ObjLongConsumer;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+/**
+ * Utility methods for populating JavaBeans properties via reflection.
+ */
 public final class BeanPropertyUtils {
 
     private static final String SETTER_PREFIX = "set";

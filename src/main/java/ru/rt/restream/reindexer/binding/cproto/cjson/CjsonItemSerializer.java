@@ -29,9 +29,6 @@ public class CjsonItemSerializer<T> implements ItemSerializer<T> {
         this.payloadType = payloadType;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public byte[] serialize(T item) {
         CtagMatcher ctagMatcher = new CtagMatcher();

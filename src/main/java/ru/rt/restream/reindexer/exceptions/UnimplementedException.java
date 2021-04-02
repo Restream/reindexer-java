@@ -15,8 +15,16 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Thrown if some feature currently is not implemented.
+ */
 public class UnimplementedException extends ReindexerException {
 
+    /**
+     * Constructs new exception.
+     *
+     * @param message error message
+     */
     public UnimplementedException(String message) {
         super(message);
     }
