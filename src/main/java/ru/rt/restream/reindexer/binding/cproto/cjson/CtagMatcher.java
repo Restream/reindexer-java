@@ -81,10 +81,20 @@ public final class CtagMatcher {
         }
     }
 
+    /**
+     * An indication that new tag has been added.
+     *
+     * @return true, if a new tag has been added
+     */
     public boolean isUpdated() {
         return updated;
     }
 
+    /**
+     * Returns a list of tag names.
+     *
+     * @return a list of tag names
+     */
     public List<String> getTags() {
         return tags;
     }

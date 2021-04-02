@@ -26,7 +26,6 @@ import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
 

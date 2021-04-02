@@ -15,8 +15,6 @@
  */
 package ru.rt.restream.reindexer;
 
-import ru.rt.restream.reindexer.binding.AggregationResult;
-
 import java.util.Iterator;
 import java.util.List;
 

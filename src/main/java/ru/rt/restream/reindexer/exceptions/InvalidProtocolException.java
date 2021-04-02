@@ -15,8 +15,16 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Thrown when rpc-protocol is not recognized.
+ */
 public class InvalidProtocolException extends NetworkException {
 
+    /**
+     * Constructs new exception.
+     *
+     * @param message error message
+     */
     public InvalidProtocolException(String message) {
         super(message);
     }

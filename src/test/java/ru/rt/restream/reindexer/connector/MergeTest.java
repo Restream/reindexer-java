@@ -17,10 +17,10 @@ package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.Namespace;
+import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
 import java.util.List;

@@ -45,6 +45,11 @@ public class CjsonArray extends CjsonElement implements Iterable<CjsonElement> {
         return members.iterator();
     }
 
+    /**
+     * Return CjsonElement list backed by the current CjsonArray.
+     *
+     * @return list view of the current CjsonArray
+     */
     public List<CjsonElement> list() {
         return members;
     }

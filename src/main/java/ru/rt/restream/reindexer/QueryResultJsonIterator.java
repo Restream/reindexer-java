@@ -15,7 +15,6 @@
  */
 package ru.rt.restream.reindexer;
 
-import ru.rt.restream.reindexer.binding.AggregationResult;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;

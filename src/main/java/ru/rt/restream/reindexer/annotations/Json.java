@@ -21,8 +21,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Is used to specify the mapped json field for a item field. If no Json annotation is specified, the default field name
- * is applied.
+ * Use @Json annotation to specify the mapped json field for a item field. If no Json annotation is specified, the
+ * default field name is applied.
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

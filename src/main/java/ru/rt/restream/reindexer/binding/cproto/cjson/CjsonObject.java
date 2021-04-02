@@ -36,10 +36,21 @@ public class CjsonObject extends CjsonElement {
         members.put(name, element);
     }
 
+    /**
+     * Returns the property with the specified name.
+     *
+     * @param name name of the property that is being requested.
+     * @return the property matching the name. Null if no such member exists.
+     */
     public CjsonElement getProperty(String name) {
         return members.getOrDefault(name, CjsonNull.INSTANCE);
     }
 
+    /**
+     * Returns a set of properties of this object.
+     *
+     * @return a set of properties of this object.
+     */
     public Set<Map.Entry<String, CjsonElement>> entries() {
         return members.entrySet();
     }

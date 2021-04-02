@@ -28,8 +28,8 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.db.DbLocator;
 

@@ -15,8 +15,16 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Thrown if passed to a reindexer server state token is invalid.
+ */
 public class StateInvalidatedException extends ReindexerException {
 
+    /**
+     * Constructs new exception.
+     *
+     * @param errorMessage error message
+     */
     StateInvalidatedException(String errorMessage) {
         super(errorMessage);
     }

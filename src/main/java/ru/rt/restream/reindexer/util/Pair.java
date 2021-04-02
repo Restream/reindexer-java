@@ -17,19 +17,41 @@ package ru.rt.restream.reindexer.util;
 
 import java.util.Objects;
 
+/**
+ * A pair consisting of two elements.
+ *
+ * @param <FIRST>  first element type
+ * @param <SECOND> second element type
+ */
 public final class Pair<FIRST, SECOND> {
     private final FIRST first;
     private final SECOND second;
 
+    /**
+     * Constructs new pair.
+     *
+     * @param first  first element
+     * @param second second element
+     */
     public Pair(FIRST first, SECOND second) {
         this.first = first;
         this.second = second;
     }
 
+    /**
+     * Get the first element from this pair.
+     *
+     * @return the first element of this pair
+     */
     public FIRST getFirst() {
         return first;
     }
 
+    /**
+     * Get the second element from this pair.
+     *
+     * @return the second element of this pair
+     */
     public SECOND getSecond() {
         return second;
     }

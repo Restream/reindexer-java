@@ -18,12 +18,12 @@ package ru.rt.restream.reindexer.connector;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.CloseableIterator;
-import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Namespace;
+import ru.rt.restream.reindexer.NamespaceOptions;
+import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
-import ru.rt.restream.reindexer.binding.option.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 
@@ -57,7 +57,10 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static ru.rt.restream.reindexer.Query.Condition.*;
+import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.reindexer.Query.Condition.LE;
+import static ru.rt.restream.reindexer.Query.Condition.RANGE;
+import static ru.rt.restream.reindexer.Query.Condition.SET;
 
 /**
  * Base Reindexer test class.

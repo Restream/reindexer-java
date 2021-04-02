@@ -40,6 +40,10 @@ import static ru.rt.restream.reindexer.FieldType.INT;
 import static ru.rt.restream.reindexer.FieldType.INT64;
 import static ru.rt.restream.reindexer.FieldType.STRING;
 
+/**
+ * {@inheritDoc}
+ * Collects index configuration from an item class annotations.
+ */
 public class ReindexAnnotationScanner implements ReindexScanner {
 
     private static final Map<Class<?>, FieldType> MAPPED_TYPES;
@@ -70,9 +74,6 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         MAPPED_TYPES.put(Character.class, STRING);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<ReindexerIndex> parseIndexes(Class<?> itemClass) {
         return parseIndexes(itemClass, false, "", "",new HashMap<>());

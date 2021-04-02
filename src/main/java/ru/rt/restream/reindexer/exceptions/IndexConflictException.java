@@ -15,8 +15,16 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Thrown on index conflict.
+ */
 public class IndexConflictException extends ReindexerException {
 
+    /**
+     * Constructs new exception.
+     *
+     * @param message the error message
+     */
     public IndexConflictException(String message) {
         super(message);
     }

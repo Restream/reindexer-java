@@ -22,6 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * Provides a method for constructing various reindexer exceptions.
+ */
 public class ReindexerExceptionFactory {
 
     private static final Map<Integer, Function<ReindexerResponse, ReindexerException>> FACTORIES = new HashMap<>();
@@ -31,6 +34,11 @@ public class ReindexerExceptionFactory {
         FACTORIES.put(Consts.ERR_STATE_INVALIDATED, r -> new StateInvalidatedException(r.getErrorMessage()));
     }
 
+    /**
+     * Creates new exception from the reindexer server response.
+     *
+     * @param response the reindexer response
+     */
     public static ReindexerException fromResponse(ReindexerResponse response) {
         if (response.getCode() == 0) {
             throw new IllegalArgumentException("Not an error response");

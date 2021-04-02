@@ -25,6 +25,9 @@ import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 import java.lang.reflect.Field;
 import java.util.List;
 
+/**
+ * Encodes item into cjson format and writes its data into the {@link ByteBuffer}.
+ */
 public class CJsonItemWriter<T> implements ItemWriter<T> {
 
     private final CtagMatcher ctagMatcher;

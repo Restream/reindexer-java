@@ -15,19 +15,35 @@
  */
 package ru.rt.restream.reindexer.exceptions;
 
+/**
+ * Common reindexer exception.
+ */
 public class ReindexerException extends RuntimeException {
 
-    public ReindexerException() {
-    }
-
+    /**
+     * Creates new instance from an error message.
+     *
+     * @param message the error message
+     */
     public ReindexerException(String message) {
         super(message);
     }
 
+    /**
+     * Creates new instance from an error message and specified cause.
+     *
+     * @param message the error message
+     * @param cause   the cause of error
+     */
     public ReindexerException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates new instance with the specified cause.
+     *
+     * @param cause the cause of error
+     */
     public ReindexerException(Throwable cause) {
         super(cause);
     }

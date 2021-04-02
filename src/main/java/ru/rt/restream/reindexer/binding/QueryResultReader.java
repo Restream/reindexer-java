@@ -17,6 +17,7 @@
 package ru.rt.restream.reindexer.binding;
 
 import com.google.gson.Gson;
+import ru.rt.restream.reindexer.AggregationResult;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadField;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
