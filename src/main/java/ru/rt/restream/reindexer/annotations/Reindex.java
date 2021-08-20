@@ -81,6 +81,13 @@ public @interface Reindex {
     boolean isAppendable() default false;
 
     /**
+     * Indicates that the index should be created as an array.
+     *
+     * @return true if the index should be created as an array
+     */
+    boolean isArray() default false;
+
+    /**
      * Index collate mode. Possible values - numeric, ascii, utf8, or custom. If custom collate mode used provide a
      * sequence of letters, which defines a sort order.
      *

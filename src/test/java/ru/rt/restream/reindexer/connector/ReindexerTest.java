@@ -2562,6 +2562,8 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Reindex(name = "integers")
         private List<Integer> integers;
         private Double doubleValue;
+        @Reindex(name = "arrayIndex", isArray = true)
+        private Integer arrayIndex;
 
         public Integer getId() {
             return id;
@@ -2625,6 +2627,14 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         public void setDoubleValue(Double doubleValue) {
             this.doubleValue = doubleValue;
+        }
+
+        public Integer getArrayIndex() {
+            return arrayIndex;
+        }
+
+        public void setArrayIndex(Integer arrayIndex) {
+            this.arrayIndex = arrayIndex;
         }
 
         @Override

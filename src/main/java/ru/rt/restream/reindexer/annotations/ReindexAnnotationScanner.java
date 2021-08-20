@@ -121,9 +121,10 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                     }
                     precept = field.getName() + "=serial()";
                 }
+                boolean isArray = fieldInfo.isArray || reindex.isArray();
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
                         fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept);
+                        isArray, collateMode, sortOrder, precept);
                 indexes.add(index);
             }
         }

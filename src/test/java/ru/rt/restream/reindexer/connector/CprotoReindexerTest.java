@@ -54,7 +54,7 @@ public class CprotoReindexerTest extends ReindexerTest {
 
         NamespaceResponse namespaceResponse = get("/db/items/namespaces/items", NamespaceResponse.class);
         assertThat(namespaceResponse.name, is(namespaceName));
-        assertThat(namespaceResponse.indexes.size(), is(9));
+        assertThat(namespaceResponse.indexes.size(), is(10));
         assertThat(namespaceResponse.storage.enabled, is(true));
         List<NamespaceResponse.IndexResponse> indexes = namespaceResponse.indexes;
         NamespaceResponse.IndexResponse idIdx = indexes.get(0);
