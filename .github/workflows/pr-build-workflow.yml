@@ -15,8 +15,8 @@ jobs:
           java-version: 1.8
       - name: Install Reindexer
         run: |
-          curl http://repo.reindexer.org/RX-KEY.GPG | sudo apt-key add
-          echo 'deb http://repo.reindexer.org/ubuntu-bionic /' | sudo tee -a /etc/apt/sources.list
+          curl http://repo.reindexer.io/RX-KEY.GPG | sudo apt-key add
+          echo 'deb http://repo.reindexer.io/ubuntu-bionic /' | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install reindexer-dev
       - name: Build with Maven
