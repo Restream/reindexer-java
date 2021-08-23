@@ -240,7 +240,7 @@ public class Reindexer {
         String namespaceName = null;
         for (int i = 0; i < words.length; i++) {
             String word = words[i];
-            if ("FROM".equals(word)) {
+            if ("FROM".equalsIgnoreCase(word)) {
                 namespaceName = words[++i];
                 break;
             }
@@ -249,7 +249,8 @@ public class Reindexer {
             throw new RuntimeException("Invalid select query, namespace name not found");
         }
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
-        long [] ptVersions = new long[] {namespace.getPayloadType().getVersion()};
+        PayloadType pt = namespace.getPayloadType();
+        long[] ptVersions = pt == null ? new long[]{0} : new long[]{pt.getVersion()};
         RequestContext ctx = binding.select(query, false, Integer.MAX_VALUE, ptVersions);
         QueryResult queryResult = ctx.getQueryResult();
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {
