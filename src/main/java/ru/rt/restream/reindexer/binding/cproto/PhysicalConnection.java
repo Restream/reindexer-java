@@ -444,7 +444,7 @@ public class PhysicalConnection implements Connection {
                 int version = deserializer.getUInt16();
                 deserializer.getUInt16();
                 int size = (int) deserializer.getUInt32();
-                int rseq = deserializer.getUInt16();
+                int rseq = (int) deserializer.getUInt32();
                 version &= CPROTO_VERSION_MASK;
                 if (version < CPROTO_VERSION) {
                     throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
