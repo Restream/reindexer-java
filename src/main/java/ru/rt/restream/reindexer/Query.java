@@ -293,6 +293,16 @@ public class Query<T> {
     }
 
     /**
+     * The 'is NULL' condition is supported only by 'sparse' or 'array' indexes.
+     *
+     * @param indexName index name
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> isNull(String indexName) {
+        return where(indexName, Condition.EMPTY);
+    }
+
+    /**
      * Queries are possible only on the indexed fields, marked with reindex annotation.
      *
      * @param indexName index name
@@ -310,7 +320,7 @@ public class Query<T> {
         this.nextOperation = OP_AND;
         this.queryCount++;
 
-        if (values != null && values.size() > 0) {
+        if (values != null) {
             buffer.putVarUInt32(values.size());
             for (Object key : values) {
                 putValue(key);
@@ -338,7 +348,7 @@ public class Query<T> {
         this.nextOperation = OP_AND;
         this.queryCount++;
 
-        if (values != null && values.length > 0) {
+        if (values != null) {
             buffer.putVarUInt32(values.length);
             for (Object key : values) {
                 putValue(key);

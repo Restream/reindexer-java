@@ -2530,6 +2530,25 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(fetchAllResponse, containsString(String.format(templateItem, 250)));
     }
 
+    @Test
+    public void testQueryIsNull() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        String jsonItem = JsonSerializer.toJson(testItem);
+        db.insert(namespaceName, jsonItem);
+        TestItem item = db.query(namespaceName, TestItem.class)
+                .isNull("value")
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+        assertThat(item.value, is(nullValue()));
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
@@ -2552,7 +2571,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         private Integer id;
         @Reindex(name = "name")
         private String name;
-        @Reindex(name = "value")
+        @Reindex(name = "value", isSparse = true)
         private String value;
         private String nonIndex;
         @Reindex(name = "nestedTest")
