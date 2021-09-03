@@ -43,7 +43,9 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResultIterator.class);
 
-    private final ReindexerNamespace<T> namespace;
+    private final ReindexerNamespace<?> namespace;
+
+    private final Class<T> itemClass;
 
     private final RequestContext requestContext;
 
@@ -55,7 +57,7 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
 
     private QueryResult queryResult;
 
-    private Query<T> query;
+    private Query<?> query;
 
     private int position;
 
@@ -63,11 +65,13 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
 
     private boolean closed;
 
-    public QueryResultIterator(ReindexerNamespace<T> namespace,
+    public QueryResultIterator(ReindexerNamespace<?> namespace,
+                               Class<T> itemClass,
                                RequestContext requestContext,
-                               Query<T> query,
+                               Query<?> query,
                                int fetchCount) {
         this.namespace = namespace;
+        this.itemClass = itemClass;
         this.requestContext = requestContext;
         this.fetchCount = fetchCount;
         this.query = query;
@@ -87,7 +91,7 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
                 if (payloadType != null) {
                     ctagMatcher.read(payloadType);
                 }
-                itemReader = new CjsonItemReader<>(namespace.getItemClass(), ctagMatcher);
+                itemReader = new CjsonItemReader<>(itemClass, ctagMatcher);
             }
         }
     }

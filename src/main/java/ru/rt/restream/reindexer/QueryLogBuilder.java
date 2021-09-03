@@ -41,6 +41,7 @@ class QueryLogBuilder {
     private final List<JoinEntry> joinEntries = new ArrayList<>();
     private final List<QueryEntry> onEntries = new ArrayList<>();
     private final List<SortEntry> sortEntries = new ArrayList<>();
+    private final List<String> selectFields = new ArrayList<>();
     private final List<AggregateEntry> aggregateEntries = new ArrayList<>();
     private final List<UpdateEntry> updateEntries = new ArrayList<>();
     private final Deque<QueryEntry> whereStack = new ArrayDeque<>();
@@ -201,6 +202,15 @@ class QueryLogBuilder {
      */
     void merge(QueryLogBuilder mergeQueryLogBuilder) {
         mergeQueries.add(mergeQueryLogBuilder);
+    }
+
+    /**
+     * Add field to builder.
+     *
+     * @param field the field to select
+     */
+    void select(String field) {
+        selectFields.add(field);
     }
 
     /**
@@ -617,13 +627,15 @@ class QueryLogBuilder {
     }
 
     private String getSelectPart() {
-        if (aggregateEntries.isEmpty()) {
-            return "*";
-        } else {
+        if (!aggregateEntries.isEmpty()) {
             return aggregateEntries.stream()
                     .map(this::getAggregationLogValue)
                     .collect(Collectors.joining(", "));
         }
+        if (!selectFields.isEmpty()) {
+            return String.join(", ", selectFields);
+        }
+        return "*";
     }
 
     private String getUpdatePart() {
