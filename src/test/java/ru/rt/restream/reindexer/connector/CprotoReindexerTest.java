@@ -24,6 +24,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbLocator;
 
@@ -34,6 +35,8 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
 /**
@@ -65,6 +68,24 @@ public class CprotoReindexerTest extends ReindexerTest {
         assertThat(nameIdx.isPk, is(false));
         assertThat(nameIdx.name, is("name"));
         assertThat(nameIdx.fieldType, is("string"));
+    }
+
+    @Test
+    public void testQuerySelectIdAndName() {
+        String namespaceName = "items";
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        ns.insert(testItem);
+        TestItem item = ns.query()
+                .select("id", "name")
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(item.getId(), is(testItem.getId()));
+        assertThat(item.getName(), is(testItem.getName()));
+        assertThat(item.getNonIndex(), is(nullValue()));
     }
 
     private <T> T get(String path, Class<T> clazz) {

@@ -196,6 +196,20 @@ public class Query<T> {
     }
 
     /**
+     * Selects only {@code fields} of items, another fields will be omitted.
+     *
+     * @param fields fields to select
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> select(String... fields) {
+        for (String field : fields) {
+            logBuilder.select(field);
+            buffer.putVarUInt32(QUERY_SELECT_FILTER).putVString(field);
+        }
+        return this;
+    }
+
+    /**
      * Inner joins 2 queries, alias for innerJoin.
      *
      * @param <J>       type of joined items
@@ -774,6 +788,17 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public CloseableIterator<T> execute() {
+        return execute(namespace.getItemClass());
+    }
+
+    /**
+     * Will execute query, and return slice of items.
+     *
+     * @param <S>       the item type
+     * @param itemClass the item class
+     * @return an iterator over a query result
+     */
+    public <S> CloseableIterator<S> execute(Class<S> itemClass) {
         long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
 
         RequestContext requestContext = transactionContext != null
@@ -782,7 +807,7 @@ public class Query<T> {
 
         updatePayloadTypes(requestContext.getQueryResult());
 
-        return new QueryResultIterator<>(namespace, requestContext, this, fetchCount);
+        return new QueryResultIterator<>(namespace, itemClass, requestContext, this, fetchCount);
     }
 
     /**

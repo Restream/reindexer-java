@@ -2549,6 +2549,24 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(item.value, is(nullValue()));
     }
 
+    @Test
+    public void testQuerySelectId() {
+        String namespaceName = "items";
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        ns.insert(testItem);
+        CloseableIterator<TestItemId> it = ns.query()
+                .select("id")
+                .where("id", EQ, 123)
+                .execute(TestItemId.class);
+        assertThat(it.hasNext(), is(true));
+        TestItemId item = it.next();
+        assertThat(item.id, is(testItem.id));
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
@@ -2709,6 +2727,20 @@ public abstract class ReindexerTest extends DbBaseTest {
         public void setNonIndex(String nonIndex) {
             this.nonIndex = nonIndex;
         }
+    }
+
+    public static class TestItemId {
+
+        private Integer id;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
     }
 
 }

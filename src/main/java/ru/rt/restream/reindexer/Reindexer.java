@@ -259,7 +259,7 @@ public class Reindexer {
                 namespace.updatePayloadType(payloadType);
             }
         }
-        return new QueryResultIterator<>(namespace, ctx, null, Integer.MAX_VALUE);
+        return new QueryResultIterator<>(namespace, itemClass, ctx, null, Integer.MAX_VALUE);
     }
 
     public void updateSql(String query) {
