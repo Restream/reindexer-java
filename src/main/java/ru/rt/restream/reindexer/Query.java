@@ -148,7 +148,12 @@ public class Query<T> {
         /**
          * Index contains an empty value
          */
-        EMPTY(9);
+        EMPTY(9),
+
+        /**
+         * Index String like pattern
+         */
+        LIKE(10);
 
         private final int code;
 
@@ -314,6 +319,17 @@ public class Query<T> {
      */
     public Query<T> isNull(String indexName) {
         return where(indexName, Condition.EMPTY);
+    }
+
+    /**
+     * Query with a String like pattern.
+     *
+     * @param indexName index name
+     * @param pattern   String like pattern
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> like(String indexName, String pattern) {
+        return where(indexName, Condition.LIKE, pattern);
     }
 
     /**

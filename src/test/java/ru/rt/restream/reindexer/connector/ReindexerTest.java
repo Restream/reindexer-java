@@ -2567,6 +2567,23 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(item.id, is(testItem.id));
     }
 
+    @Test
+    public void testQueryLike() {
+        String namespaceName = "items";
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        ns.insert(testItem);
+        TestItem item = ns.query()
+                .like("name", "%Na%")
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
