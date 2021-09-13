@@ -104,7 +104,8 @@ class QueryLogBuilder {
         RANGE("RANGE"),
         SET("IN"),
         ALLSET("ALLSET"),
-        EMPTY("IS NULL");
+        EMPTY("IS NULL"),
+        LIKE("LIKE");
 
         private final String name;
 
@@ -498,6 +499,8 @@ class QueryLogBuilder {
                 return Condition.ALLSET;
             case 9:
                 return Condition.EMPTY;
+            case 10:
+                return Condition.LIKE;
             default:
                 throw new RuntimeException("Illegal condition: " + conditionCode);
         }
