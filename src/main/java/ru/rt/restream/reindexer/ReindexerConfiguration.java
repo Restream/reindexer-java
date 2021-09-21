@@ -19,9 +19,14 @@ import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.builtin.Builtin;
 import ru.rt.restream.reindexer.binding.builtin.server.BuiltinServer;
 import ru.rt.restream.reindexer.binding.cproto.Cproto;
+import ru.rt.restream.reindexer.binding.cproto.DataSourceFactory;
+import ru.rt.restream.reindexer.binding.cproto.DataSourceFactoryStrategy;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
+import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents approach for bootstrapping Reindexer.
@@ -30,7 +35,9 @@ public final class ReindexerConfiguration {
 
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
 
-    private String url;
+    private final List<String> urls = new ArrayList<>();
+
+    private DataSourceFactory dataSourceFactory = DataSourceFactoryStrategy.NEXT;
 
     private int connectionPoolSize = DEFAULT_CONNECTION_POOL_SIZE;
 
@@ -55,7 +62,18 @@ public final class ReindexerConfiguration {
      * @return the {@link ReindexerConfiguration} for further customizations
      */
     public ReindexerConfiguration url(String url) {
-        this.url = url;
+        urls.add(url);
+        return this;
+    }
+
+    /**
+     * Configure a {@link DataSourceFactory}. Defaults to {@link DataSourceFactoryStrategy#NEXT}.
+     *
+     * @param dataSourceFactory the {@link DataSourceFactory} to use
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration dataSourceFactory(DataSourceFactory dataSourceFactory) {
+        this.dataSourceFactory = dataSourceFactory;
         return this;
     }
 
@@ -109,22 +127,31 @@ public final class ReindexerConfiguration {
      * @return configured reindexer connector instance
      */
     public Reindexer getReindexer() {
-        if (url == null) {
+        if (urls.isEmpty()) {
             throw new IllegalStateException("Url is not configured");
         }
-
-        String protocol = url.substring(0, url.indexOf(":"));
-        return new Reindexer(getBinding(protocol));
+        String protocol = null;
+        List<URI> uris = new ArrayList<>();
+        for (String url : urls) {
+            URI uri = URI.create(url);
+            if (protocol == null) {
+                protocol = uri.getScheme();
+            } else if (!protocol.equals(uri.getScheme())) {
+                throw new IllegalArgumentException("Protocol must be the same for all DSNs");
+            }
+            uris.add(uri);
+        }
+        return new Reindexer(getBinding(protocol, uris));
     }
 
-    private Binding getBinding(String protocol) {
+    private Binding getBinding(String protocol, List<URI> uris) {
         switch (protocol) {
             case "cproto":
-                return new Cproto(url, connectionPoolSize, requestTimeout);
+                return new Cproto(uris, dataSourceFactory, connectionPoolSize, requestTimeout);
             case "builtin":
-                return new Builtin(url, requestTimeout);
+                return new Builtin(uris.get(0), requestTimeout);
             case "builtinserver":
-                return new BuiltinServer(url, serverConfigFile, serverStartupTimeout, requestTimeout);
+                return new BuiltinServer(uris.get(0), serverConfigFile, serverStartupTimeout, requestTimeout);
             default:
                 throw new UnimplementedException("Protocol: '" + protocol + "' is not suppored");
         }

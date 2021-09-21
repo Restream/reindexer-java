@@ -59,12 +59,12 @@ public class BuiltinServer implements Binding {
     /**
      * Creates an instance.
      *
-     * @param url                  the Reindexer URL
+     * @param uri                  the Reindexer URL
      * @param serverConfigFile     the server config file
      * @param serverStartupTimeout the server startup timeout
      * @param requestTimeout       the request timeout
      */
-    public BuiltinServer(String url, String serverConfigFile, Duration serverStartupTimeout, Duration requestTimeout) {
+    public BuiltinServer(URI uri, String serverConfigFile, Duration serverStartupTimeout, Duration requestTimeout) {
         String yamlConfig = readYamlConfig(serverConfigFile);
         adapter = new BuiltinAdapter();
         svc = adapter.initServer();
@@ -88,7 +88,6 @@ public class BuiltinServer implements Binding {
                 throw new ReindexerException("Interrupted while waiting for server to startup");
             }
         }
-        URI uri = URI.create(url);
         String user = "";
         String password = "";
         String userInfo = uri.getUserInfo();
