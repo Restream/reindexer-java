@@ -162,6 +162,40 @@ db.query("items", Item.class)
     .execute();
 ```
 
+### Full text search
+Reindexer has internal full text search engine. It can be used for fields with text index. 
+Use the @FullText annotation in code to tune the full text search params of text index.
+Use it only in conjunction with @Reindex annotation of text type. 
+Full text search query supports either EQ or SET conditions.
+
+```java
+public class Item {
+
+    @Reindex(name = "id")
+    private Integer id;
+
+    @Reindex(name = "description", type = TEXT)
+    @FullText(synonyms = @FullText.Synonym(tokens = {"cpu"}, alternatives = {"processor"}))
+    private String description;
+
+}
+```
+
+This query returns all items with words "cpu" or "processor" in description:
+```java
+db.query("items", Item.class)
+        .where("description", Query.Condition.EQ, "cpu")
+        .toList();
+```
+This query returns all items with words "cpu" or "processor" but not with word "food" in description:
+```java
+db.query("items", Item.class)
+        .where("description", Query.Condition.EQ, "cpu -food")
+        .toList();
+```
+
+Full text search usage documentation and examples are [here](https://github.com/Restream/reindexer/blob/master/fulltext.md).
+
 ### Joins
 Reindexer can join documents from multiple namespaces into a single result:
 

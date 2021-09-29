@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import ru.rt.restream.reindexer.fulltext.FullTextConfig;
+
 import java.util.List;
 
 /**
@@ -33,6 +35,8 @@ public class ReindexerIndex {
     private CollateMode collateMode;
 
     private String sortOrder;
+
+    private FullTextConfig fullTextConfig;
 
     private String precept;
 
@@ -150,6 +154,29 @@ public class ReindexerIndex {
      */
     public void setSortOrder(String sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    /**
+     * Get full text search config for current index.
+     * Type of index must be TEXT.
+     *
+     * @return full text search config
+     */
+    public FullTextConfig getFullTextConfig() {
+        return fullTextConfig;
+    }
+
+    /**
+     * Set full text search config for current index, if the index is text index.
+     *
+     * @param fullTextConfig full text search configuration of text index
+     * @throws IllegalArgumentException if type of index is not TEXT and fullText config is not null
+     */
+    public void setFullTextConfig(FullTextConfig fullTextConfig) {
+        if (indexType != IndexType.TEXT && fullTextConfig != null) {
+            throw new IllegalArgumentException("Type of index must be TEXT for full text search config.");
+        }
+        this.fullTextConfig = fullTextConfig;
     }
 
     /**
