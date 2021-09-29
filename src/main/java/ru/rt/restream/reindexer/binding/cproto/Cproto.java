@@ -27,11 +27,12 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
-import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
 /**
  * A binding to Reindexer database, which establishes a connection to Reindexer instance via RPC.
@@ -46,12 +47,14 @@ public class Cproto implements Binding {
     /**
      * Construct binding instance to the given database URL.
      *
-     * @param url                a database url of the form cproto://host:port/database_name
+     * @param uris               a database urls of the form cproto://host:port/database_name
+     * @param dataSourceFactory  the {@link DataSourceFactory} to use
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public Cproto(String url, int connectionPoolSize, Duration requestTimeout) {
-        pool = new ConnectionPool(url, connectionPoolSize, requestTimeout);
+    public Cproto(List<URI> uris, DataSourceFactory dataSourceFactory, int connectionPoolSize,
+                  Duration requestTimeout) {
+        pool = new ConnectionPool(uris, dataSourceFactory, connectionPoolSize, requestTimeout);
     }
 
     /**

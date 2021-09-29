@@ -59,14 +59,13 @@ public class Builtin implements Binding {
     /**
      * Creates an instance.
      *
-     * @param url            the Reindexer URL
+     * @param uri            the Reindexer URL
      * @param requestTimeout the request timeout
      */
-    public Builtin(String url, Duration requestTimeout) {
+    public Builtin(URI uri, Duration requestTimeout) {
         adapter = new BuiltinAdapter();
         timeout = requestTimeout;
         rx = adapter.init();
-        URI uri = URI.create(url);
         String path = uri.getPath();
         try {
             ReindexerResponse response = adapter.connect(rx, path, REINDEXER_VERSION);

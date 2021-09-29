@@ -19,9 +19,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
+import ru.rt.restream.reindexer.exceptions.NetworkException;
+import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -44,6 +47,11 @@ public class ConnectionPool {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
+     * The {@link DataSourceFactory} for obtaining a {@link DataSource}.
+     */
+    private final DataSourceFactory dataSourceFactory;
+
+    /**
      * Scheduler for async I/O processing.
      */
     private final ScheduledThreadPoolExecutor scheduler;
@@ -64,29 +72,9 @@ public class ConnectionPool {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * Reindexer host.
+     * URIs to connect.
      */
-    private final String host;
-
-    /**
-     * Reindexer port.
-     */
-    private final int port;
-
-    /**
-     * Reindexer user.
-     */
-    private final String user;
-
-    /**
-     * Reindexer password.
-     */
-    private final String password;
-
-    /**
-     * Reindexer database.
-     */
-    private final String database;
+    private final List<URI> uris;
 
     /**
      * Request timeout.
@@ -94,37 +82,27 @@ public class ConnectionPool {
     private final Duration timeout;
 
     /**
+     * Current {@link DataSource}.
+     */
+    private DataSource dataSource;
+
+    /**
      * Construct the connection pool instance to the given database URL.
      *
-     * @param url                a database url of the form cproto://host:port/database_name
+     * @param uris               a database urls of the form cproto://host:port/database_name
+     * @param dataSourceFactory  the {@link DataSourceFactory} to use
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public ConnectionPool(String url, int connectionPoolSize, Duration requestTimeout) {
-        URI uri = URI.create(url);
-        host = uri.getHost();
-        port = uri.getPort();
-        String userInfo = uri.getUserInfo();
-        if (userInfo != null) {
-            String[] userInfoArray = userInfo.split(":");
-            if (userInfoArray.length == 2) {
-                user = userInfoArray[0];
-                password = userInfoArray[1];
-            } else {
-                throw new IllegalArgumentException("Invalid username or password in the URL");
-            }
-        } else {
-            user = "";
-            password = "";
-        }
-        database = uri.getPath().substring(1);
-        timeout = requestTimeout;
+    public ConnectionPool(List<URI> uris, DataSourceFactory dataSourceFactory,
+                          int connectionPoolSize, Duration requestTimeout) {
+        this.uris = uris;
+        this.dataSourceFactory = dataSourceFactory;
         scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1);
         scheduler.setRemoveOnCancelPolicy(true);
         connections = new ArrayList<>(connectionPoolSize);
-        for (int i = 0; i < connectionPoolSize; i++) {
-            connections.add(new PhysicalConnection(host, port, user, password, database, timeout, scheduler));
-        }
+        timeout = requestTimeout;
+        dataSource = getDataSource(connectionPoolSize);
         scheduler.scheduleWithFixedDelay(new PingTask(), 0, 1, TimeUnit.MINUTES);
     }
 
@@ -151,15 +129,56 @@ public class ConnectionPool {
             try {
                 connection = connections.get(id);
                 if (connection.hasError()) {
-                    connection = new PhysicalConnection(host, port, user, password, database, timeout, scheduler);
-                    connections.set(id, connection);
-                    LOGGER.debug("rx: connection-{} reconnected", id);
+                    try {
+                        connection = dataSource.getConnection(timeout, scheduler);
+                        connections.set(id, connection);
+                    } catch (NetworkException e) {
+                        LOGGER.error("rx: connection-{} to {} failed with error", id, dataSource, e);
+                        dataSource = getDataSource(connections.size());
+                        connection = connections.get(id);
+                    }
+                    LOGGER.debug("rx: connection-{} reconnected to {}", id, dataSource);
                 }
             } finally {
                 lock.writeLock().unlock();
             }
         }
         return connection;
+    }
+
+    private DataSource getDataSource(int connectionPoolSize) {
+        Instant connectionDeadline = Instant.now().plus(timeout);
+        for (; ; ) {
+            if (Instant.now().isAfter(connectionDeadline)) {
+                throw new IllegalStateException("Connection timeout: no available data source to connect");
+            }
+            DataSource dataSource = dataSourceFactory.getDataSource(uris);
+            if (dataSource == null) {
+                throw new IllegalArgumentException("dataSource cannot be null");
+            }
+            LOGGER.debug("rx: trying to connect to {}", dataSource);
+            try {
+                for (int i = 0; i < connectionPoolSize; i++) {
+                    Connection newConnection = dataSource.getConnection(timeout, scheduler);
+                    if (i < connections.size()) {
+                        Connection oldConnection = connections.get(i);
+                        oldConnection.close();
+                        connections.set(i, newConnection);
+                    } else {
+                        connections.add(newConnection);
+                    }
+                }
+                return dataSource;
+            } catch (NetworkException e) {
+                LOGGER.error("rx: connection to {} failed with error", dataSource, e);
+            }
+            try {
+                TimeUnit.SECONDS.sleep(1L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ReindexerException("Interrupted while waiting for data source to connect");
+            }
+        }
     }
 
     /**
