@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -2547,6 +2548,25 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(item.name, is(testItem.name));
         assertThat(item.nonIndex, is(testItem.nonIndex));
         assertThat(item.value, is(nullValue()));
+    }
+
+    @Test
+    public void testQueryIsNotNull() {
+        String namespaceName = "items";
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        testItem.setValue("testValue");
+        ns.insert(testItem);
+        TestItem item = ns.query()
+                .isNotNull("value")
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.nonIndex, is(testItem.nonIndex));
+        assertThat(item.value, is(notNullValue()));
     }
 
     @Test
