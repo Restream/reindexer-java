@@ -322,6 +322,16 @@ public class Query<T> {
     }
 
     /**
+     * The 'NOT NULL' condition is supported only by 'sparse' or 'array' indexes.
+     *
+     * @param indexName index name
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> isNotNull(String indexName) {
+        return where(indexName, Condition.ANY);
+    }
+
+    /**
      * Query with a String like pattern.
      *
      * @param indexName index name
