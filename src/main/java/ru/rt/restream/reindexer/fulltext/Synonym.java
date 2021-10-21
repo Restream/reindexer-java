@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package ru.rt.restream.reindexer.fulltext;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,15 +30,14 @@ public class Synonym {
     /**
      * List source tokens in a query, which will be replaced with alternatives.
      */
-    private List<String> tokens;
+    private List<String> tokens = Collections.emptyList();
 
     /**
      * List of alternatives, which will be used for search documents.
      */
-    private List<String> alternatives;
+    private List<String> alternatives = Collections.emptyList();
 
     public Synonym() {
-        this(new ArrayList<>(), new ArrayList<>());
     }
 
     public Synonym(List<String> tokens, List<String> alternatives) {
@@ -68,15 +68,20 @@ public class Synonym {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Synonym synonym = (Synonym) o;
         return Objects.equals(tokens, synonym.tokens)
-                && Objects.equals(alternatives, synonym.alternatives);
+               && Objects.equals(alternatives, synonym.alternatives);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(tokens, alternatives);
     }
+
 }
