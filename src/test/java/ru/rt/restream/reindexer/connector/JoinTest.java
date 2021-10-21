@@ -347,6 +347,7 @@ public abstract class JoinTest extends DbBaseTest {
         itemWithJoin.id = 1;
         itemWithJoin.name = "name";
         itemWithJoin.actorName = "Test";
+        itemWithJoin.actorsIds = new ArrayList<>();
 
         Actor actor = new Actor();
         actor.id = 1;

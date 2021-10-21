@@ -20,6 +20,7 @@ import ru.rt.restream.reindexer.FieldType;
 import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ReindexScanner;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
 import java.lang.reflect.Field;
@@ -121,9 +122,10 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                     }
                     precept = field.getName() + "=serial()";
                 }
+                FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
                         fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept);
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig);
                 indexes.add(index);
             }
         }
@@ -135,11 +137,18 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null);
             indexes.add(compositeIndex);
         }
 
         return indexes;
+    }
+
+    private FullTextConfig getFullTextConfig(Field field, IndexType type) {
+        if (type != IndexType.TEXT || !field.isAnnotationPresent(FullText.class)) {
+            return null;
+        }
+        return FullTextConfig.of(field.getAnnotation(FullText.class));
     }
 
     private String getSortOrder(CollateMode collateMode, String collate) {
@@ -159,7 +168,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
-                                       boolean isArray, CollateMode collateMode, String sortOrder, String precept) {
+                                       boolean isArray, CollateMode collateMode, String sortOrder, String precept,
+                                       FullTextConfig textConfig) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -173,6 +183,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setIndexType(indexType);
         index.setFieldType(fieldType);
         index.setPrecept(precept);
+        index.setFullTextConfig(textConfig);
         return index;
     }
 

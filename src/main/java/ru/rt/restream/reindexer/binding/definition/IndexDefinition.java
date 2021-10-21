@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.definition;
 
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 
 import java.util.List;
 
@@ -48,10 +49,13 @@ public class IndexDefinition {
 
     private String sortOrder;
 
+    private FullTextConfig config;
+
     /**
      * Construct a new IndexDefinition from a {@link ReindexerIndex} object.
      *
      * @param index the object by which the new index definition is constructed
+     * @return a new IndexDefinition
      */
     public static IndexDefinition fromIndex(ReindexerIndex index) {
         IndexDefinition indexDefinition = new IndexDefinition();
@@ -67,6 +71,7 @@ public class IndexDefinition {
         indexDefinition.setSparse(index.isSparse());
         indexDefinition.setLinear(false);
         indexDefinition.setAppendable(false);
+        indexDefinition.setConfig(index.getFullTextConfig());
         return indexDefinition;
     }
 
@@ -284,5 +289,25 @@ public class IndexDefinition {
      */
     public void setSortOrder(String sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    /**
+     * Get full text search config for current index.
+     * It has meaning only if the index is text index.
+     *
+     * @return full text search config.
+     */
+    public FullTextConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * Set full text search config for current index.
+     * Do this only if the index is text index.
+     *
+     * @param config full text search configuration of text index
+     */
+    public void setConfig(FullTextConfig config) {
+        this.config = config;
     }
 }
