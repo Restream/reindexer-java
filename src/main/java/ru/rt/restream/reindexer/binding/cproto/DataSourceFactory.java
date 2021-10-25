@@ -16,20 +16,17 @@
 
 package ru.rt.restream.reindexer.binding.cproto;
 
-import java.net.URI;
-import java.util.List;
-
 /**
  * A {@link DataSource} factory.
  */
 public interface DataSourceFactory {
 
     /**
-     * Creates a {@link DataSource} from a list of {@link URI}.
+     * Creates a {@link DataSource} from a {@link DataSourceConfiguration}.
      *
-     * @param uris the list of {@link URI} to use
+     * @param configuration the {@link DataSourceConfiguration} contains params to create a {@link DataSource}
      * @return the {@link DataSource} to use
      */
-    DataSource getDataSource(List<URI> uris);
+    DataSource getDataSource(DataSourceConfiguration configuration);
 
 }

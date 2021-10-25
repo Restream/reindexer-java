@@ -19,6 +19,7 @@ import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.builtin.Builtin;
 import ru.rt.restream.reindexer.binding.builtin.server.BuiltinServer;
 import ru.rt.restream.reindexer.binding.cproto.Cproto;
+import ru.rt.restream.reindexer.binding.cproto.DataSourceConfiguration;
 import ru.rt.restream.reindexer.binding.cproto.DataSourceFactory;
 import ru.rt.restream.reindexer.binding.cproto.DataSourceFactoryStrategy;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
@@ -27,6 +28,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents approach for bootstrapping Reindexer.
@@ -36,6 +38,8 @@ public final class ReindexerConfiguration {
     private static final int DEFAULT_CONNECTION_POOL_SIZE = 8;
 
     private final List<String> urls = new ArrayList<>();
+
+    private boolean allowUnlistedDs = false;
 
     private DataSourceFactory dataSourceFactory = DataSourceFactoryStrategy.NEXT;
 
@@ -63,6 +67,28 @@ public final class ReindexerConfiguration {
      */
     public ReindexerConfiguration url(String url) {
         urls.add(url);
+        return this;
+    }
+
+    /**
+     * Configure reindexer database urls.
+     *
+     * @param urls a list of database url of the form protocol://host:port/database_name
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration urls(List<String> urls) {
+        this.urls.addAll(Objects.requireNonNull(urls));
+        return this;
+    }
+
+    /**
+     * Allowed to use database urls from #replicationstats which are not in the list of urls.
+     *
+     * @param allow enable permission to use unlisted urls
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration allowUnlistedDs(boolean allow) {
+        allowUnlistedDs = allow;
         return this;
     }
 
@@ -147,7 +173,11 @@ public final class ReindexerConfiguration {
     private Binding getBinding(String protocol, List<URI> uris) {
         switch (protocol) {
             case "cproto":
-                return new Cproto(uris, dataSourceFactory, connectionPoolSize, requestTimeout);
+                DataSourceConfiguration dataSourceConfig = DataSourceConfiguration.builder()
+                        .urls(urls)
+                        .allowUnlistedDataSource(allowUnlistedDs)
+                        .build();
+                return new Cproto(uris, dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
             case "builtin":
                 return new Builtin(uris.get(0), requestTimeout);
             case "builtinserver":

@@ -49,12 +49,13 @@ public class Cproto implements Binding {
      *
      * @param uris               a database urls of the form cproto://host:port/database_name
      * @param dataSourceFactory  the {@link DataSourceFactory} to use
+     * @param dataSourceConfig   the {@link DataSourceConfiguration} to configure an obtaining of {@link DataSource}
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public Cproto(List<URI> uris, DataSourceFactory dataSourceFactory, int connectionPoolSize,
+    public Cproto(List<URI> uris, DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfig, int connectionPoolSize,
                   Duration requestTimeout) {
-        pool = new ConnectionPool(uris, dataSourceFactory, connectionPoolSize, requestTimeout);
+        pool = new ConnectionPool(uris, dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
     }
 
     /**

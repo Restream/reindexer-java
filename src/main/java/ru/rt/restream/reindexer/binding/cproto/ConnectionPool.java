@@ -52,6 +52,11 @@ public class ConnectionPool {
     private final DataSourceFactory dataSourceFactory;
 
     /**
+     * The {@link DataSourceConfiguration} to configure an obtaining of {@link DataSource}.
+     */
+    private final DataSourceConfiguration dataSourceConfiguration;
+
+    /**
      * Scheduler for async I/O processing.
      */
     private final ScheduledThreadPoolExecutor scheduler;
@@ -94,10 +99,11 @@ public class ConnectionPool {
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public ConnectionPool(List<URI> uris, DataSourceFactory dataSourceFactory,
+    public ConnectionPool(List<URI> uris, DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfiguration,
                           int connectionPoolSize, Duration requestTimeout) {
         this.uris = uris;
         this.dataSourceFactory = dataSourceFactory;
+        this.dataSourceConfiguration = dataSourceConfiguration;
         scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1);
         scheduler.setRemoveOnCancelPolicy(true);
         connections = new ArrayList<>(connectionPoolSize);
@@ -152,7 +158,7 @@ public class ConnectionPool {
             if (Instant.now().isAfter(connectionDeadline)) {
                 throw new IllegalStateException("Connection timeout: no available data source to connect");
             }
-            DataSource dataSource = dataSourceFactory.getDataSource(uris);
+            DataSource dataSource = dataSourceFactory.getDataSource(dataSourceConfiguration);
             if (dataSource == null) {
                 throw new IllegalArgumentException("dataSource cannot be null");
             }
