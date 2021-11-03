@@ -24,7 +24,6 @@ import ru.rt.restream.reindexer.ReindexerConfiguration;
 import ru.rt.restream.reindexer.binding.definition.Nodes;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -40,16 +39,11 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
      * Next strategy. Selects the next URL cyclically.
      */
     NEXT {
-        private int position;
-
         @Override
         public DataSource getDataSource(DataSourceConfiguration configuration) {
-            List<URI> uris = configuration.getUris();
-            URI uri = uris.get(position++);
-            if (position == uris.size()) {
-                position = 0;
-            }
-            return new PhysicalDataSource(uri);
+            List<String> urls = configuration.getUrls();
+            configuration.setActive((configuration.getActive() + 1) % urls.size());
+            return new PhysicalDataSource(urls.get(configuration.getActive()));
         }
     },
 
@@ -59,9 +53,9 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
     RANDOM {
         @Override
         public DataSource getDataSource(DataSourceConfiguration configuration) {
-            List<URI> uris = configuration.getUris();
-            int index = ThreadLocalRandom.current().nextInt(uris.size());
-            return new PhysicalDataSource(uris.get(index));
+            List<String> urls = configuration.getUrls();
+            configuration.setActive(ThreadLocalRandom.current().nextInt(urls.size()));
+            return new PhysicalDataSource(urls.get(configuration.getActive()));
         }
     },
 

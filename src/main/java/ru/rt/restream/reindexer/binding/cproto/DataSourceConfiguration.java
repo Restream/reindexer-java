@@ -16,11 +16,11 @@
 
 package ru.rt.restream.reindexer.binding.cproto;
 
-import java.net.URI;
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * A {@link DataSource} configuration.
@@ -37,9 +37,15 @@ public class DataSourceConfiguration {
      */
     private final boolean allowUnlistedDataSource;
 
-    private DataSourceConfiguration(List<String> urls, boolean allowUnlistedDataSource) {
-        this.urls = urls;
-        this.allowUnlistedDataSource = allowUnlistedDataSource;
+    /**
+     * An index of the current active data source.
+     */
+    private final MutableInt active;
+
+    private DataSourceConfiguration(Builder builder) {
+        urls = builder.urls;
+        allowUnlistedDataSource = builder.allowUnlistedDataSource;
+        active = builder.active;
     }
 
     public static Builder builder() {
@@ -59,14 +65,26 @@ public class DataSourceConfiguration {
         return urls;
     }
 
-    public List<URI> getUris() {
-        return urls.stream()
-                .map(URI::create)
-                .collect(Collectors.toList());
-    }
-
     public boolean isAllowUnlistedDataSource() {
         return allowUnlistedDataSource;
+    }
+
+    /**
+     * Returns the index of the current active data source.
+     *
+     * @return the index of the current active data source
+     */
+    public int getActive() {
+        return active.getValue();
+    }
+
+    /**
+     * Sets the index of the current active data source.
+     *
+     * @param value the index of the current active data source
+     */
+    public void setActive(int value) {
+        active.setValue(value);
     }
 
     /**
@@ -85,6 +103,11 @@ public class DataSourceConfiguration {
         private boolean allowUnlistedDataSource = true;
 
         /**
+         * An index of the current active data source.
+         */
+        private MutableInt active = new MutableInt(0);
+
+        /**
          * Private constructor with default values for use in the method builder() only.
          */
         private Builder() {
@@ -96,8 +119,9 @@ public class DataSourceConfiguration {
          * @param configuration parent {@link DataSourceConfiguration}
          */
         private Builder(DataSourceConfiguration configuration) {
-            this.urls = configuration.urls;
-            this.allowUnlistedDataSource = configuration.allowUnlistedDataSource;
+            urls = configuration.urls;
+            allowUnlistedDataSource = configuration.allowUnlistedDataSource;
+            active = configuration.active;
         }
 
         /**
@@ -139,7 +163,7 @@ public class DataSourceConfiguration {
          * @return a {@link DataSourceConfiguration}
          */
         public DataSourceConfiguration build() {
-            return new DataSourceConfiguration(urls, allowUnlistedDataSource);
+            return new DataSourceConfiguration(this);
         }
 
     }

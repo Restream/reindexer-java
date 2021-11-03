@@ -38,9 +38,10 @@ public class PhysicalDataSource implements DataSource {
     /**
      * Creates an instance.
      *
-     * @param uri the {@link URI} to use
+     * @param url the URL to use
      */
-    public PhysicalDataSource(URI uri) {
+    public PhysicalDataSource(String url) {
+        URI uri = URI.create(url);
         host = uri.getHost();
         port = uri.getPort();
         String userInfo = uri.getUserInfo();
