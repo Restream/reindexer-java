@@ -29,6 +29,8 @@ public class Nodes {
 
     /**
      * Get a list of nodes of reindexer cluster.
+     *
+     * @return the list of {@link Node} to use
      */
     public List<Node> getNodes() {
         return nodes;
@@ -36,6 +38,8 @@ public class Nodes {
 
     /**
      * Set a list of nodes of reindexer cluster.
+     *
+     * @param nodes the list of {@link Node} to use
      */
     public void setNodes(List<Node> nodes) {
         this.nodes = nodes;
@@ -49,7 +53,6 @@ public class Nodes {
         /**
          * DataSource name - url like "cproto://host:port/database_name".
          */
-        @Json("dsn")
         private String dsn;
 
         /**
@@ -67,13 +70,11 @@ public class Nodes {
         /**
          * Node's status: none, online, offline or raft_error.
          */
-        @Json("status")
         private String status;
 
         /**
          * Node's role: leader or follower.
          */
-        @Json("role")
         private String role;
 
         /**
@@ -85,7 +86,6 @@ public class Nodes {
         /**
          * Namespaces which are configured for this node.
          */
-        @Json("namespaces")
         private List<String> namespaces;
 
         /**
@@ -213,5 +213,33 @@ public class Nodes {
         public void setNamespaces(List<String> namespaces) {
             this.namespaces = namespaces;
         }
+
+        /**
+         * Returns true if the status is "online".
+         *
+         * @return true if the status is "online"
+         */
+        public boolean isOnline() {
+            return "online".equals(status);
+        }
+
+        /**
+         * Returns true if the role is "leader".
+         *
+         * @return true if the role is "leader"
+         */
+        public boolean isLeader() {
+            return "leader".equals(role);
+        }
+
+        /**
+         * Returns true if the role is "follower".
+         *
+         * @return true if the role is "follower"
+         */
+        public boolean isFollower() {
+            return "follower".equals(role);
+        }
+
     }
 }

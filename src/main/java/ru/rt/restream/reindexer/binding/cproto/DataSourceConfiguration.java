@@ -52,6 +52,8 @@ public class DataSourceConfiguration {
 
     /**
      * Return a list of reindexer database urls of the form protocol://host:port/database_name.
+     *
+     * @return a list of reindexer database urls of the form protocol://host:port/database_name
      */
     public List<String> getUrls() {
         return urls;
@@ -71,6 +73,7 @@ public class DataSourceConfiguration {
      * Builder for a {@link DataSource} configuration.
      */
     public static class Builder {
+
         /**
          * A list of reindexer database urls database url of the form protocol://host:port/database_name.
          */
@@ -103,7 +106,7 @@ public class DataSourceConfiguration {
          * @param url a database url of the form protocol://host:port/database_name
          * @return the {@link Builder} for further customizations
          */
-        public Builder addUrl(String url) {
+        public Builder url(String url) {
             urls.add(Objects.requireNonNull(url));
             return this;
         }
@@ -120,13 +123,13 @@ public class DataSourceConfiguration {
         }
 
         /**
-         * Allow to use database urls from #replicationstats which are not in the list of urls.
+         * Allows usage of the database urls from #replicationstats which are not in the list of urls.
          *
-         * @param allow enable permission to use unlisted urls
+         * @param allowUnlistedDataSource enable permission to use unlisted urls
          * @return the {@link Builder} for further customizations
          */
-        public Builder allowUnlistedDataSource(boolean allow) {
-            this.allowUnlistedDataSource = allow;
+        public Builder allowUnlistedDataSource(boolean allowUnlistedDataSource) {
+            this.allowUnlistedDataSource = allowUnlistedDataSource;
             return this;
         }
 

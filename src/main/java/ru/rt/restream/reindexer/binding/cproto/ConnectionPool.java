@@ -22,7 +22,6 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.exceptions.NetworkException;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -77,11 +76,6 @@ public class ConnectionPool {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
-     * URIs to connect.
-     */
-    private final List<URI> uris;
-
-    /**
      * Request timeout.
      */
     private final Duration timeout;
@@ -94,14 +88,13 @@ public class ConnectionPool {
     /**
      * Construct the connection pool instance to the given database URL.
      *
-     * @param uris               a database urls of the form cproto://host:port/database_name
-     * @param dataSourceFactory  the {@link DataSourceFactory} to use
-     * @param connectionPoolSize the connection pool size
-     * @param requestTimeout     the request timeout
+     * @param dataSourceFactory       the {@link DataSourceFactory} to use
+     * @param dataSourceConfiguration the {@link DataSourceConfiguration} to use
+     * @param connectionPoolSize      the connection pool size
+     * @param requestTimeout          the request timeout
      */
-    public ConnectionPool(List<URI> uris, DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfiguration,
+    public ConnectionPool(DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfiguration,
                           int connectionPoolSize, Duration requestTimeout) {
-        this.uris = uris;
         this.dataSourceFactory = dataSourceFactory;
         this.dataSourceConfiguration = dataSourceConfiguration;
         scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1);

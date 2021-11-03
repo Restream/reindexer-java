@@ -39,7 +39,7 @@ public final class ReindexerConfiguration {
 
     private final List<String> urls = new ArrayList<>();
 
-    private boolean allowUnlistedDs = false;
+    private boolean allowUnlistedDataSource = false;
 
     private DataSourceFactory dataSourceFactory = DataSourceFactoryStrategy.NEXT;
 
@@ -82,13 +82,13 @@ public final class ReindexerConfiguration {
     }
 
     /**
-     * Allowed to use database urls from #replicationstats which are not in the list of urls.
+     * Allows usage of the database urls from #replicationstats which are not in the list of urls.
      *
-     * @param allow enable permission to use unlisted urls
+     * @param allowUnlistedDataSource enable permission to use unlisted urls
      * @return the {@link ReindexerConfiguration} for further customizations
      */
-    public ReindexerConfiguration allowUnlistedDs(boolean allow) {
-        allowUnlistedDs = allow;
+    public ReindexerConfiguration allowUnlistedDataSource(boolean allowUnlistedDataSource) {
+        this.allowUnlistedDataSource = allowUnlistedDataSource;
         return this;
     }
 
@@ -175,9 +175,9 @@ public final class ReindexerConfiguration {
             case "cproto":
                 DataSourceConfiguration dataSourceConfig = DataSourceConfiguration.builder()
                         .urls(urls)
-                        .allowUnlistedDataSource(allowUnlistedDs)
+                        .allowUnlistedDataSource(allowUnlistedDataSource)
                         .build();
-                return new Cproto(uris, dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
+                return new Cproto(dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
             case "builtin":
                 return new Builtin(uris.get(0), requestTimeout);
             case "builtinserver":

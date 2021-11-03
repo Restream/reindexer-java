@@ -27,10 +27,8 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY;
 
@@ -47,15 +45,14 @@ public class Cproto implements Binding {
     /**
      * Construct binding instance to the given database URL.
      *
-     * @param uris               a database urls of the form cproto://host:port/database_name
      * @param dataSourceFactory  the {@link DataSourceFactory} to use
      * @param dataSourceConfig   the {@link DataSourceConfiguration} to configure an obtaining of {@link DataSource}
      * @param connectionPoolSize the connection pool size
      * @param requestTimeout     the request timeout
      */
-    public Cproto(List<URI> uris, DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfig, int connectionPoolSize,
+    public Cproto(DataSourceFactory dataSourceFactory, DataSourceConfiguration dataSourceConfig, int connectionPoolSize,
                   Duration requestTimeout) {
-        pool = new ConnectionPool(uris, dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
+        pool = new ConnectionPool(dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
     }
 
     /**

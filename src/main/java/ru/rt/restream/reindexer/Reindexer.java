@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Reindexer {
+public class Reindexer implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Reindexer.class);
 
@@ -55,6 +55,7 @@ public class Reindexer {
         this.binding = binding;
     }
 
+    @Override
     public void close() {
         binding.close();
     }
