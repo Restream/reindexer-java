@@ -105,7 +105,7 @@ public class DataSourceConfiguration {
         /**
          * An index of the current active data source.
          */
-        private MutableInt active = new MutableInt(0);
+        private MutableInt active = new MutableInt(-1);
 
         /**
          * Private constructor with default values for use in the method builder() only.
