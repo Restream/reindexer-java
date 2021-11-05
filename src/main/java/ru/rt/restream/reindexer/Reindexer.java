@@ -256,7 +256,8 @@ public class Reindexer implements AutoCloseable {
         QueryResult queryResult = ctx.getQueryResult();
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {
             PayloadType currentPayloadType = namespace.getPayloadType();
-            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()) {
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()
+                || currentPayloadType.getStateToken() < payloadType.getStateToken()) {
                 namespace.updatePayloadType(payloadType);
             }
         }

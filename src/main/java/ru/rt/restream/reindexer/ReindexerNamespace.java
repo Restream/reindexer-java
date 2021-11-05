@@ -177,13 +177,14 @@ public class ReindexerNamespace<T> implements Namespace<T> {
     }
 
     /**
-     * Update the current namespace payload type. If current payload type version is lower than passed. Payload type
-     * will be updated.
+     * Update the current namespace payload type. If current payload type version is lower than passed or payload type
+     * state token is lower than passed. Payload type will be updated.
      *
      * @param payloadType new payload object
      */
     public synchronized void updatePayloadType(PayloadType payloadType) {
-        if (this.payloadType == null || this.payloadType.getVersion() < payloadType.getVersion()) {
+        if (this.payloadType == null || this.payloadType.getVersion() < payloadType.getVersion()
+            || this.payloadType.getStateToken() < payloadType.getStateToken()) {
             this.payloadType = payloadType;
         }
     }
