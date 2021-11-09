@@ -71,13 +71,12 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
                     .collect(Collectors.toList());
             return RANDOM.getDataSource(configuration.toBuilder().urls(urls).build());
         }
-
     },
 
     /**
-     * WriteReq strategy. Select the URL of leader node.
+     * PreferWrite strategy. Select the URL of leader node.
      */
-    WRITE_REQ {
+    PREFER_WRITE {
         @Override
         public DataSource getDataSource(DataSourceConfiguration configuration) {
             List<String> urls = getOnlineClusterNodes(configuration).stream()
