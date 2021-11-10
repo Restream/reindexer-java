@@ -249,6 +249,16 @@ public class ReindexerNamespace<T> implements Namespace<T> {
         return reindexer.getBinding().getMeta(name, key);
     }
 
+    @Override
+    public CloseableIterator<T> execSql(String query) {
+        return reindexer.execSql(query, itemClass);
+    }
+
+    @Override
+    public void updateSql(String query) {
+        reindexer.updateSql(query);
+    }
+
     /**
      * Reindexer namespace builder.
      */

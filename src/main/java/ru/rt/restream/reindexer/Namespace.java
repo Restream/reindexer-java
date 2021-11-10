@@ -110,4 +110,19 @@ public interface Namespace<T> {
      */
     String getMeta(String key);
 
+    /**
+     * Executes the given SQL query and returns a {@link CloseableIterator}.
+     *
+     * @param query the SQL query to execute
+     * @return the {@link CloseableIterator} to use
+     */
+    CloseableIterator<T> execSql(String query);
+
+    /**
+     * Executes the given SQL update query.
+     *
+     * @param query the SQL update query to execute
+     */
+    void updateSql(String query);
+
 }
