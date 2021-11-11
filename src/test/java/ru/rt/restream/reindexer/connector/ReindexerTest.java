@@ -2498,6 +2498,75 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testNamespaceExecSqlForOne() {
+        Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        ns.insert(testItem);
+        CloseableIterator<TestItem> iterator = ns.execSql("SELECT * FROM items WHERE id = 123");
+        TestItem result = iterator.next();
+        assertThat(result.getId(), is(testItem.getId()));
+        assertThat(result.getName(), is(testItem.getName()));
+        assertThat(result.getNonIndex(), is(testItem.getNonIndex()));
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testNamespaceExecSqlForList() {
+        Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
+        Set<TestItem> expectedItems = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            ns.upsert(testItem);
+            expectedItems.add(testItem);
+        }
+        CloseableIterator<TestItem> iterator = ns.execSql("SELECT * FROM items");
+        while (iterator.hasNext()) {
+            TestItem responseItem = iterator.next();
+            assertThat(expectedItems.remove(responseItem), is(true));
+        }
+        assertThat(expectedItems.size(), is(0));
+    }
+
+    @Test
+    public void testNamespaceUpdateSqlForOne() {
+        Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("TestName");
+        testItem.setNonIndex("testNonIndex");
+        ns.insert(testItem);
+        ns.updateSql("UPDATE items SET name = 'upd' WHERE id = 123");
+        TestItem result = ns.query()
+                .where("id", EQ, 123)
+                .getOne();
+        assertThat(result.getName(), is("upd"));
+    }
+
+    @Test
+    public void testNamespaceUpdateSqlForList() {
+        Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
+        for (int i = 0; i < 100; i++) {
+            TestItem testItem = new TestItem();
+            testItem.setId(i);
+            testItem.setName("TestName" + i);
+            testItem.setValue(i + "Value");
+            ns.upsert(testItem);
+        }
+        ns.updateSql("UPDATE items SET name = 'upd'");
+        List<TestItem> result = ns.query().toList();
+        assertThat(result.size(), is(100));
+        for (TestItem resultItem : result) {
+            assertThat(resultItem.getName(), is("upd"));
+        }
+    }
+
+    @Test
     public void testQueryExecuteJson() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
