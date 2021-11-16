@@ -10,7 +10,7 @@
 
     <groupId>com.github.restream</groupId>
     <artifactId>rx-connector</artifactId>
-    <version>1.11-SNAPSHOT</version>
+    <version>1.11</version>
     <packaging>jar</packaging>
 
     <name>rx-connector</name>
