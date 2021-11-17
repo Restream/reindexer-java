@@ -64,8 +64,8 @@ public class Nodes {
         /**
          * Number of updates, which are awaiting replication to this specific follower.
          */
-        @Json("pended_updates_count")
-        private int pendedUpdatesCount;
+        @Json("pending_updates_count")
+        private int pendingUpdatesCount;
 
         /**
          * Node's status: none, online, offline or raft_error.
@@ -76,6 +76,12 @@ public class Nodes {
          * Node's role: leader or follower.
          */
         private String role;
+
+        /**
+         * Node's sync state: "none", "syncing", "awaiting_resync", "online_replication", "initial_leader_sync".
+         */
+        @Json("sync_state")
+        private String syncState;
 
         /**
          * Synchronization status. Shows if all the approved updates were replicated to this node.
@@ -129,17 +135,17 @@ public class Nodes {
          *
          * @return number of updates
          */
-        public int getPendedUpdatesCount() {
-            return pendedUpdatesCount;
+        public int getPendingUpdatesCount() {
+            return pendingUpdatesCount;
         }
 
         /**
          * Set number of updates, which are awaiting replication to this specific follower.
          *
-         * @param pendedUpdatesCount number of updates, which are awaiting replication
+         * @param pendingUpdatesCount number of updates, which are awaiting replication
          */
-        public void setPendedUpdatesCount(int pendedUpdatesCount) {
-            this.pendedUpdatesCount = pendedUpdatesCount;
+        public void setPendingUpdatesCount(int pendingUpdatesCount) {
+            this.pendingUpdatesCount = pendingUpdatesCount;
         }
 
         /**
@@ -176,6 +182,24 @@ public class Nodes {
          */
         public void setRole(String role) {
             this.role = role;
+        }
+
+        /**
+         * Get node's sync state: "none", "syncing", "awaiting_resync", "online_replication", "initial_leader_sync".
+         *
+         * @return node's sync state: "none", "syncing", "awaiting_resync", "online_replication", "initial_leader_sync"
+         */
+        public String getSyncState() {
+            return syncState;
+        }
+
+        /**
+         * Set node's sync state: "none", "syncing", "awaiting_resync", "online_replication", "initial_leader_sync".
+         *
+         * @param syncState node's sync state: "none", "syncing", "awaiting_resync", "online_replication", "initial_leader_sync"
+         */
+        public void setSyncState(String syncState) {
+            this.syncState = syncState;
         }
 
         /**
