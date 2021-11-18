@@ -99,7 +99,7 @@ public final class ReindexerConfiguration {
      * @return the {@link ReindexerConfiguration} for further customizations
      */
     public ReindexerConfiguration dataSourceFactory(DataSourceFactory dataSourceFactory) {
-        this.dataSourceFactory = dataSourceFactory;
+        this.dataSourceFactory = Objects.requireNonNull(dataSourceFactory, "dataSourceFactory cannot be null");
         return this;
     }
 
