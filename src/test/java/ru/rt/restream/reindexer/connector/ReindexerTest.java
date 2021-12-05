@@ -2673,6 +2673,22 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(item.nonIndex, is(testItem.nonIndex));
     }
 
+    @Test
+    public void testWhereBetweenFields() {
+        Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem testItem = new TestItem();
+        testItem.setId(123);
+        testItem.setName("testWhereBetweenFields");
+        testItem.setValue("testWhereBetweenFields");
+        ns.insert(testItem);
+        TestItem item = ns.query()
+                .whereBetweenFields("name", EQ, "value")
+                .getOne();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.name, is(testItem.name));
+        assertThat(item.value, is(testItem.value));
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
