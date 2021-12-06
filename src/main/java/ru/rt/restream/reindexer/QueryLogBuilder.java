@@ -59,6 +59,7 @@ class QueryLogBuilder {
         private Operation operation;
         private String field;
         private Condition condition;
+        private String secondField;
         private int joinIndex = -1;
         private final List<Object> values = new ArrayList<>();
         private final List<QueryEntry> children = new ArrayList<>();
@@ -281,6 +282,20 @@ class QueryLogBuilder {
         queryEntry.field = field;
         queryEntry.condition = getCondition(conditionCode);
         queryEntry.values.addAll(Arrays.asList(values));
+        if (!whereStack.isEmpty()) {
+            QueryEntry parent = whereStack.getLast();
+            parent.children.add(queryEntry);
+        } else {
+            whereEntries.add(queryEntry);
+        }
+    }
+
+    void whereBetweenFields(int operationCode, String firstField, int conditionCode, String secondField) {
+        QueryEntry queryEntry = new QueryEntry();
+        queryEntry.operation = getOperation(operationCode);
+        queryEntry.field = firstField;
+        queryEntry.condition = getCondition(conditionCode);
+        queryEntry.secondField = secondField;
         if (!whereStack.isEmpty()) {
             QueryEntry parent = whereStack.getLast();
             parent.children.add(queryEntry);
@@ -613,7 +628,9 @@ class QueryLogBuilder {
                 }
                 stringBuilder.append(whereEntry.field)
                         .append(" ").append(whereEntry.condition.name);
-                if (whereEntry.values.size() == 1) {
+                if (whereEntry.secondField != null) {
+                    stringBuilder.append(" ").append(whereEntry.secondField);
+                } else if (whereEntry.values.size() == 1) {
                     Object value = whereEntry.values.get(0);
                     stringBuilder.append(" ").append(value instanceof String ? addQuotes(value)
                             : String.valueOf(value));

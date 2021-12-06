@@ -95,6 +95,7 @@ public class Query<T> {
     private static final int QUERY_DROP_FIELD = 21;
     private static final int QUERY_UPDATE_OBJECT = 22;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
+    private static final int QUERY_BETWEEN_FIELDS_CONDITION = 26;
 
     /**
      * Condition types.
@@ -395,6 +396,26 @@ public class Query<T> {
             }
         }
 
+        return this;
+    }
+
+    /**
+     * Where - Add comparing two fields where condition to DB query.
+     *
+     * @param firstField  the first field to use
+     * @param condition   the {@link Condition} to use
+     * @param secondField the second field to use
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> whereBetweenFields(String firstField, Condition condition, String secondField) {
+        logBuilder.whereBetweenFields(nextOperation, firstField, condition.code, secondField);
+        buffer.putVarUInt32(QUERY_BETWEEN_FIELDS_CONDITION)
+                .putVarUInt32(nextOperation)
+                .putVString(firstField)
+                .putVarUInt32(condition.code)
+                .putVString(secondField);
+        nextOperation = OP_AND;
+        queryCount++;
         return this;
     }
 
