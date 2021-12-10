@@ -20,6 +20,7 @@ import ru.rt.restream.reindexer.FieldType;
 import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ReindexScanner;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
@@ -31,8 +32,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static ru.rt.restream.reindexer.FieldType.BOOL;
 import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
@@ -48,6 +51,11 @@ import static ru.rt.restream.reindexer.FieldType.STRING;
 public class ReindexAnnotationScanner implements ReindexScanner {
 
     private static final Map<Class<?>, FieldType> MAPPED_TYPES;
+    /**
+     * The maximum number of indexes in a namespace.
+     * If the number is more, then IllegalAnnotationException will be thrown.
+     */
+    private static final int INDEXES_MAX_COUNT = 63;
 
     static {
         MAPPED_TYPES = new HashMap<>();
@@ -77,7 +85,14 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     @Override
     public List<ReindexerIndex> parseIndexes(Class<?> itemClass) {
-        return parseIndexes(itemClass, false, "", "",new HashMap<>());
+        List<ReindexerIndex> indexes = parseIndexes(itemClass, false, "", "", new HashMap<>());
+        if (indexes.size() > INDEXES_MAX_COUNT) {
+            throw new IndexConflictException(String.format(
+                    "Too many indexes in the class %s: %s",
+                    itemClass.getName(),
+                    indexes.size()));
+        }
+        return indexes;
     }
 
     List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String reindexBasePath, String jsonBasePath,
@@ -91,11 +106,18 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         List<ReindexerIndex> indexes = new ArrayList<>();
+        Set<String> indexNames = new HashSet<>();
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
             if (reindex == null || "-".equals(reindex.name()) || field.isAnnotationPresent(Transient.class)) {
                 continue;
+            }
+            if (!indexNames.add(reindex.name())) {
+                throw new IndexConflictException(String.format(
+                        "Non-unique name index name in class %s: %s",
+                        itemClass.getName(),
+                        reindex.name()));
             }
             String reindexPath = reindexBasePath + reindex.name();
             Json json = field.getAnnotation(Json.class);
