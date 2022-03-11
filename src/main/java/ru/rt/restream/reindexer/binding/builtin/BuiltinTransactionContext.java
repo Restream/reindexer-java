@@ -79,7 +79,7 @@ public class BuiltinTransactionContext implements TransactionContext {
         ByteBuffer args = new ByteBuffer()
                 .putVarUInt32(format)
                 .putVarUInt32(mode)
-                .putVarUInt32(stateToken);
+                .putVarInt32(stateToken);
         args.putVarUInt32(precepts.length);
         for (String precept : precepts) {
             args.putVString(precept);

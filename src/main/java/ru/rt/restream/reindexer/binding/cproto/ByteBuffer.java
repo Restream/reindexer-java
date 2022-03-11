@@ -174,6 +174,23 @@ public class ByteBuffer {
     }
 
     /**
+     * Encodes a value using the variable-length encoding without sign check.
+     * Used only for stateToken encoding.
+     * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
+     */
+    public ByteBuffer putVarInt32(int value) {
+        do {
+            int bits = value & 0x7F;
+            value >>>= 7;
+            byte b = (byte) (bits + ((value != 0) ? 0x80 : 0));
+            buffer[position++] = b;
+            size++;
+        } while (value != 0);
+        return this;
+    }
+
+    /**
      * Encodes a value using the variable-length encoding from
      * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
      * Google Protocol Buffers</a>. It uses zig-zag encoding to efficiently

@@ -184,7 +184,7 @@ public class ReindexerNamespace<T> implements Namespace<T> {
      */
     public synchronized void updatePayloadType(PayloadType payloadType) {
         if (this.payloadType == null || this.payloadType.getVersion() < payloadType.getVersion()
-            || this.payloadType.getStateToken() < payloadType.getStateToken()) {
+            || this.payloadType.getStateToken() != payloadType.getStateToken()) {
             this.payloadType = payloadType;
         }
     }

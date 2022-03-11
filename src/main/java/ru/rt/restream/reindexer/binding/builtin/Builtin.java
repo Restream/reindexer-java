@@ -111,7 +111,7 @@ public class Builtin implements Binding {
                 .putVString(namespaceName)
                 .putVarUInt32(format)
                 .putVarUInt32(mode)
-                .putVarUInt32(stateToken);
+                .putVarInt32(stateToken);
         args.putVarUInt32(precepts.length);
         for (String precept : precepts) {
             args.putVString(precept);
