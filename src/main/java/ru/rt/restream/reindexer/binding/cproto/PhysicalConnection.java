@@ -281,7 +281,7 @@ public class PhysicalConnection implements Connection {
                 ByteBuffer arrayBuffer = new ByteBuffer();
                 arrayBuffer.putVarUInt32(array.length);
                 for (long i : array) {
-                    arrayBuffer.putVarUInt32(i);
+                    arrayBuffer.putVarInt64(i);
                 }
                 buffer.putVBytes(arrayBuffer.bytes());
             } else {
