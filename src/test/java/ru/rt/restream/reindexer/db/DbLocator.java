@@ -17,13 +17,17 @@
 package ru.rt.restream.reindexer.db;
 
 import org.apache.commons.io.FileUtils;
+import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.Reindexer;
 import ru.rt.restream.reindexer.ReindexerConfiguration;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +44,11 @@ public class DbLocator {
     private static final Map<Type, ClearDbReindexer> instancesForUse = new HashMap<>();
 
     private static final Map<ClearDbReindexer, String> instancesForClose = new HashMap<>();
+
+    /**
+     * Environment property, it allows to specify CPROTO DataSource urls for {@link CprotoTest}.
+     */
+    private static final String CPROTO_DSNS_PROPERTY = "CprotoDsns";
 
     public static ClearDbReindexer getDb(Type type) {
         ClearDbReindexer db = instancesForUse.get(type);
@@ -74,22 +83,46 @@ public class DbLocator {
                 instancesForClose.put(builtinDb, BUILTIN_DB_PATH);
                 return builtinDb;
             case CPROTO:
-                ClearDbReindexer server = new ClearDbReindexer(ReindexerConfiguration.builder()
-                        .url("builtinserver://items")
-                        .getReindexer().getBinding());
-                // builtinserver is not for use, only for cproto db
-                instancesForClose.put(server, BUILTINSERVER_DB_PATH);
-                ClearDbReindexer cprotoDb = new ClearDbReindexer(ReindexerConfiguration.builder()
-                        .url("cproto://localhost:6534/items")
+                ReindexerConfiguration cprotoConfig = ReindexerConfiguration.builder()
                         .connectionPoolSize(4)
-                        .requestTimeout(Duration.ofSeconds(30L))
-                        .getReindexer().getBinding());
+                        .requestTimeout(Duration.ofSeconds(30L));
+
+                List<String> urls = getCprotoDbUrlsFromProperty();
+                if (urls.isEmpty()) {
+                    // run builtinserver, not for own use, only for use in cproto datasource
+                    String builtinServerCprotoUrl = runDefaultBuiltinServerDbInstance();
+                    urls.add(builtinServerCprotoUrl);
+                }
+                urls.forEach(cprotoConfig::url);
+
+                ClearDbReindexer cprotoDb = new ClearDbReindexer(cprotoConfig.getReindexer().getBinding());
                 instancesForUse.put(Type.CPROTO, cprotoDb);
                 instancesForClose.put(cprotoDb, null);
                 return cprotoDb;
             default:
                 throw new IllegalArgumentException("Type of Reindexer DB " + type + " is not supported");
         }
+    }
+
+    private static List<String> getCprotoDbUrlsFromProperty() {
+        List<String> urls = new ArrayList<>();
+
+        String cprotoUrls = System.getProperty(CPROTO_DSNS_PROPERTY, null);
+        if (cprotoUrls != null) {
+            Arrays.stream(cprotoUrls.split(","))
+                    .filter(s -> !s.isEmpty())
+                    .filter(s -> s.startsWith("cproto://"))
+                    .forEach(urls::add);
+        }
+        return urls;
+    }
+
+    private static String runDefaultBuiltinServerDbInstance() {
+        ClearDbReindexer server = new ClearDbReindexer(ReindexerConfiguration.builder()
+                .url("builtinserver://items")
+                .getReindexer().getBinding());
+        instancesForClose.put(server, BUILTINSERVER_DB_PATH);
+        return "cproto://localhost:6534/items";
     }
 
     public enum Type {

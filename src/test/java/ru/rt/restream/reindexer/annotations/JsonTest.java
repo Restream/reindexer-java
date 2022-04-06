@@ -28,10 +28,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.db.DbBaseTest;
-import ru.rt.restream.reindexer.db.DbLocator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,14 +44,9 @@ import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
+@CprotoTest
 class JsonTest extends DbBaseTest {
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return CPROTO;
-    }
 
     @Test
     public void testInsert() {

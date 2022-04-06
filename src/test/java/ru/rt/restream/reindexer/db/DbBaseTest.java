@@ -20,9 +20,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import ru.rt.restream.category.BuiltinTest;
+import ru.rt.restream.category.CprotoTest;
+
+import static ru.rt.restream.reindexer.db.DbLocator.Type.BUILTIN;
+import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
 /**
  * A base class for all of the test classes that use the Reindexer instance.
+ *
+ * Base class descendant must have either {@link BuiltinTest} annotation or {@link CprotoTest} annotation.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(DbCloseExtension.class)
@@ -35,15 +42,14 @@ public abstract class DbBaseTest {
      */
     @BeforeAll
     void initDb() {
-        db = DbLocator.getDb(getDbType());
+        if (this.getClass().isAnnotationPresent(CprotoTest.class)) {
+            db = DbLocator.getDb(CPROTO);
+        } else if (this.getClass().isAnnotationPresent(BuiltinTest.class)) {
+            db = DbLocator.getDb(BUILTIN);
+        } else {
+            throw new RuntimeException("DbBaseTest must have either BuiltinTest annotation or CprotoTest annotation");
+        }
     }
-
-    /**
-     * Returns a {@link DbLocator.Type} to use for obtaining a Reindexer instance.
-     *
-     * @return the {@link DbLocator.Type} to use for obtaining a Reindexer instance
-     */
-    protected abstract DbLocator.Type getDbType();
 
     /**
      * Clears the Reindexer instance after each test method.

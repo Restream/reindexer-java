@@ -16,18 +16,12 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import ru.rt.restream.reindexer.db.DbLocator;
-
-import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
+import ru.rt.restream.category.CprotoTest;
 
 /**
  * Tests for Cproto implementation.
  */
+@CprotoTest
 public class CprotoJoinTest extends JoinTest {
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return CPROTO;
-    }
 
 }
