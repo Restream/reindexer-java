@@ -16,18 +16,12 @@
 
 package ru.rt.restream.reindexer.connector;
 
-import ru.rt.restream.reindexer.db.DbLocator;
-
-import static ru.rt.restream.reindexer.db.DbLocator.Type.BUILTIN;
+import ru.rt.restream.category.BuiltinTest;
 
 /**
  * Tests for Builtin implementation.
  */
+@BuiltinTest
 public class BuiltinReindexerTest extends ReindexerTest {
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return BUILTIN;
-    }
 
 }

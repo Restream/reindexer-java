@@ -17,12 +17,12 @@ package ru.rt.restream.reindexer.annotations;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.ReindexerIndex;
 import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.db.DbBaseTest;
-import ru.rt.restream.reindexer.db.DbLocator;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.fulltext.Synonym;
 
@@ -37,15 +37,11 @@ import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.IndexType.TEXT;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
+@CprotoTest
 public class FullTextTest extends DbBaseTest {
 
     private Namespace<ItemWithFullTextAnnotation> fullTextNs;
     private Namespace<ItemWithoutFullTextAnnotation> defaultFullTextNs;
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return DbLocator.Type.CPROTO;
-    }
 
     @BeforeEach
     public void setUp() {

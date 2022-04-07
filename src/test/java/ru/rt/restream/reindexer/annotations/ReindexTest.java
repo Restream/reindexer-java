@@ -16,21 +16,17 @@
 package ru.rt.restream.reindexer.annotations;
 
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.category.BuiltinTest;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.db.DbBaseTest;
-import ru.rt.restream.reindexer.db.DbLocator;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static ru.rt.restream.reindexer.IndexType.TEXT;
 
+@BuiltinTest
 public class ReindexTest extends DbBaseTest {
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return DbLocator.Type.BUILTIN;
-    }
 
     @Test
     public void testThrownExceptionWhenNonUniqueIndexes() {

@@ -24,9 +24,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
-import ru.rt.restream.reindexer.db.DbLocator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,17 +37,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
-import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 
 /**
  * Tests for Cproto implementation.
  */
+@CprotoTest
 public class CprotoReindexerTest extends ReindexerTest {
-
-    @Override
-    protected DbLocator.Type getDbType() {
-        return CPROTO;
-    }
 
     @Test
     public void testOpenNamespace() {

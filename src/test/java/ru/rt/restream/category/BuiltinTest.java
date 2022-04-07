@@ -13,15 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package ru.rt.restream.category;
 
-package ru.rt.restream.reindexer.connector;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-import ru.rt.restream.category.BuiltinTest;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Tests for Builtin implementation.
+ * Categories marker for BUILTIN tests.
+ *
+ * Run BUILTIN tests only:
+ * `mvn test -PBuiltinTests`
+ * OR
+ * `mvn test -Dtests=builtin`
  */
-@BuiltinTest
-public class BuiltinAggregationTest extends AggregationTest {
-
+@Target({ ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Tag("builtin")
+@Test
+public @interface BuiltinTest {
 }
