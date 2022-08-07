@@ -250,7 +250,7 @@ public class ReindexerNamespace<T> implements Namespace<T> {
     }
 
     @Override
-    public CloseableIterator<T> execSql(String query) {
+    public ResultIterator<T> execSql(String query) {
         return reindexer.execSql(query, itemClass);
     }
 

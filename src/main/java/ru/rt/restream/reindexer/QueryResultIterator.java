@@ -39,7 +39,7 @@ import java.util.Map;
  * An iterator over a query result.
  * Maintains a cursor pointing to its current row of data. Initially the cursor is positioned before the first row.
  */
-public class QueryResultIterator<T> implements CloseableIterator<T> {
+public class QueryResultIterator<T> implements ResultIterator<T> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryResultIterator.class);
 
@@ -267,6 +267,11 @@ public class QueryResultIterator<T> implements CloseableIterator<T> {
         requestContext.fetchResults(position, fetchCount);
         queryResult = requestContext.getQueryResult();
         parseQueryResult(queryResult);
+    }
+
+    @Override
+    public long getTotalCount() {
+        return queryResult.getTotalCount();
     }
 
     @Override

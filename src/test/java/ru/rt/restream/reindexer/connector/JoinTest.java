@@ -20,7 +20,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Query;
@@ -65,7 +65,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -101,7 +101,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -129,7 +129,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class).where("is_visible", EQ, true)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -164,7 +164,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class).where("is_visible", EQ, true)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -191,7 +191,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -226,7 +226,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .execute();
@@ -257,7 +257,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
@@ -293,7 +293,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
@@ -324,7 +324,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorName", Query.Condition.EQ, "name"), "joinedActor")
                 .execute();
@@ -357,7 +357,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActor")
                 .execute();
@@ -383,7 +383,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActor")
@@ -415,7 +415,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActor")
@@ -442,7 +442,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActor")
                 .execute();
@@ -474,7 +474,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActor")
                 .execute();
@@ -504,7 +504,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActor")
@@ -537,7 +537,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .leftJoin(db.query("actors", Actor.class)
                         .where("is_visible", EQ, true)
                         .on("actorName", Query.Condition.SET, "name"), "joinedActors")
@@ -574,7 +574,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .join(db.query("actors", Actor.class)
@@ -621,7 +621,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
                 .join(db.query("actors", Actor.class)
@@ -656,7 +656,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id")
                         .on("actorName", Query.Condition.SET, "name"), "joinedActors")
@@ -697,7 +697,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .join(db.query("actors", Actor.class)
                         .on("actorsIds", Query.Condition.SET, "id")
                         .or()
@@ -752,7 +752,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .where("id", RANGE, 0, 100)
                 .or()
                 .innerJoin(db.query("actors", Actor.class)
@@ -819,7 +819,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("actors", actorById);
         db.upsert("actors", actorByName);
 
-        CloseableIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
                 .where("id", RANGE, 0, 100)
                 .or()
                 .openBracket()
@@ -859,7 +859,7 @@ public abstract class JoinTest extends DbBaseTest {
         db.upsert("items_with_join", itemWithJoin);
         db.upsert("actors", actor);
 
-        CloseableIterator<ItemWithJoin> items = db.execSql(
+        ResultIterator<ItemWithJoin> items = db.execSql(
                 "SELECT * FROM items_with_join INNER JOIN actors ON items_with_join.actorName = actors.name",
                 ItemWithJoin.class
         );
@@ -896,7 +896,7 @@ public abstract class JoinTest extends DbBaseTest {
             db.upsert("actors", actor);
         }
 
-        CloseableIterator<ItemWithJoin> items = db.execSql(
+        ResultIterator<ItemWithJoin> items = db.execSql(
                 "SELECT * FROM items_with_join INNER JOIN actors ON items_with_join.actorName = actors.name",
                 ItemWithJoin.class
         );

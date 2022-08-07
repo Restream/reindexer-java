@@ -17,7 +17,7 @@ package ru.rt.restream.reindexer.connector;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
@@ -708,7 +708,7 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
-    public void testSelectItemWithOffset() {
+    public void testSelectItemWithOffsetAndReqTotal() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
@@ -722,9 +722,12 @@ public abstract class ReindexerTest extends DbBaseTest {
             expectedItems.add(testItem);
         }
 
-        Iterator<TestItem> iterator = db.query("items", TestItem.class)
+        ResultIterator<TestItem> iterator = db.query("items", TestItem.class)
                 .offset(50)
+                .reqTotal()
                 .execute();
+
+        assertThat(iterator.getTotalCount(), is(100L));
 
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
@@ -1092,7 +1095,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             db.upsert(namespaceName, testItem);
         }
 
-        CloseableIterator<TestItem> execute = db.query("items", TestItem.class)
+        ResultIterator<TestItem> execute = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .execute();
 
@@ -1115,7 +1118,7 @@ public abstract class ReindexerTest extends DbBaseTest {
                 .set("doubleValue", 123.123D)
                 .update();
 
-        CloseableIterator<TestItem> items = db.query("items", TestItem.class)
+        ResultIterator<TestItem> items = db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .execute();
 
@@ -2419,7 +2422,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setNonIndex("testNonIndex");
         db.insert(namespaceName, testItem);
 
-        CloseableIterator<TestItem> iterator = db.execSql("SELECT * FROM items WHERE id = 123",
+        ResultIterator<TestItem> iterator = db.execSql("SELECT * FROM items WHERE id = 123",
                 TestItem.class);
         TestItem result = iterator.next();
         assertThat(result.getId(), is(testItem.getId()));
@@ -2443,7 +2446,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             expectedItems.add(testItem);
         }
 
-        CloseableIterator<TestItem> iterator = db.execSql("SELECT * FROM items",
+        ResultIterator<TestItem> iterator = db.execSql("SELECT * FROM items",
                 TestItem.class);
 
         while (iterator.hasNext()) {
@@ -2505,7 +2508,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setName("TestName");
         testItem.setNonIndex("testNonIndex");
         ns.insert(testItem);
-        CloseableIterator<TestItem> iterator = ns.execSql("SELECT * FROM items WHERE id = 123");
+        ResultIterator<TestItem> iterator = ns.execSql("SELECT * FROM items WHERE id = 123");
         TestItem result = iterator.next();
         assertThat(result.getId(), is(testItem.getId()));
         assertThat(result.getName(), is(testItem.getName()));
@@ -2525,7 +2528,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             ns.upsert(testItem);
             expectedItems.add(testItem);
         }
-        CloseableIterator<TestItem> iterator = ns.execSql("SELECT * FROM items");
+        ResultIterator<TestItem> iterator = ns.execSql("SELECT * FROM items");
         while (iterator.hasNext()) {
             TestItem responseItem = iterator.next();
             assertThat(expectedItems.remove(responseItem), is(true));
@@ -2647,7 +2650,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         testItem.setName("TestName");
         testItem.setNonIndex("testNonIndex");
         ns.insert(testItem);
-        CloseableIterator<TestItemId> it = ns.query()
+        ResultIterator<TestItemId> it = ns.query()
                 .select("id")
                 .where("id", EQ, 123)
                 .execute(TestItemId.class);

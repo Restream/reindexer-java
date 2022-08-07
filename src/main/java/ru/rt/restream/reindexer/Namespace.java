@@ -111,12 +111,12 @@ public interface Namespace<T> {
     String getMeta(String key);
 
     /**
-     * Executes the given SQL query and returns a {@link CloseableIterator}.
+     * Executes the given SQL query and returns a {@link ResultIterator}.
      *
      * @param query the SQL query to execute
-     * @return the {@link CloseableIterator} to use
+     * @return the {@link ResultIterator} to use
      */
-    CloseableIterator<T> execSql(String query);
+    ResultIterator<T> execSql(String query);
 
     /**
      * Executes the given SQL update query.

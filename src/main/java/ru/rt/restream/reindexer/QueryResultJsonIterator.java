@@ -22,7 +22,7 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class QueryResultJsonIterator implements CloseableIterator<String> {
+public class QueryResultJsonIterator implements ResultIterator<String> {
 
     private final RequestContext requestContext;
 
@@ -111,6 +111,11 @@ public class QueryResultJsonIterator implements CloseableIterator<String> {
         this.close();
 
         return builder.toString();
+    }
+
+    @Override
+    public long getTotalCount() {
+        return queryResult.getTotalCount();
     }
 
     @Override
