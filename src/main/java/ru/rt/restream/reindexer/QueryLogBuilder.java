@@ -632,18 +632,26 @@ class QueryLogBuilder {
                     stringBuilder.append(" ").append(whereEntry.secondField);
                 } else if (whereEntry.values.size() == 1) {
                     Object value = whereEntry.values.get(0);
-                    stringBuilder.append(" ").append(value instanceof String ? addQuotes(value)
-                            : String.valueOf(value));
+                    stringBuilder.append(" ").append(mapToString(value));
                 } else if (whereEntry.values.size() > 1) {
                     stringBuilder.append(" (");
                     String logValues = whereEntry.values.stream()
-                            .map(value -> value instanceof String ? addQuotes(value) : String.valueOf(value))
+                            .map(this::mapToString)
                             .collect(Collectors.joining(", "));
                     stringBuilder.append(logValues).append(")");
                 }
             }
         }
         return stringBuilder.toString();
+    }
+
+    private String mapToString(Object whereEntryValue) {
+        if (whereEntryValue.getClass().isArray()) {
+            return Arrays.stream((Object[]) whereEntryValue)
+                    .map(v -> v instanceof String ? addQuotes(v) : String.valueOf(v))
+                    .collect(Collectors.joining(", ", "{", "}"));
+        }
+        return whereEntryValue instanceof String ? addQuotes(whereEntryValue) : String.valueOf(whereEntryValue);
     }
 
     private String getSelectPart() {
