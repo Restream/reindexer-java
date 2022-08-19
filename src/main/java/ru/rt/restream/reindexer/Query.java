@@ -47,6 +47,7 @@ import static ru.rt.restream.reindexer.QueryLogBuilder.QueryType.UPDATE;
 import static ru.rt.restream.reindexer.binding.Consts.INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.MERGE;
+import static ru.rt.restream.reindexer.binding.Consts.MODE_ACCURATE_TOTAL;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
@@ -611,6 +612,19 @@ public class Query<T> {
 
     }
 
+
+    /**
+     * Calculate the total count of matching documents.
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> reqTotal() {
+        logBuilder.reqTotal();
+        buffer.putVarUInt32(QUERY_REQ_TOTAL)
+                .putVarUInt32(MODE_ACCURATE_TOTAL);
+        return this;
+    }
+
     /**
      * Limit is used to retrieve records from the namespace in a database and limit the number of items returned based
      * on a limit value
@@ -736,7 +750,7 @@ public class Query<T> {
      * @return stream of items
      */
     public Stream<T> stream() {
-        CloseableIterator<T> iterator = execute();
+        ResultIterator<T> iterator = execute();
         Spliterator<T> spliterator = Spliterators.spliterator(iterator, iterator.size(), Spliterator.NONNULL);
         return StreamSupport.stream(spliterator, false).onClose(iterator::close);
     }
@@ -747,7 +761,7 @@ public class Query<T> {
      * @return list of items
      */
     public List<T> toList() {
-        try (CloseableIterator<T> iterator = execute()) {
+        try (ResultIterator<T> iterator = execute()) {
             List<T> result = new ArrayList<>();
             while (iterator.hasNext()) {
                 result.add(iterator.next());
@@ -784,7 +798,7 @@ public class Query<T> {
     }
 
     private T getOneInternal() {
-        try (CloseableIterator<T> iterator = execute()) {
+        try (ResultIterator<T> iterator = execute()) {
             T item = null;
             if (iterator.hasNext()) {
                 item = iterator.next();
@@ -804,7 +818,7 @@ public class Query<T> {
      * @return count of items
      */
     public long count() {
-        try (CloseableIterator<T> iterator = execute()) {
+        try (ResultIterator<T> iterator = execute()) {
             return iterator.size();
         }
     }
@@ -824,7 +838,7 @@ public class Query<T> {
      * @return true if the item exists
      */
     public boolean exists() {
-        try (CloseableIterator<T> iterator = execute()) {
+        try (ResultIterator<T> iterator = execute()) {
             return iterator.hasNext();
         }
     }
@@ -834,7 +848,7 @@ public class Query<T> {
      *
      * @return an iterator over a query result
      */
-    public CloseableIterator<T> execute() {
+    public ResultIterator<T> execute() {
         return execute(namespace.getItemClass());
     }
 
@@ -845,7 +859,7 @@ public class Query<T> {
      * @param itemClass the item class
      * @return an iterator over a query result
      */
-    public <S> CloseableIterator<S> execute(Class<S> itemClass) {
+    public <S> ResultIterator<S> execute(Class<S> itemClass) {
         long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
 
         RequestContext requestContext = transactionContext != null

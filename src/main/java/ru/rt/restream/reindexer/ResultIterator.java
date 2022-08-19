@@ -25,7 +25,12 @@ import java.util.List;
  * @see Iterator
  * @see AutoCloseable
  */
-public interface CloseableIterator<E> extends Iterator<E>, AutoCloseable {
+public interface ResultIterator<E> extends Iterator<E>, AutoCloseable {
+
+    /**
+     * Return the total count of matching documents, if {@link Query} has set reqTotal() flag, else return 0.
+     */
+    long getTotalCount();
 
     /**
      * Returns the iterator size.

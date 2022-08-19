@@ -17,7 +17,7 @@ package ru.rt.restream.reindexer.connector;
 
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.AggregationResult;
-import ru.rt.restream.reindexer.CloseableIterator;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
@@ -48,7 +48,7 @@ public abstract class AggregationTest extends DbBaseTest {
             itemNamespace.insert(item);
         }
 
-        CloseableIterator<Item> result = itemNamespace.query()
+        ResultIterator<Item> result = itemNamespace.query()
                 .aggregateDistinct("name")
                 .execute();
         AggregationResult aggResult = result.aggResults().get(0);
@@ -72,7 +72,7 @@ public abstract class AggregationTest extends DbBaseTest {
 
         Query<Item> query = itemNamespace.query()
                 .aggregateSum("price");
-        CloseableIterator<Item> result = query.execute();
+        ResultIterator<Item> result = query.execute();
         AggregationResult sumResult = result.aggResults().get(0);
         assertThat(sumResult.getValue(), is(499500D));
     }
@@ -91,7 +91,7 @@ public abstract class AggregationTest extends DbBaseTest {
         Query<Item> query = itemNamespace.query()
                 .aggregateAvg("price");
         query.aggregateFacet("id", "price").sort("id", true).offset(10).limit(100);
-        CloseableIterator<Item> result = query.execute();
+        ResultIterator<Item> result = query.execute();
         AggregationResult avgResult = result.aggResults().get(0);
         assertThat(avgResult.getValue(), is(499.5D));
     }
@@ -109,7 +109,7 @@ public abstract class AggregationTest extends DbBaseTest {
 
         Query<Item> query = itemNamespace.query()
                 .aggregateMax("price");
-        CloseableIterator<Item> result = query.execute();
+        ResultIterator<Item> result = query.execute();
         AggregationResult maxResult = result.aggResults().get(0);
         assertThat(maxResult.getValue(), is(999D));
     }
@@ -127,7 +127,7 @@ public abstract class AggregationTest extends DbBaseTest {
 
         Query<Item> query = itemNamespace.query()
                 .aggregateMin("price");
-        CloseableIterator<Item> result = query.execute();
+        ResultIterator<Item> result = query.execute();
         AggregationResult minResult = result.aggResults().get(0);
         assertThat(minResult.getValue(), is(0D));
     }
@@ -146,7 +146,7 @@ public abstract class AggregationTest extends DbBaseTest {
 
         Query<Item> query = itemNamespace.query();
         query.aggregateFacet("name", "price").sort("name", true).sort("price", false).limit(100);
-        CloseableIterator<Item> result = query.execute();
+        ResultIterator<Item> result = query.execute();
         AggregationResult aggResult = result.aggResults().get(0);
 
         List<AggregationResult.Facet> facets = aggResult.getFacets();

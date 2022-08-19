@@ -34,6 +34,7 @@ class QueryLogBuilder {
 
     private String namespace;
     private QueryType type = QueryType.SELECT;
+    private boolean reqTotal;
     private Integer offset;
     private Integer limit;
     private final Map<Query<?>.AggregationFacetRequest, AggregateEntry> facetParams = new HashMap<>();
@@ -139,6 +140,9 @@ class QueryLogBuilder {
             if (type == QueryType.SELECT) {
                 stringBuilder.append(" ")
                         .append(getSelectPart());
+            }
+            if (reqTotal) {
+                stringBuilder.append(", COUNT(*)");
             }
             stringBuilder.append(" FROM");
         }
@@ -414,6 +418,13 @@ class QueryLogBuilder {
         sortEntry.sortIndex = sortIndex;
         sortEntry.desc = desc;
         facetParams.get(facet).sortEntries.add(sortEntry);
+    }
+
+    /**
+     * Set flag of request of total count of items.
+     */
+    void reqTotal() {
+        this.reqTotal = true;
     }
 
     /**
