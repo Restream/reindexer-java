@@ -72,7 +72,7 @@ public class CprotoRequestContext implements RequestContext {
     public void fetchResults(int offset, int limit) {
         int flags = asJson
                 ? Consts.RESULTS_JSON
-                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, FETCH_RESULTS, requestId, flags, offset, fetchCount);
         queryResult = getQueryResult(rpcResponse);
