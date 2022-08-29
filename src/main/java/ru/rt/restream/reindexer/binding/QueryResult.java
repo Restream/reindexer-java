@@ -180,7 +180,7 @@ public class QueryResult {
     /**
      * Set the indication that the query result contains shard ID values.
      *
-     * @param withRank true, if query result contains shard ID values
+     * @param withShardID true, if query result contains shard ID values
      */
     public void setWithShardID(boolean withShardID) {
         this.withShardID = withShardID;
@@ -331,7 +331,7 @@ public class QueryResult {
     }
 
     /**
-     * Get the global shard ID value for QueryResults.
+     * Get the global shard ID value for query result.
      *
      * @return global shard ID
      */
@@ -340,7 +340,7 @@ public class QueryResult {
     }
 
     /**
-     * Set the global shard ID value for QueryResults.
+     * Set the global shard ID value for query result.
      *
      * @param shardID shard ID value
      */
