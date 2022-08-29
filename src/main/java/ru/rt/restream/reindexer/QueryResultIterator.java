@@ -242,11 +242,11 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         if (queryResult.isWithItemId()) {
             params.id = buffer.getVarUInt();
             params.version = buffer.getVarUInt();
-            if (queryResult.isWithShardID()) {
-                if (queryResult.getShardID() != Consts.SHARDING_PROXY_OFF) {
-                    params.shardID = queryResult.getShardID();
+            if (queryResult.isWithShardId()) {
+                if (queryResult.getShardId() != Consts.SHARDING_PROXY_OFF) {
+                    params.shardId = queryResult.getShardId();
                 } else {
-                    params.shardID = (int) buffer.getVarUInt();
+                    params.shardId = (int) buffer.getVarUInt();
                 }
 
             }
@@ -308,7 +308,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
     private static class ItemParams {
         private long rank = -1;
         private long id = -1;
-        private int shardID = Consts.SHARDING_PROXY_OFF;
+        private int shardId = Consts.SHARDING_PROXY_OFF;
         private long version = -1;
         private long cptr;
         private int nsId = 0;
@@ -321,8 +321,8 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             return id;
         }
 
-        public int getShardID() {
-            return shardID;
+        public int getShardId() {
+            return shardId;
         }
 
         public long getVersion() {

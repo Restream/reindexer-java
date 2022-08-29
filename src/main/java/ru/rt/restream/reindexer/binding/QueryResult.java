@@ -38,7 +38,7 @@ public class QueryResult {
 
     private boolean withRank;
 
-    private boolean withShardID;
+    private boolean withShardId;
 
     private boolean withItemId;
 
@@ -56,7 +56,7 @@ public class QueryResult {
 
     private ByteBuffer buffer;
 
-    private int shardID = Consts.SHARDING_PROXY_OFF;
+    private int shardId = Consts.SHARDING_PROXY_OFF;
 
     private long shardingVersion;
 
@@ -173,17 +173,17 @@ public class QueryResult {
      *
      * @return true, if query result contains shard ID values
      */
-    public boolean isWithShardID() {
-        return withShardID;
+    public boolean isWithShardId() {
+        return withShardId;
     }
 
     /**
      * Set the indication that the query result contains shard ID values.
      *
-     * @param withShardID true, if query result contains shard ID values
+     * @param withShardId true, if query result contains shard ID values
      */
-    public void setWithShardID(boolean withShardID) {
-        this.withShardID = withShardID;
+    public void setWithShardId(boolean withShardId) {
+        this.withShardId = withShardId;
     }
 
     /**
@@ -335,17 +335,17 @@ public class QueryResult {
      *
      * @return global shard ID
      */
-    public int getShardID() {
-        return shardID;
+    public int getShardId() {
+        return shardId;
     }
 
     /**
      * Set the global shard ID value for query result.
      *
-     * @param shardID shard ID value
+     * @param shardId shard ID value
      */
-    public void setShardID(int shardID) {
-        this.shardID = shardID;
+    public void setShardId(int shardId) {
+        this.shardId = shardId;
     }
 
     /**

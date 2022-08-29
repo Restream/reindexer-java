@@ -77,7 +77,7 @@ public class QueryResultReader {
         boolean withPayloadTypes = (flags & RESULTS_WITH_PAYLOAD_TYPES) != 0;
         boolean withJoined = (flags & RESULTS_WITH_JOINED) != 0;
         boolean withResultsPtr = (flags & RESULTS_PTRS) != 0;
-        boolean withShardID = (flags & RESULTS_WITH_SHARD_ID) != 0;
+        boolean withShardId = (flags & RESULTS_WITH_SHARD_ID) != 0;
         QueryResult queryResult = new QueryResult();
         queryResult.setJson(isJson);
         queryResult.setWithRank(withRank);
@@ -89,7 +89,7 @@ public class QueryResultReader {
         queryResult.setWithPayloadTypes(withPayloadTypes);
         queryResult.setWithJoined(withJoined);
         queryResult.setWithResultsPtr(withResultsPtr);
-        queryResult.setWithShardID(withShardID);
+        queryResult.setWithShardId(withShardId);
         List<PayloadType> payloadTypes = new ArrayList<>();
         queryResult.setPayloadTypes(payloadTypes);
         if (!isJson && queryResult.isWithPayloadTypes()) {
@@ -143,7 +143,7 @@ public class QueryResultReader {
                     queryResult.setShardingVersion(buffer.getVarInt());
                     break;
                 case QUERY_RESULT_SHARD_ID:
-                    queryResult.setShardID((int) buffer.getVarUInt());
+                    queryResult.setShardId((int) buffer.getVarUInt());
                     break;
                 default:
                     throw new RuntimeException("Illegal QueryResults tag: " + tag);
