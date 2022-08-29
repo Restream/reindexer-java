@@ -24,10 +24,7 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * A {@link QueryResult} reader.
@@ -37,6 +34,12 @@ public class QueryResultReader {
     private static final int QUERY_RESULT_END = 0;
 
     private static final int QUERY_RESULT_AGGREGATION = 1;
+
+    private static final int QUERY_RESULT_EXPLAIN = 2;
+
+    private static final int QUERY_RESULT_SHARDING_VERSION = 3;
+
+    private static final int QUERY_RESULT_SHARD_ID = 4;
 
     private static final int RESULTS_FORMAT_MASK = 0xF;
 
@@ -51,6 +54,8 @@ public class QueryResultReader {
     private static final int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
 
     private static final int RESULTS_WITH_JOINED = 0x100;
+
+    private static final int RESULTS_WITH_SHARD_ID = 0x800;
 
     private static final int RESULTS_PTRS = 0x1;
 
@@ -72,6 +77,7 @@ public class QueryResultReader {
         boolean withPayloadTypes = (flags & RESULTS_WITH_PAYLOAD_TYPES) != 0;
         boolean withJoined = (flags & RESULTS_WITH_JOINED) != 0;
         boolean withResultsPtr = (flags & RESULTS_PTRS) != 0;
+        boolean withShardID = (flags & RESULTS_WITH_SHARD_ID) != 0;
         QueryResult queryResult = new QueryResult();
         queryResult.setJson(isJson);
         queryResult.setWithRank(withRank);
@@ -83,6 +89,7 @@ public class QueryResultReader {
         queryResult.setWithPayloadTypes(withPayloadTypes);
         queryResult.setWithJoined(withJoined);
         queryResult.setWithResultsPtr(withResultsPtr);
+        queryResult.setWithShardID(withShardID);
         List<PayloadType> payloadTypes = new ArrayList<>();
         queryResult.setPayloadTypes(payloadTypes);
         if (!isJson && queryResult.isWithPayloadTypes()) {
@@ -120,13 +127,32 @@ public class QueryResultReader {
                 payloadTypes.add(payloadType);
             }
         }
-        Map<Integer, List<byte[]>> extraResults = readExtraResults(buffer);
-        List<byte[]> rawAggregations = extraResults.getOrDefault(QUERY_RESULT_AGGREGATION, new ArrayList<>());
-        List<AggregationResult> aggregationResults = rawAggregations.stream()
-                .map(this::deserializeAggResult)
-                .collect(Collectors.toList());
+
+        int tag = (int) buffer.getVarUInt();
+        ArrayList<AggregationResult> aggregationResults = new ArrayList<AggregationResult>();
+        while (tag != QUERY_RESULT_END) {
+            switch (tag) {
+                case QUERY_RESULT_AGGREGATION:
+                    byte[] data = buffer.getBytes((int) buffer.getUInt32());
+                    aggregationResults.add(deserializeAggResult(data));
+                    break;
+                case QUERY_RESULT_EXPLAIN:
+                    buffer.getBytes((int) buffer.getUInt32());
+                    break;
+                case QUERY_RESULT_SHARDING_VERSION:
+                    queryResult.setShardingVersion(buffer.getVarInt());
+                    break;
+                case QUERY_RESULT_SHARD_ID:
+                    queryResult.setShardID((int) buffer.getVarUInt());
+                    break;
+                default:
+                    throw new RuntimeException("Illegal QueryResults tag: " + tag);
+            }
+            tag = (int) buffer.getVarUInt();
+        }
         queryResult.setAggResults(aggregationResults);
         queryResult.setBuffer(new ByteBuffer(buffer.getBytes()).rewind());
+
         return queryResult;
     }
 
@@ -134,18 +160,4 @@ public class QueryResultReader {
         String json = new String(bytes, StandardCharsets.UTF_8);
         return gson.fromJson(json, AggregationResult.class);
     }
-
-    private Map<Integer, List<byte[]>> readExtraResults(ByteBuffer buffer) {
-        Map<Integer, List<byte[]>> extraResults = new HashMap<>();
-        int tag = (int) buffer.getVarUInt();
-        while (tag != QUERY_RESULT_END) {
-            byte[] data = buffer.getBytes((int) buffer.getUInt32());
-            extraResults.computeIfAbsent(tag, t -> new ArrayList<>())
-                    .add(data);
-
-            tag = (int) buffer.getVarUInt();
-        }
-        return extraResults;
-    }
-
 }

@@ -38,6 +38,8 @@ public class QueryResult {
 
     private boolean withRank;
 
+    private boolean withShardID;
+
     private boolean withItemId;
 
     private boolean withNsId;
@@ -53,6 +55,10 @@ public class QueryResult {
     private List<AggregationResult> aggResults;
 
     private ByteBuffer buffer;
+
+    private int shardID = Consts.SHARDING_PROXY_OFF;
+
+    private long shardingVersion;
 
     /**
      * Get the current query result total count.
@@ -160,6 +166,24 @@ public class QueryResult {
      */
     public void setWithRank(boolean withRank) {
         this.withRank = withRank;
+    }
+
+    /**
+     * An indication that the query result contains shard ID values.
+     *
+     * @return true, if query result contains shard ID values
+     */
+    public boolean isWithShardID() {
+        return withShardID;
+    }
+
+    /**
+     * Set the indication that the query result contains shard ID values.
+     *
+     * @param withRank true, if query result contains shard ID values
+     */
+    public void setWithShardID(boolean withShardID) {
+        this.withShardID = withShardID;
     }
 
     /**
@@ -304,5 +328,41 @@ public class QueryResult {
      */
     public void setAggResults(List<AggregationResult> aggResults) {
         this.aggResults = aggResults;
+    }
+
+    /**
+     * Get the global shard ID value for QueryResults.
+     *
+     * @return global shard ID
+     */
+    public int getShardID() {
+        return shardID;
+    }
+
+    /**
+     * Set the global shard ID value for QueryResults.
+     *
+     * @param shardID shard ID value
+     */
+    public void setShardID(int shardID) {
+        this.shardID = shardID;
+    }
+
+    /**
+     * Get version of the sharding config.
+     *
+     * @return sharding config version
+     */
+    public long getShardingVersion() {
+        return shardingVersion;
+    }
+
+    /**
+     * Get version of the sharding config.
+     *
+     * @param shardingVersion sharding config version
+     */
+    public void setShardingVersion(long shardingVersion) {
+        this.shardingVersion = shardingVersion;
     }
 }

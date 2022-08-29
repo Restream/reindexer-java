@@ -19,6 +19,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.annotations.Transient;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
@@ -241,6 +242,14 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         if (queryResult.isWithItemId()) {
             params.id = buffer.getVarUInt();
             params.version = buffer.getVarUInt();
+            if (queryResult.isWithShardID()) {
+                if (queryResult.getShardID() != Consts.SHARDING_PROXY_OFF) {
+                    params.shardID = queryResult.getShardID();
+                } else {
+                    params.shardID = (int) buffer.getVarUInt();
+                }
+
+            }
         }
 
         if (queryResult.isWithNsId()) {
@@ -299,6 +308,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
     private static class ItemParams {
         private long rank = -1;
         private long id = -1;
+        private int shardID = Consts.SHARDING_PROXY_OFF;
         private long version = -1;
         private long cptr;
         private int nsId = 0;
@@ -309,6 +319,10 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
 
         public long getId() {
             return id;
+        }
+
+        public int getShardID() {
+            return shardID;
         }
 
         public long getVersion() {

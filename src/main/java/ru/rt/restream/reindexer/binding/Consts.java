@@ -66,9 +66,6 @@ public final class Consts {
     public static final int MODE_CACHED_TOTAL = 1;
     public static final int MODE_ACCURATE_TOTAL = 2;
 
-    public static final int QUERY_RESULT_AGGREGATION = 1;
-    public static final int QUERY_RESULT_EXPLAIN = 2;
-
     public static final int RESULTS_FORMAT_MASK = 0xF;
     public static final int RESULTS_PURE = 0x0;
     public static final int RESULTS_PTRS = 0x1;
@@ -106,5 +103,8 @@ public final class Consts {
     public static final int ERR_NETWORK = 12;
     public static final int ERR_NOT_FOUND = 13;
     public static final int ERR_STATE_INVALIDATED = 14;
+
+    public static final int SHARDING_PROXY_OFF = -2;
+    public static final int NOT_SHARDED = -3;
 
 }

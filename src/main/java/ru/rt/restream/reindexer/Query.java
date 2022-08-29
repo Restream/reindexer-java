@@ -97,6 +97,7 @@ public class Query<T> {
     private static final int QUERY_UPDATE_OBJECT = 22;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
     private static final int QUERY_BETWEEN_FIELDS_CONDITION = 26;
+    private static final int QUERY_ALWAYS_FALSE_CONDITION = 27;
 
     /**
      * Condition types.

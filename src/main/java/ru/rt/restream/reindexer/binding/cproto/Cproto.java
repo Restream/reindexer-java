@@ -122,7 +122,7 @@ public class Cproto implements Binding {
     public RequestContext select(String query, boolean asJson, int fetchCount, long[] ptVersions) {
         int flags = asJson
                 ? Consts.RESULTS_JSON
-                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT_SQL, query, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
@@ -136,7 +136,7 @@ public class Cproto implements Binding {
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
         int flags = asJson
                 ? Consts.RESULTS_JSON
-                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES | Consts.RESULTS_WITH_ITEM_ID;
+                : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
