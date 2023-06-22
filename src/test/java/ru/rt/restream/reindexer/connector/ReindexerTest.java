@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.connector;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -2692,6 +2694,28 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(item.value, is(testItem.value));
     }
 
+    @Test
+    public void testUuidItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), UuidItem.class);
+
+        UUID uuid = UUID.randomUUID();
+        UuidItem testItem = new UuidItem();
+        testItem.setId(123);
+        testItem.setUuid(uuid);
+
+        db.insert(namespaceName, testItem);
+
+        Iterator<UuidItem> iterator = db.query(namespaceName, UuidItem.class)
+                .where("id", EQ, 123)
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+
+        UuidItem item = iterator.next();
+        assertThat(item.id, is(testItem.id));
+        assertThat(item.uuid, is(testItem.uuid));
+    }
+
     public static class SerialIdTestItem {
 
         @Serial
@@ -2866,6 +2890,29 @@ public abstract class ReindexerTest extends DbBaseTest {
             this.id = id;
         }
 
+    }
+
+    public static class UuidItem {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+        @Reindex(name = "uuid")
+        private UUID uuid;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
+        public UUID getUuid() {
+            return uuid;
+        }
+
+        public void setUuid(UUID uuid) {
+            this.uuid = uuid;
+        }
     }
 
 }
