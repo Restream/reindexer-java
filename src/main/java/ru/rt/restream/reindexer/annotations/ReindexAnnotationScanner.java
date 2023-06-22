@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static ru.rt.restream.reindexer.FieldType.BOOL;
 import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
@@ -43,6 +44,7 @@ import static ru.rt.restream.reindexer.FieldType.DOUBLE;
 import static ru.rt.restream.reindexer.FieldType.INT;
 import static ru.rt.restream.reindexer.FieldType.INT64;
 import static ru.rt.restream.reindexer.FieldType.STRING;
+import static ru.rt.restream.reindexer.FieldType.UUID;
 
 /**
  * {@inheritDoc}
@@ -81,6 +83,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         MAPPED_TYPES.put(String.class, STRING);
         MAPPED_TYPES.put(char.class, STRING);
         MAPPED_TYPES.put(Character.class, STRING);
+        //UUID
+        MAPPED_TYPES.put(UUID.class, UUID);
     }
 
     @Override
@@ -145,9 +149,12 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                     precept = field.getName() + "=serial()";
                 }
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
-                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
+                validateUuidIndex(reindex, fieldInfo);
+                boolean isUuid = fieldInfo.fieldType == UUID;
+                IndexType indexType = isUuid ? IndexType.HASH : reindex.type();
+                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig);
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid);
                 indexes.add(index);
             }
         }
@@ -159,11 +166,24 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false);
             indexes.add(compositeIndex);
         }
 
         return indexes;
+    }
+
+    private void validateUuidIndex(Reindex index, FieldInfo fieldInfo) {
+        boolean isUuidTypes = fieldInfo.fieldType == UUID;
+        boolean isHash = index.type() == IndexType.DEFAULT || index.type() == IndexType.HASH;
+
+        if (isUuidTypes && !isHash) {
+            throw new RuntimeException("UUID index can only be of HASH type");
+        }
+
+        if (index.isUuid() && !isUuidTypes) {
+            throw new RuntimeException("UUID index can only be for UUID fields");
+        }
     }
 
     private FullTextConfig getFullTextConfig(Field field, IndexType type) {
@@ -191,7 +211,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
-                                       FullTextConfig textConfig) {
+                                       FullTextConfig textConfig, boolean isUuid) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -206,6 +226,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setFieldType(fieldType);
         index.setPrecept(precept);
         index.setFullTextConfig(textConfig);
+        index.setUuid(isUuid);
         return index;
     }
 
