@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
+import java.util.UUID;
+
 /**
  * A class representing a Cjson primitive value.
  */
@@ -35,6 +37,10 @@ public class CjsonPrimitive extends CjsonElement {
     }
 
     public CjsonPrimitive(Double value) {
+        this.value = value;
+    }
+
+    public CjsonPrimitive(UUID value) {
         this.value = value;
     }
 
@@ -148,6 +154,17 @@ public class CjsonPrimitive extends CjsonElement {
         }
     }
 
+    @Override
+    public UUID getAsUuid() {
+        if (value instanceof UUID) {
+            return (UUID) value;
+        } else if (value instanceof String) {
+            return UUID.fromString((String) value);
+        } else {
+            throw new IllegalStateException(String.format("Unexpected value type: %s", value.getClass().getName()));
+        }
+    }
+
     /**
      * Check that value is an integral type
      *
@@ -182,6 +199,15 @@ public class CjsonPrimitive extends CjsonElement {
      */
     public boolean isBoolean() {
         return value instanceof Boolean;
+    }
+
+    /**
+     * Check that value is a UUID type
+     *
+     * @return true if value is a UUID type
+     */
+    public boolean isUuid() {
+        return value instanceof UUID;
     }
 
     /**

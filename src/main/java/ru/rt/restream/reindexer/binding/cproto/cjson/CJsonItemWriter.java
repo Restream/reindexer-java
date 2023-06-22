@@ -24,6 +24,7 @@ import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Encodes item into cjson format and writes its data into the {@link ByteBuffer}.
@@ -64,6 +65,8 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
             return new CjsonPrimitive(((Double) source));
         } else if (source instanceof Float) {
             return new CjsonPrimitive(((Float) source).doubleValue());
+        } else if (source instanceof UUID) {
+            return new CjsonPrimitive((UUID) source);
         } else if (source instanceof List) {
             CjsonArray cjsonArray = new CjsonArray();
             List<?> sourceList = (List<?>) source;

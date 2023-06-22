@@ -66,6 +66,8 @@ public class CjsonDecoder {
             return readCjsonPrimitive(ctagType);
         } else if (ctagType == Ctag.STRING) {
             return readCjsonPrimitive(ctagType);
+        } else if (ctagType == Ctag.UUID) {
+            return readCjsonPrimitive(ctagType);
         } else if (ctagType == Ctag.NULL) {
             return CjsonNull.INSTANCE;
         } else {
@@ -108,6 +110,8 @@ public class CjsonDecoder {
                 return new CjsonPrimitive(buffer.getDouble());
             case Ctag.STRING:
                 return new CjsonPrimitive(buffer.getVString());
+            case Ctag.UUID:
+                return new CjsonPrimitive(buffer.getUuid());
             default:
                 throw new IllegalStateException("Not a cjson primitive type");
 

@@ -24,6 +24,7 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Encodes CjsonElement to a byte array.
@@ -109,6 +110,10 @@ public class CjsonEncoder {
                 for (CjsonElement element : elements) {
                     buffer.putVarUInt32(element.getAsBoolean() ? 1L : 0L);
                 }
+            } else if (ctagType == Ctag.UUID) {
+                for (CjsonElement element : elements) {
+                    buffer.putUuid(element.getAsUuid());
+                }
             } else if (ctagType == Ctag.OBJECT) {
                 for (CjsonElement element : elements) {
                     encodeObject(element.getAsCjsonObject(), 0);
@@ -130,6 +135,8 @@ public class CjsonEncoder {
                 return Ctag.STRING;
             } else if (cjsonPrimitive.isBoolean()) {
                 return Ctag.BOOL;
+            } else if (cjsonPrimitive.isUuid()) {
+                return Ctag.UUID;
             }
         }
         throw new UnsupportedOperationException(String.format("Unsupported data cjson type: %s", cjsonElement));
@@ -156,6 +163,11 @@ public class CjsonEncoder {
             Long value = cjsonPrimitive.getAsLong();
             buffer.putVarUInt32(ctag.getValue());
             buffer.putVarInt64(value);
+        } else if (cjsonPrimitive.isUuid()) {
+            Ctag ctag = new Ctag(Ctag.UUID, ctagName, 0);
+            UUID value = cjsonPrimitive.getAsUuid();
+            buffer.putVarUInt32(ctag.getValue());
+            buffer.putUuid(value);
         }
     }
 
