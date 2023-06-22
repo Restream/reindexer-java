@@ -2707,7 +2707,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.insert(namespaceName, testItem);
 
         Iterator<UuidItem> iterator = db.query(namespaceName, UuidItem.class)
-                .where("id", EQ, 123)
+                .where("uuid", EQ, uuid)
                 .execute();
         assertThat(iterator.hasNext(), is(true));
 

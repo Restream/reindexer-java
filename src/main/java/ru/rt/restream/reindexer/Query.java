@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.UUID;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -733,6 +734,9 @@ public class Query<T> {
             Character character = (Character) value;
             buffer.putVarUInt32(Consts.VALUE_STRING)
                     .putVString(character.toString());
+        } else if (value instanceof UUID) {
+            buffer.putVarUInt32(Consts.VALUE_UUID)
+                    .putUuid((UUID) value);
         } else if (value instanceof Object[]) {
             buffer.putVarUInt32(Consts.VALUE_TUPLE);
             Object[] objects = (Object[]) value;
