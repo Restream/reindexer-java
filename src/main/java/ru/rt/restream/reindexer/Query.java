@@ -28,6 +28,7 @@ import ru.rt.restream.reindexer.util.JsonSerializer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
@@ -355,23 +356,10 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> where(String indexName, Condition condition, Collection<?> values) {
-        logBuilder.where(nextOperation, indexName, condition.code, values);
-        buffer.putVarUInt32(QUERY_CONDITION)
-                .putVString(indexName)
-                .putVarUInt32(nextOperation)
-                .putVarUInt32(condition.code);
-
-        this.nextOperation = OP_AND;
-        this.queryCount++;
-
-        if (values != null) {
-            buffer.putVarUInt32(values.size());
-            for (Object key : values) {
-                putValue(key);
-            }
+        if (values == null) {
+            values = Collections.emptyList();
         }
-
-        return this;
+        return where(indexName, condition, values.toArray());
     }
 
     /**
@@ -392,11 +380,9 @@ public class Query<T> {
         this.nextOperation = OP_AND;
         this.queryCount++;
 
-        if (values != null) {
-            buffer.putVarUInt32(values.length);
-            for (Object key : values) {
-                putValue(key);
-            }
+        buffer.putVarUInt32(values.length);
+        for (Object key : values) {
+            putValue(key);
         }
 
         return this;
