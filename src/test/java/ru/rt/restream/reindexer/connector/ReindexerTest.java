@@ -17,11 +17,10 @@ package ru.rt.restream.reindexer.connector;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.IndexType;
-import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
@@ -2698,22 +2697,43 @@ public abstract class ReindexerTest extends DbBaseTest {
     public void testUuidItem() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), UuidItem.class);
+        int itemsCount = 100;
+        for (int i = 0; i < itemsCount; i++) {
+            UUID uuid = UUID.randomUUID();
+            UuidItem testItem = new UuidItem();
+            testItem.setId(i);
+            testItem.setUuid(uuid);
+            testItem.setStrUuid(uuid.toString());
+            testItem.setStr(uuid.toString());
+            testItem.setNoIndexStrUuid(uuid.toString());
 
-        UUID uuid = UUID.randomUUID();
-        UuidItem testItem = new UuidItem();
-        testItem.setId(123);
-        testItem.setUuid(uuid);
+            db.insert(namespaceName, testItem);
+        }
 
-        db.insert(namespaceName, testItem);
+        UuidItem testItem = db.query(namespaceName, UuidItem.class)
+                .where("id", EQ, itemsCount / 2)
+                .execute().next();
+        UUID search = testItem.uuid;
 
-        Iterator<UuidItem> iterator = db.query(namespaceName, UuidItem.class)
-                .where("uuid", EQ, uuid)
-                .execute();
-        assertThat(iterator.hasNext(), is(true));
+        boolean foundOnUuidByUuidSql = db.execSql("select * from items where noIndexStrUuid = '" + search.toString() + "'", UuidItem.class).hasNext();
 
-        UuidItem item = iterator.next();
-        assertThat(item.id, is(testItem.id));
-        assertThat(item.uuid, is(testItem.uuid));
+        UuidItem foundOnUuidByUuid = db.query(namespaceName, UuidItem.class)
+                .where("uuid", EQ, search)
+                .execute().next();
+        UuidItem foundOnUuidByString = db.query(namespaceName, UuidItem.class)
+                .where("uuid", EQ, search.toString())
+                .execute().next();
+        UuidItem foundOnStrUuidByUuid = db.query(namespaceName, UuidItem.class)
+                .where("strUuid", EQ, search)
+                .execute().next();
+        UuidItem foundOnStrUuidByString = db.query(namespaceName, UuidItem.class)
+                .where("strUuid", EQ, search.toString())
+                .execute().next();
+
+        assertThat(testItem, is(foundOnUuidByUuid));
+        assertThat(testItem, is(foundOnUuidByString));
+        assertThat(testItem, is(foundOnStrUuidByUuid));
+        assertThat(testItem, is(foundOnStrUuidByString));
     }
 
     public static class SerialIdTestItem {
@@ -2897,6 +2917,11 @@ public abstract class ReindexerTest extends DbBaseTest {
         private Integer id;
         @Reindex(name = "uuid")
         private UUID uuid;
+        @Reindex(name = "strUuid", isUuid = true)
+        private String strUuid;
+        @Reindex(name = "str")
+        private String str;
+        private String noIndexStrUuid;
 
         public Integer getId() {
             return id;
@@ -2912,6 +2937,47 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         public void setUuid(UUID uuid) {
             this.uuid = uuid;
+        }
+
+        public String getStrUuid() {
+            return strUuid;
+        }
+
+        public void setStrUuid(String strUuid) {
+            this.strUuid = strUuid;
+        }
+
+        public String getNoIndexStrUuid() {
+            return noIndexStrUuid;
+        }
+
+        public void setNoIndexStrUuid(String noIndexStrUuid) {
+            this.noIndexStrUuid = noIndexStrUuid;
+        }
+
+        public String getStr() {
+            return str;
+        }
+
+        public void setStr(String str) {
+            this.str = str;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            UuidItem uuidItem = (UuidItem) o;
+            return Objects.equals(id, uuidItem.id)
+                    && Objects.equals(uuid, uuidItem.uuid)
+                    && Objects.equals(strUuid, uuidItem.strUuid)
+                    && Objects.equals(str, uuidItem.str)
+                    && Objects.equals(noIndexStrUuid, uuidItem.noIndexStrUuid);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id);
         }
     }
 

@@ -114,6 +114,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
+            // todo remove validate after release of support of no index UUID fields
+            validateUuidFieldHasIndex(itemClass, field, reindex);
             if (reindex == null || "-".equals(reindex.name()) || field.isAnnotationPresent(Transient.class)) {
                 continue;
             }
@@ -150,10 +152,11 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 }
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
                 validateUuidIndex(reindex, fieldInfo);
-                boolean isUuid = fieldInfo.fieldType == UUID;
+                boolean isUuid = reindex.isUuid() || fieldInfo.fieldType == UUID;
                 IndexType indexType = isUuid ? IndexType.HASH : reindex.type();
+                FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
-                        fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
+                        fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
                         fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid);
                 indexes.add(index);
             }
@@ -173,8 +176,16 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         return indexes;
     }
 
+    private void validateUuidFieldHasIndex(Class<?> itemClass, Field field, Reindex reindex) {
+        if (reindex == null && field.getType() == UUID.class) {
+            throw new RuntimeException(String.format("Field %s.%s has type UUID so it must have annotation Reindex ",
+                    itemClass.getSimpleName(), field.getName()));
+        }
+    }
+
     private void validateUuidIndex(Reindex index, FieldInfo fieldInfo) {
-        boolean isUuidTypes = fieldInfo.fieldType == UUID;
+        boolean isUuidTypes = fieldInfo.fieldType == UUID
+                || index.isUuid() && fieldInfo.fieldType == STRING;
         boolean isHash = index.type() == IndexType.DEFAULT || index.type() == IndexType.HASH;
 
         if (isUuidTypes && !isHash) {
@@ -182,7 +193,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         if (index.isUuid() && !isUuidTypes) {
-            throw new RuntimeException("UUID index can only be for UUID fields");
+            throw new RuntimeException("UUID index can only be for UUID or String fields");
         }
     }
 

@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
 import ru.rt.restream.reindexer.annotations.Json;
+import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
@@ -84,7 +85,14 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                 }
                 Object fieldValue = readFieldValue(source, field);
                 if (fieldValue != null) {
-                    CjsonElement cjsonElement = toCjson(fieldValue);
+                    CjsonElement cjsonElement;
+                    // hack for serialization of String field with Reindex.isUuid() == true as UUID.
+                    if (field.getType() == String.class && field.isAnnotationPresent(Reindex.class)
+                            && field.getAnnotation(Reindex.class).isUuid()) {
+                        cjsonElement = new CjsonPrimitive(UUID.fromString((String) fieldValue));
+                    } else {
+                        cjsonElement = toCjson(fieldValue);
+                    }
                     Json json = field.getAnnotation(Json.class);
                     String tagName = json == null ? field.getName() : json.value();
                     cjsonObject.add(tagName, cjsonElement);
