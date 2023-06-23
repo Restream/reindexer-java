@@ -5,6 +5,10 @@ project(builtin-adapter)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Delete debug symbols
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
+
 set(TARGET builtin-adapter)
 
 find_package(JNI REQUIRED)
