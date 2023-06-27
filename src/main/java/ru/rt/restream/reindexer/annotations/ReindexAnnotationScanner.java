@@ -151,9 +151,9 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                     precept = field.getName() + "=serial()";
                 }
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
-                validateUuidIndex(reindex, fieldInfo);
+                validateUuidIndexHasTypeUuidOrString(reindex, fieldInfo);
                 boolean isUuid = reindex.isUuid() || fieldInfo.fieldType == UUID;
-                IndexType indexType = isUuid ? IndexType.HASH : reindex.type();
+                IndexType indexType = (isUuid && reindex.type() == IndexType.DEFAULT) ? IndexType.HASH : reindex.type();
                 FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
@@ -183,16 +183,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
     }
 
-    private void validateUuidIndex(Reindex index, FieldInfo fieldInfo) {
-        boolean isUuidTypes = fieldInfo.fieldType == UUID
-                || index.isUuid() && fieldInfo.fieldType == STRING;
-        boolean isHash = index.type() == IndexType.DEFAULT || index.type() == IndexType.HASH;
-
-        if (isUuidTypes && !isHash) {
-            throw new RuntimeException("UUID index can only be of HASH type");
-        }
-
-        if (index.isUuid() && !isUuidTypes) {
+    private void validateUuidIndexHasTypeUuidOrString(Reindex index, FieldInfo fieldInfo) {
+        if (index.isUuid() && fieldInfo.fieldType != UUID && fieldInfo.fieldType != STRING) {
             throw new RuntimeException("UUID index can only be for UUID or String fields");
         }
     }
