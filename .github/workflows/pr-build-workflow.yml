@@ -4,7 +4,7 @@ on: pull_request
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: github.repository == 'Restream/reindexer-java'
 
     steps:
@@ -16,7 +16,7 @@ jobs:
       - name: Install Reindexer
         run: |
           curl https://repo.reindexer.io/RX-KEY.GPG | sudo apt-key add
-          echo 'deb https://repo.reindexer.io/ubuntu-bionic /' | sudo tee -a /etc/apt/sources.list
+          echo 'deb https://repo.reindexer.io/ubuntu-focal /' | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install reindexer-dev
       - name: Build with Maven

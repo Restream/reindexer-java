@@ -45,6 +45,11 @@ public enum FieldType {
     STRING("string"),
 
     /**
+     * Reindexer UUID type.
+     */
+    UUID("uuid"),
+
+    /**
      * Reindexer composite type.
      */
     COMPOSITE("composite");

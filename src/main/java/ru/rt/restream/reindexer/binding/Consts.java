@@ -49,6 +49,7 @@ public final class Consts {
     public static final int VALUE_UNDEFINED = 9;
     public static final int VALUE_COMPOSITE = 10;
     public static final int VALUE_TUPLE = 11;
+    public static final int VALUE_UUID = 12;
 
     public static final int LEFT_JOIN = 0;
     public static final int INNER_JOIN = 1;

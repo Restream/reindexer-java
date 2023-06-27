@@ -110,8 +110,8 @@ public class PhysicalConnection implements Connection {
                 requests.add(new RpcRequest());
                 sequences.add(i);
             }
-            readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 1, TimeUnit.MILLISECONDS);
-            writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 1, TimeUnit.MILLISECONDS);
+            readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
+            writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
             ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database);
         } catch (Exception e) {
             onError(e);

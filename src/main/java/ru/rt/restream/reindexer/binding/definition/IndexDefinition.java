@@ -45,6 +45,8 @@ public class IndexDefinition {
 
     private boolean isAppendable;
 
+    private boolean isUuid;
+
     private String collateMode;
 
     private String sortOrder;
@@ -72,6 +74,7 @@ public class IndexDefinition {
         indexDefinition.setLinear(false);
         indexDefinition.setAppendable(false);
         indexDefinition.setConfig(index.getFullTextConfig());
+        indexDefinition.setUuid(index.isUuid());
         return indexDefinition;
     }
 
@@ -253,6 +256,24 @@ public class IndexDefinition {
      */
     public void setAppendable(boolean appendable) {
         isAppendable = appendable;
+    }
+
+    /**
+     * Get the indication, that the current index is appendable.
+     *
+     * @return true, is the current index is appendable
+     */
+    public boolean isUuid() {
+        return isUuid;
+    }
+
+    /**
+     * Set the indication, that the current index is for UUID.
+     *
+     * @param uuid true, if the current index is for UUID
+     */
+    public void setUuid(boolean uuid) {
+        isUuid = uuid;
     }
 
     /**

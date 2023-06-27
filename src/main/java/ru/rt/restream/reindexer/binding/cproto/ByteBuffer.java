@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.UUID;
 
 /**
  * A byte buffer with auto-expansion functionality. This class defines methods for reading and writing values with space
@@ -176,6 +177,7 @@ public class ByteBuffer {
     /**
      * Encodes a value using the variable-length encoding without sign check.
      * Used only for stateToken encoding.
+     *
      * @param value value to encode
      * @return the {@link ByteBuffer} for further customizations
      */
@@ -228,6 +230,19 @@ public class ByteBuffer {
     public ByteBuffer putVString(String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         putVBytes(bytes);
+        return this;
+    }
+
+    /**
+     * Encodes a UUID value.
+     * Increments buffer position.
+     *
+     * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
+     */
+    public ByteBuffer putUuid(UUID value) {
+        putIntBits(value.getMostSignificantBits(), Long.BYTES, -1);
+        putIntBits(value.getLeastSignificantBits(), Long.BYTES, -1);
         return this;
     }
 
@@ -352,6 +367,16 @@ public class ByteBuffer {
     public String getVString() {
         int length = (int) getVarUInt();
         return getString(length);
+    }
+
+    /**
+     * Reads a UUID (two 64-bit integer) from the current position in the buffer.
+     * Increments buffer position.
+     *
+     * @return the UUID read from a backed array
+     */
+    public UUID getUuid() {
+        return new UUID(readIntBits(Long.BYTES), readIntBits(Long.BYTES));
     }
 
     /**

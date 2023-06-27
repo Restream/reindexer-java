@@ -27,6 +27,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Reads items from a {@link ByteBuffer}, that contains cjson-encoded data.
@@ -108,6 +109,8 @@ public class CjsonItemReader<T> implements ItemReader<T> {
             return element.getAsDouble();
         } else if (targetClass == Float.class || targetClass == float.class) {
             return element.getAsFloat();
+        } else if (targetClass == UUID.class) {
+            return element.getAsUuid();
         } else if (element.isObject()) {
             return readObject(element.getAsCjsonObject(), targetClass);
         } else {

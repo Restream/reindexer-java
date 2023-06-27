@@ -48,6 +48,8 @@ public class ReindexerIndex {
 
     private boolean isSparse;
 
+    private boolean isUuid;
+
     /**
      * Get the current index name.
      *
@@ -269,5 +271,23 @@ public class ReindexerIndex {
      */
     public void setSparse(boolean sparse) {
         isSparse = sparse;
+    }
+
+    /**
+     * Get the indication, that the current index is for UUID.
+     *
+     * @return true, if the current index is for UUID
+     */
+    public boolean isUuid() {
+        return isUuid;
+    }
+
+    /**
+     * Set the indication, that the current index is for UUID.
+     *
+     * @param uuid true, if the current index is for UUID
+     */
+    public void setUuid(boolean uuid) {
+        isUuid = uuid;
     }
 }

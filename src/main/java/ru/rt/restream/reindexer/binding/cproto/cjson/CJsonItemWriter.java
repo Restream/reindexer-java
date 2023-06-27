@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
 import ru.rt.restream.reindexer.annotations.Json;
+import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
@@ -24,6 +25,7 @@ import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Encodes item into cjson format and writes its data into the {@link ByteBuffer}.
@@ -64,6 +66,8 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
             return new CjsonPrimitive(((Double) source));
         } else if (source instanceof Float) {
             return new CjsonPrimitive(((Float) source).doubleValue());
+        } else if (source instanceof UUID) {
+            return new CjsonPrimitive((UUID) source);
         } else if (source instanceof List) {
             CjsonArray cjsonArray = new CjsonArray();
             List<?> sourceList = (List<?>) source;
@@ -81,7 +85,14 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                 }
                 Object fieldValue = readFieldValue(source, field);
                 if (fieldValue != null) {
-                    CjsonElement cjsonElement = toCjson(fieldValue);
+                    CjsonElement cjsonElement;
+                    // hack for serialization of String field with Reindex.isUuid() == true as UUID.
+                    if (field.getType() == String.class && field.isAnnotationPresent(Reindex.class)
+                            && field.getAnnotation(Reindex.class).isUuid()) {
+                        cjsonElement = new CjsonPrimitive(UUID.fromString((String) fieldValue));
+                    } else {
+                        cjsonElement = toCjson(fieldValue);
+                    }
                     Json json = field.getAnnotation(Json.class);
                     String tagName = json == null ? field.getName() : json.value();
                     cjsonObject.add(tagName, cjsonElement);

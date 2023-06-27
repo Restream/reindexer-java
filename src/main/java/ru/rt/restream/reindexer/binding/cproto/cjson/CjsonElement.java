@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
+import java.util.UUID;
+
 /**
  * A class representing an element of Cjson. It could either be a {@link CjsonObject}, a
  * {@link CjsonArray}, a {@link CjsonPrimitive} or a {@link CjsonNull}.
@@ -174,6 +176,15 @@ public abstract class CjsonElement {
      * @return get this element as a Short value.
      */
     public Short getAsShort() {
+        throw new UnsupportedOperationException(getClass().getSimpleName());
+    }
+
+    /**
+     * Convenience method to get this element as a UUID value.
+     *
+     * @return get this element as a UUID value.
+     */
+    public UUID getAsUuid() {
         throw new UnsupportedOperationException(getClass().getSimpleName());
     }
 

@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static ru.rt.restream.reindexer.FieldType.BOOL;
 import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
@@ -43,6 +44,7 @@ import static ru.rt.restream.reindexer.FieldType.DOUBLE;
 import static ru.rt.restream.reindexer.FieldType.INT;
 import static ru.rt.restream.reindexer.FieldType.INT64;
 import static ru.rt.restream.reindexer.FieldType.STRING;
+import static ru.rt.restream.reindexer.FieldType.UUID;
 
 /**
  * {@inheritDoc}
@@ -81,6 +83,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         MAPPED_TYPES.put(String.class, STRING);
         MAPPED_TYPES.put(char.class, STRING);
         MAPPED_TYPES.put(Character.class, STRING);
+        //UUID
+        MAPPED_TYPES.put(UUID.class, UUID);
     }
 
     @Override
@@ -110,6 +114,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
+            // todo remove validate after release of support of no index UUID fields
+            validateUuidFieldHasIndex(itemClass, field, reindex);
             if (reindex == null || "-".equals(reindex.name()) || field.isAnnotationPresent(Transient.class)) {
                 continue;
             }
@@ -145,9 +151,13 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                     precept = field.getName() + "=serial()";
                 }
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
-                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), reindex.type(),
-                        fieldInfo.fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig);
+                validateUuidIndexHasTypeUuidOrString(reindex, fieldInfo);
+                boolean isUuid = reindex.isUuid() || fieldInfo.fieldType == UUID;
+                IndexType indexType = (isUuid && reindex.type() == IndexType.DEFAULT) ? IndexType.HASH : reindex.type();
+                FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
+                ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
+                        fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid);
                 indexes.add(index);
             }
         }
@@ -159,11 +169,24 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false);
             indexes.add(compositeIndex);
         }
 
         return indexes;
+    }
+
+    private void validateUuidFieldHasIndex(Class<?> itemClass, Field field, Reindex reindex) {
+        if (reindex == null && field.getType() == UUID.class) {
+            throw new RuntimeException(String.format("Field %s.%s has type UUID so it must have annotation Reindex ",
+                    itemClass.getSimpleName(), field.getName()));
+        }
+    }
+
+    private void validateUuidIndexHasTypeUuidOrString(Reindex index, FieldInfo fieldInfo) {
+        if (index.isUuid() && fieldInfo.fieldType != UUID && fieldInfo.fieldType != STRING) {
+            throw new RuntimeException("UUID index can only be for UUID or String fields");
+        }
     }
 
     private FullTextConfig getFullTextConfig(Field field, IndexType type) {
@@ -191,7 +214,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
-                                       FullTextConfig textConfig) {
+                                       FullTextConfig textConfig, boolean isUuid) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -206,6 +229,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setFieldType(fieldType);
         index.setPrecept(precept);
         index.setFullTextConfig(textConfig);
+        index.setUuid(isUuid);
         return index;
     }
 

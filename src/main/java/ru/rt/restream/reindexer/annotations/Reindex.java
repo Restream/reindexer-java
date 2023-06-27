@@ -94,4 +94,11 @@ public @interface Reindex {
      * @return a sub index names for a composite index
      */
     String[] subIndexes() default {};
+
+    /**
+     * Index is a UUID. Type of the index is only HASH.
+     *
+     * @return true, if index is UUID;
+     */
+    boolean isUuid() default false;
 }
