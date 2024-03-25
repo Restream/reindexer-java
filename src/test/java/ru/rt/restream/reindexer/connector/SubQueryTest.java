@@ -32,7 +32,6 @@ import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.GE;
 import static ru.rt.restream.reindexer.Query.Condition.GT;
 import static ru.rt.restream.reindexer.Query.Condition.LT;
-import static ru.rt.restream.reindexer.Query.Condition.SET;
 
 /**
  * Base SubQuery test.
@@ -98,6 +97,40 @@ public abstract class SubQueryTest extends DbBaseTest {
     }
 
     @Test
+    public void testWhereWithArgsIndexConditionQueryAndTwoNsAndNoAgg() {
+        Namespace<Person> personsNs = db.openNamespace("persons", NamespaceOptions.defaultOptions(), Person.class);
+        Namespace<Purchase> purchasesNs = db.openNamespace("purchases", NamespaceOptions.defaultOptions(), Purchase.class);
+        int purchaseId = 0;
+        // 24 persons, everyone has from 0 to 3 purchases, for a total of 36 purchases.
+        for (int i = 0; i < 24; i++) {
+            int age = 9 + (i % 8) * 10;
+            String name = "Person" + i + "Age" + age;
+            personsNs.insert(new Person(i, name, age));
+            for (int j = 0; j < i % 4; j++) {
+                int price = (j + 1) * 10;
+                purchasesNs.insert(new Purchase(purchaseId++, i, price, "Asset" + j));
+            }
+        }
+
+        // select * from purchases p
+        // where p.person_id in (select id from persons where age > 60)
+        Query<Person> retireeSubQuery = personsNs.query()
+                .select("id")
+                .where("age", GT, 60);
+        Query<Purchase> purchasesQuery = purchasesNs.query()
+                .where("person_id", EQ, retireeSubQuery);
+        ResultIterator<Purchase> iterator = purchasesQuery.execute();
+
+        List<Purchase> actualRetireesPurchases = new ArrayList<>();
+        while (iterator.hasNext()) {
+            actualRetireesPurchases.add(iterator.next());
+        }
+
+        // 6 persons with age > 60 have 15 purchases ((2 + 3) * 3).
+        assertThat(actualRetireesPurchases.size(), is(15));
+    }
+
+    @Test
     public void testWhereWithArgsQueryConditionValues() {
         Namespace<Banner> bannersNs = db.openNamespace("banners", NamespaceOptions.defaultOptions(), Banner.class);
         Namespace<Purchase> purchasesNs = db.openNamespace("purchases", NamespaceOptions.defaultOptions(), Purchase.class);
@@ -139,6 +172,52 @@ public abstract class SubQueryTest extends DbBaseTest {
         Query<Banner> bannerNotExistsQuery = bannersNs.query()
                 .where("id", EQ, 1)
                 .where(subQuery, LT, 30);
+        ResultIterator<Banner> bannerNotExistsIterator = bannerNotExistsQuery.execute();
+        assertThat(bannerNotExistsIterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testWhereWithArgsQueryConditionValuesAndNoAgg() {
+        Namespace<Banner> bannersNs = db.openNamespace("banners", NamespaceOptions.defaultOptions(), Banner.class);
+        Namespace<Purchase> purchasesNs = db.openNamespace("purchases", NamespaceOptions.defaultOptions(), Purchase.class);
+        bannersNs.insert(new Banner(1, "Banner"));
+        int purchaseId = 0;
+        // 24 persons, everyone has from 0 to 3 purchases, for a total of 36 purchases.
+        for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < i % 4; j++) {
+                int price = (j + 1) * 10;
+                purchasesNs.insert(new Purchase(purchaseId++, i, price, "Asset" + j));
+            }
+        }
+
+        int personId = 14;
+        int personPurchasesCnt = 2;
+        // prices of person14 purchases: 10, 20
+
+        // select * from banners b
+        // where b.id = 1 and (select p.price from purchases p where p.person_id = 14) = 20
+        Query<Purchase> subQuery = purchasesNs.query()
+                .select("price")
+                .where("person_id", EQ, personId);
+        Query<Banner> bannerExistsOnEqQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(subQuery, EQ, 20);
+        ResultIterator<Banner> bannerExistsOnEqIterator = bannerExistsOnEqQuery.execute();
+        assertThat(bannerExistsOnEqIterator.hasNext(), is(true));
+
+        // select * from banners b
+        // where b.id = 1 and (select p.price from purchases p where p.person_id = 14) >= 20
+        Query<Banner> bannerExistsOnGeQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(subQuery, GE, 20);
+        ResultIterator<Banner> bannerExistsOnGeIterator = bannerExistsOnGeQuery.execute();
+        assertThat(bannerExistsOnGeIterator.hasNext(), is(true));
+
+        // select * from banners b
+        // where b.id = 1 and (select p.price from purchases p where p.person_id = 14) > 20
+        Query<Banner> bannerNotExistsQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(subQuery, GT, 20);
         ResultIterator<Banner> bannerNotExistsIterator = bannerNotExistsQuery.execute();
         assertThat(bannerNotExistsIterator.hasNext(), is(false));
     }
