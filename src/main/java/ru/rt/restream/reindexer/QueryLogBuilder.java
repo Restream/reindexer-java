@@ -280,6 +280,7 @@ class QueryLogBuilder {
             whereEntries.add(queryEntry);
         }
     }
+
     void where(int operationCode, String field, int conditionCode, Object... values) {
         QueryEntry queryEntry = new QueryEntry();
         queryEntry.operation = getOperation(operationCode);
@@ -292,6 +293,10 @@ class QueryLogBuilder {
         } else {
             whereEntries.add(queryEntry);
         }
+    }
+
+    void where(int operationCode, Query<?> subquery, int conditionCode, Object... values) {
+        where(operationCode, mapToString(subquery), conditionCode, values);
     }
 
     void whereBetweenFields(int operationCode, String firstField, int conditionCode, String secondField) {
@@ -661,6 +666,9 @@ class QueryLogBuilder {
             return Arrays.stream((Object[]) whereEntryValue)
                     .map(v -> v instanceof String ? addQuotes(v) : String.valueOf(v))
                     .collect(Collectors.joining(", ", "{", "}"));
+        } else if (whereEntryValue instanceof Query<?>) {
+            Query<?> subquery = (Query<?>) whereEntryValue;
+            return "(" + subquery.getSql() + ")";
         }
         return whereEntryValue instanceof String ? addQuotes(whereEntryValue) : String.valueOf(whereEntryValue);
     }

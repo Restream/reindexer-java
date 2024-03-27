@@ -100,6 +100,9 @@ public class Query<T> {
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
     private static final int QUERY_BETWEEN_FIELDS_CONDITION = 26;
     private static final int QUERY_ALWAYS_FALSE_CONDITION = 27;
+    private static final int QUERY_ALWAYS_TRUE_CONDITION = 28;
+    private static final int QUERY_SUB_QUERY_CONDITION = 29;
+    private static final int QUERY_FIELD_SUB_QUERY_CONDITION = 30;
 
     /**
      * Condition types.
@@ -187,7 +190,7 @@ public class Query<T> {
 
     private final List<ReindexerNamespace<?>> namespaces = new ArrayList<>();
 
-    private Deque<Integer> openedBrackets = new ArrayDeque<>();
+    private final Deque<Integer> openedBrackets = new ArrayDeque<>();
 
     private final QueryLogBuilder logBuilder = new QueryLogBuilder();
 
@@ -384,6 +387,69 @@ public class Query<T> {
         for (Object key : values) {
             putValue(key);
         }
+
+        return this;
+    }
+
+    /**
+     * Queries are possible only on the indexed fields, marked with reindex annotation.
+     *
+     * @param subquery query returning aggregated values
+     * @param condition condition value {@link Condition}
+     * @param values    values to match
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> where(Query<?> subquery, Condition condition, Collection<?> values) {
+        if (values == null) {
+            values = Collections.emptyList();
+        }
+        return where(subquery, condition, values.toArray());
+    }
+
+    /**
+     * Queries are possible only on the indexed fields, marked with reindex annotation.
+     *
+     * @param subquery query returning aggregated values
+     * @param condition condition value {@link Condition}
+     * @param values    values to match
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> where(Query<?> subquery, Condition condition, Object... values) {
+        logBuilder.where(nextOperation, subquery, condition.code, values);
+        buffer.putVarUInt32(QUERY_SUB_QUERY_CONDITION)
+                .putVarUInt32(nextOperation)
+                .putVBytes(subquery.buffer.bytes())
+                .putVarUInt32(condition.code);
+
+        this.nextOperation = OP_AND;
+        this.queryCount++;
+
+        buffer.putVarUInt32(values.length);
+        for (Object key : values) {
+            putValue(key);
+        }
+
+        return this;
+    }
+
+    /**
+     * Queries are possible only on the indexed fields, marked with reindex annotation.
+     *
+     * @param indexName index name
+     * @param condition condition value {@link Condition}
+     * @param subquery query returning aggregated values
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> where(String indexName, Condition condition, Query<?> subquery) {
+        logBuilder.where(nextOperation, indexName, condition.code, subquery);
+        buffer.putVarUInt32(QUERY_FIELD_SUB_QUERY_CONDITION)
+                .putVarUInt32(nextOperation)
+                .putVString(indexName)
+                .putVarUInt32(condition.code)
+                .putVBytes(subquery.buffer.bytes());
+
+        this.nextOperation = OP_AND;
+        this.queryCount++;
 
         return this;
     }
@@ -1138,6 +1204,15 @@ public class Query<T> {
      */
     public List<String> getJoinFields() {
         return joinFields;
+    }
+
+    /**
+     * Get constructed sql log string.
+     *
+     * @return SQL-like representation of reindexer query
+     */
+    String getSql() {
+        return logBuilder.getSql();
     }
 
 }
