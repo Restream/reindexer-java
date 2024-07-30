@@ -1837,7 +1837,12 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
             String jsonItem = gson.toJson(testItem);
-            tx.insertAsync(jsonItem).thenAccept(results::add);
+            String item;
+            tx.insertAsync(jsonItem).thenAccept(item);
+            StringBuilder stringBuilder = new StringBuilder()
+                .append(item.substring(0, item.length() - 1))
+                .append(",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}");
+            results.add(stringBuilder.toString());
         }
 
         tx.commit();
@@ -1847,7 +1852,6 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(iterator.size(), is(100L));
         assertThat(results, hasSize(100));
         assertThat(item0, is(in(results)));
-
     }
 
     @Test
@@ -2576,6 +2580,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
+        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}"
 
         for (int i = 1; i < 277; i++) {
             db.insert(namespaceName, String.format(templateItem, i));
@@ -2590,7 +2595,7 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String response = iterator.next();
 
-        assertThat(response, is(String.format(templateItem, 1)));
+        assertThat(response, is(String.format(expectedItem, 1)));
         iterator.close();
 
         QueryResultJsonIterator fetchAllIterator = db.query(namespaceName, TestItem.class)
