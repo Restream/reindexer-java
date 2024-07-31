@@ -2580,7 +2580,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
-        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}"
+        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}";
 
         for (int i = 1; i < 277; i++) {
             db.insert(namespaceName, String.format(templateItem, i));
