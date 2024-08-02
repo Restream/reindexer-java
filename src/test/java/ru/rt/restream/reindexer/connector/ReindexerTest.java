@@ -2606,8 +2606,8 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String fetchAllResponse = fetchAllIterator.fetchAll("items");
         assertThat(fetchAllResponse, startsWith("{\"items\":[{\"id\":1"));
-        assertThat(fetchAllResponse, containsString(String.format(templateItem, 1)));
-        assertThat(fetchAllResponse, containsString(String.format(templateItem, 250)));
+        assertThat(fetchAllResponse, containsString(String.format(expectedItem, 1)));
+        assertThat(fetchAllResponse, containsString(String.format(expectedItem, 250)));
     }
 
     @Test
