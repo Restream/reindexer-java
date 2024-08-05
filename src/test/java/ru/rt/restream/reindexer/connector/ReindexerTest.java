@@ -1838,8 +1838,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setNonIndex("testNonIndex" + i);
             String jsonItem = gson.toJson(testItem);
             tx.insertAsync(jsonItem)
-                .thenAccept(s -> s.substring(0, s.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}")
-                .thenAccept(results::add);
+                .thenAccept(s -> results.add(s.substring(0, s.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}"));
         }
 
         tx.commit();
