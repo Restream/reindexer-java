@@ -45,5 +45,5 @@ jobs:
       - name: Perform release
         run: mvn --batch-mode release:perform -Psign-artifacts
         env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME_1 }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD_1 }}
