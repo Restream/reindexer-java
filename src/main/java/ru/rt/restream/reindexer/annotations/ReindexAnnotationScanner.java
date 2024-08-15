@@ -129,11 +129,14 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             Json json = field.getAnnotation(Json.class);
             String jsonPath = jsonBasePath + (json == null ? field.getName() : json.value());
             FieldInfo fieldInfo = getFieldInfo(field);
+
+            // If at least one array (collection) is encountered on a nested path for some field,
+            // or the field itself is an array, then the index on it must also be an array.
             if (subArray) {
                 fieldInfo.isArray = true;
             }
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
-                List<ReindexerIndex> nested = parseIndexes(field.getType(), true, reindexPath, jsonPath, joined);
+                List<ReindexerIndex> nested = parseIndexes(field.getType(), subArray, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
             } else if ((fieldInfo.isArray) && fieldInfo.componentType != null
                     && getFieldTypeByClass(fieldInfo.componentType) == COMPOSITE) {
