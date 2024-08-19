@@ -1805,7 +1805,7 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         List<Integer> integers = Collections.emptyList();
         List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested;
+        NestedTest nested = new NestedTest();
 
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
