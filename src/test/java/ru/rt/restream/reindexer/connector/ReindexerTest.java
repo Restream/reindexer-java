@@ -1812,7 +1812,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             tx.insertAsync(testItem)
                 .thenAccept(item -> {
                     String jsonItem = JsonSerializer.toJson(item);
-                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}") });
+                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}"); });
         }
 
         tx.commit();
@@ -1902,7 +1902,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             tx.insertAsync(testItem)
                 .thenAccept(item -> {
                     String jsonItem = JsonSerializer.toJson(item);
-                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}") });
+                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}"); });
         }
 
         tx.rollback();
