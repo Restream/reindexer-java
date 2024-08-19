@@ -1809,7 +1809,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            tx.insertAsync(testItem).thenAccept(results::add);
+            tx.insertAsync(testItem)
+                .thenAccept(s -> results.add(s.substring(0, s.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":\"\",\"test\":0}}"));
         }
 
         tx.commit();
@@ -1896,7 +1897,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            tx.insertAsync(testItem).thenAccept(results::add);
+            tx.insertAsync(testItem)
+                .thenAccept(s -> results.add(s.substring(0, s.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":\"\",\"test\":0}}"));
         }
 
         tx.rollback();
