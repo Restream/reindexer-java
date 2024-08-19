@@ -1802,6 +1802,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> results = new CopyOnWriteArrayList<>();
+        List<Integer> integers = Collections.emptyList();
 
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -1809,10 +1810,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            tx.insertAsync(testItem)
-                .thenAccept(item -> {
-                    String jsonItem = JsonSerializer.toJson(item);
-                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}"); });
+            testItem.setIntegers(integers);
+            tx.insertAsync(testItem).thenAccept(results::add);
         }
 
         tx.commit();
@@ -1892,6 +1891,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> results = new CopyOnWriteArrayList<>();
+        List<Integer> integers = Collections.emptyList();
 
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -1899,10 +1899,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            tx.insertAsync(testItem)
-                .thenAccept(item -> {
-                    String jsonItem = JsonSerializer.toJson(item);
-                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}"); });
+            testItem.setIntegers(integers);
+            tx.insertAsync(testItem).thenAccept(results::add);
         }
 
         tx.rollback();
