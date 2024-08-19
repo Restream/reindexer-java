@@ -1804,11 +1804,8 @@ public abstract class ReindexerTest extends DbBaseTest {
         List<TestItem> results = new CopyOnWriteArrayList<>();
 
         List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = new ArrayList<>();
-        NestedTest arrayItem = new NestedTest();
-        arrayItem.value = "array$";
-        arrayItem.test = 0;
-        nestedList.add(arrayItem);
+        List<NestedTest> nestedList = Collections.emptyList();
+        NestedTest nested;
 
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -1818,7 +1815,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setNonIndex("testNonIndex" + i);
             testItem.setIntegers(integers);
             testItem.setListNested(nestedList);
-            testItem.setNestedTest(arrayItem);
+            testItem.setNestedTest(nested);
             tx.insertAsync(testItem).thenAccept(results::add);
         }
 
