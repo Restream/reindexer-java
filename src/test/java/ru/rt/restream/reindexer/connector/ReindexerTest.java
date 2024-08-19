@@ -1810,7 +1810,9 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
             tx.insertAsync(testItem)
-                .thenAccept(str -> results.add(str.substring(0, str.length() - 1) + ",\"integers\":[]}"));
+                .thenAccept(item -> {
+                    String jsonItem = JsonSerializer.toJson(item);
+                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}") });
         }
 
         tx.commit();
@@ -1898,7 +1900,9 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
             tx.insertAsync(testItem)
-                .thenAccept(str -> results.add(str.substring(0, str.length() - 1) + ",\"integers\":[]}"));
+                .thenAccept(item -> {
+                    String jsonItem = JsonSerializer.toJson(item);
+                    results.add(jsonItem.substring(0, jsonItem.length() - 1) + ",\"integers\":[]}") });
         }
 
         tx.rollback();
