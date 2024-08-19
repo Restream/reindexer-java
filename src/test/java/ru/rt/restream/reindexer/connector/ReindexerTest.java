@@ -749,11 +749,21 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> expectedItems = new ArrayList<>();
+        List<Integer> integers = Collections.emptyList();
+        List<NestedTest> nestedList = Collections.emptyList();
+        NestedTest nested = new NestedTest();
+        nested.setValue("testValueNested");
+        nested.setTest(0);
+        nested.setNonIndex("testNonIndexNested");
+
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
+            testItem.setIntegers(integers);
+            testItem.setListNested(nestedList);
+            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
             expectedItems.add(testItem);
         }
@@ -2870,7 +2880,7 @@ public abstract class ReindexerTest extends DbBaseTest {
                    ", name='" + name + '\'' +
                    ", value='" + value + '\'' +
                    ", nonIndex='" + nonIndex + '\'' +
-                   ", nestedTest=" + nestedTest.toString() +
+                   ", nestedTest=" + nestedTest +
                    ", listNested=" + listNested +
                    ", integers=" + integers +
                    '}';
@@ -2908,6 +2918,21 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         public void setNonIndex(String nonIndex) {
             this.nonIndex = nonIndex;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof NestedTest)) return false;
+            NestedTest testItem = (NestedTest) o;
+            return Objects.equals(value, testItem.value) &&
+                   Objects.equals(test, testItem.test) &&
+                   Objects.equals(nonIndex, testItem.nonIndex);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value, test, nonIndex);
         }
 
         @Override
