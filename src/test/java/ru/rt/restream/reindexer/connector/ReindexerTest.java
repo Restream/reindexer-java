@@ -1838,7 +1838,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setNonIndex("testNonIndex" + i);
             String jsonItem = gson.toJson(testItem);
             tx.insertAsync(jsonItem)
-                .thenAccept(s -> results.add(s.substring(0, s.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}"));
+                .thenAccept(s -> results.add(s.substring(0, s.length() - 1) + ",\"integers\":[]}"));
         }
 
         tx.commit();
@@ -2576,7 +2576,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
-        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[],\"nestedTest\":{\"value\":[],\"test\":[]},\"listNested\":{\"value\":[],\"test\":[]}}";
+        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[]}";
 
         for (int i = 1; i < 277; i++) {
             db.insert(namespaceName, String.format(templateItem, i));
