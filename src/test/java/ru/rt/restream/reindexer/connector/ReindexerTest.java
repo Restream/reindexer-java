@@ -1845,7 +1845,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setNonIndex("testNonIndex" + i);
             String jsonItem = gson.toJson(testItem);
             tx.insertAsync(jsonItem)
-                .thenAccept(str -> results.add(str.substring(0, str.length() - 1) + ",\"integers\":[]}"));
+                .thenAccept(str -> results.add(str.substring(0, str.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":\"\",\"test\":0}}"));
         }
 
         tx.commit();
@@ -2867,7 +2867,7 @@ public abstract class ReindexerTest extends DbBaseTest {
                    ", name='" + name + '\'' +
                    ", value='" + value + '\'' +
                    ", nonIndex='" + nonIndex + '\'' +
-                   ", nestedTest=" + nestedTest +
+                   ", nestedTest=" + nestedTest.toString() +
                    ", listNested=" + listNested +
                    ", integers=" + integers +
                    '}';
@@ -2905,6 +2905,15 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         public void setNonIndex(String nonIndex) {
             this.nonIndex = nonIndex;
+        }
+
+        @Override
+        public String toString() {
+            return "NestedTest{" +
+                   "value='" + value + '\'' +
+                   ", test=" + test +
+                   ", nonIndex='" + nonIndex + '\'' +
+                   '}';
         }
     }
 
