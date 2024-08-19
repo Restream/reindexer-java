@@ -973,7 +973,11 @@ public abstract class ReindexerTest extends DbBaseTest {
         TestItem updatedItem = iterator.next();
 
         NestedTest result = updatedItem.nestedTest;
-        assertThat(result, is(new NestedTest()));
+        NestedTest defValue = new NestedTest();
+        defValue.setValue("");
+        defValue.setTest(0);
+        defValue.setNonIndex("");
+        assertThat(result, is(defValue));
     }
 
     @Test
