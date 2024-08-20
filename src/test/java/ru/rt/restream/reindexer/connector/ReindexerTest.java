@@ -69,6 +69,23 @@ import static ru.rt.restream.reindexer.Query.Condition.SET;
  */
 public abstract class ReindexerTest extends DbBaseTest {
 
+    private static final List<Integer> defIntegers = Collections.emptyList();
+    private static final List<NestedTest> defNestedList = Collections.emptyList();
+    private static final NestedTest defNested;
+    private static NestedTest getDefNestedTest() {
+        if (defNested == null) {
+            defNested = new NestedTest();
+            defNested.setValue("");
+            defNested.setTest(0);
+        }
+        return defNested;
+    }
+    private static void setDefault(TestItem testItem) {
+        testItem.setIntegers(defIntegers);
+        testItem.setListNested(defNestedList);
+        testItem.setNestedTest(getDefNestedTest());
+    }
+
     @Test
     public void testReopenNamespaceWithWrongClass() {
         String namespaceName = "items";
@@ -660,21 +677,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         Set<TestItem> expectedItems = new HashSet<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -695,21 +704,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         Set<TestItem> expectedItems = new HashSet<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -732,21 +733,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         Set<TestItem> expectedItems = new HashSet<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -776,22 +769,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> expectedItems = new ArrayList<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
-
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -815,21 +799,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> expectedItems = new ArrayList<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -857,21 +833,13 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         Set<TestItem> expectedItems = new HashSet<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -1861,22 +1829,13 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         List<TestItem> results = new CopyOnWriteArrayList<>();
 
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
-
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
-            testItem.setNestedTest(nested);
+            setDefault(testItem);
             tx.insertAsync(testItem).thenAccept(results::add);
         }
 
@@ -1957,7 +1916,6 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         List<TestItem> results = new CopyOnWriteArrayList<>();
-        List<Integer> integers = Collections.emptyList();
 
         Transaction<TestItem> tx = db.beginTransaction(namespaceName, TestItem.class);
         for (int i = 0; i < 100; i++) {
@@ -1965,7 +1923,6 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
-            testItem.setIntegers(integers);
             tx.insertAsync(testItem).thenAccept(results::add);
         }
 
@@ -2506,12 +2463,6 @@ public abstract class ReindexerTest extends DbBaseTest {
     public void testExecSqlForList() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
 
         Set<TestItem> expectedItems = new HashSet<>();
         for (int i = 0; i < 100; i++) {
@@ -2519,10 +2470,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             db.upsert(namespaceName, testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -2600,21 +2549,13 @@ public abstract class ReindexerTest extends DbBaseTest {
     public void testNamespaceExecSqlForList() {
         Namespace<TestItem> ns = db.openNamespace("items", NamespaceOptions.defaultOptions(), TestItem.class);
         Set<TestItem> expectedItems = new HashSet<>();
-        List<Integer> integers = Collections.emptyList();
-        List<NestedTest> nestedList = Collections.emptyList();
-        NestedTest nested = new NestedTest();
-        nested.setValue("testValueNested");
-        nested.setTest(0);
-        nested.setNonIndex("testNonIndexNested");
         for (int i = 0; i < 100; i++) {
             TestItem testItem = new TestItem();
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
-            testItem.setNestedTest(nested);
             ns.upsert(testItem);
-            testItem.setIntegers(integers);
-            testItem.setListNested(nestedList);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
         ResultIterator<TestItem> iterator = ns.execSql("SELECT * FROM items");
