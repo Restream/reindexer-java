@@ -71,7 +71,7 @@ public abstract class ReindexerTest extends DbBaseTest {
 
     private static final List<Integer> defIntegers = Collections.emptyList();
     private static final List<NestedTest> defNestedList = Collections.emptyList();
-    private static final NestedTest defNested;
+    private static NestedTest defNested;
     private static NestedTest getDefNestedTest() {
         if (defNested == null) {
             defNested = new NestedTest();
