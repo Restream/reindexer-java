@@ -69,6 +69,23 @@ import static ru.rt.restream.reindexer.Query.Condition.SET;
  */
 public abstract class ReindexerTest extends DbBaseTest {
 
+    private static final List<Integer> defIntegers = Collections.emptyList();
+    private static final List<NestedTest> defNestedList = Collections.emptyList();
+    private static NestedTest defNested;
+    private static NestedTest getDefNestedTest() {
+        if (defNested == null) {
+            defNested = new NestedTest();
+            defNested.setValue("");
+            defNested.setTest(0);
+        }
+        return defNested;
+    }
+    private static void setDefault(TestItem testItem) {
+        testItem.setIntegers(defIntegers);
+        testItem.setListNested(defNestedList);
+        testItem.setNestedTest(getDefNestedTest());
+    }
+
     @Test
     public void testReopenNamespaceWithWrongClass() {
         String namespaceName = "items";
@@ -666,6 +683,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -692,6 +710,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -720,6 +739,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -755,6 +775,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -784,6 +805,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -817,6 +839,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -918,7 +941,10 @@ public abstract class ReindexerTest extends DbBaseTest {
         TestItem updatedItem = iterator.next();
 
         NestedTest result = updatedItem.nestedTest;
-        assertThat(result, is(nullValue()));
+        NestedTest defValue = new NestedTest();
+        defValue.setValue("");
+        defValue.setTest(0);
+        assertThat(result, is(defValue));
     }
 
     @Test
@@ -1809,6 +1835,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setId(i);
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
+            setDefault(testItem);
             tx.insertAsync(testItem).thenAccept(results::add);
         }
 
@@ -1837,7 +1864,8 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setNonIndex("testNonIndex" + i);
             String jsonItem = gson.toJson(testItem);
-            tx.insertAsync(jsonItem).thenAccept(results::add);
+            tx.insertAsync(jsonItem)
+                .thenAccept(str -> results.add(str.substring(0, str.length() - 1) + ",\"integers\":[],\"nestedTest\":{\"value\":\"\",\"test\":0}}"));
         }
 
         tx.commit();
@@ -1847,7 +1875,6 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(iterator.size(), is(100L));
         assertThat(results, hasSize(100));
         assertThat(item0, is(in(results)));
-
     }
 
     @Test
@@ -2444,6 +2471,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             db.upsert(namespaceName, testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
 
@@ -2527,6 +2555,7 @@ public abstract class ReindexerTest extends DbBaseTest {
             testItem.setName("TestName" + i);
             testItem.setValue(i + "Value");
             ns.upsert(testItem);
+            setDefault(testItem);
             expectedItems.add(testItem);
         }
         ResultIterator<TestItem> iterator = ns.execSql("SELECT * FROM items");
@@ -2576,6 +2605,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         String templateItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\"}";
+        String expectedItem = "{\"id\":%1$s,\"name\":\"TestName%1$s\",\"nonIndex\":\"testNonIndex\",\"integers\":[],\"nestedTest\":{\"value\":\"\",\"test\":0}}";
 
         for (int i = 1; i < 277; i++) {
             db.insert(namespaceName, String.format(templateItem, i));
@@ -2590,7 +2620,7 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String response = iterator.next();
 
-        assertThat(response, is(String.format(templateItem, 1)));
+        assertThat(response, is(String.format(expectedItem, 1)));
         iterator.close();
 
         QueryResultJsonIterator fetchAllIterator = db.query(namespaceName, TestItem.class)
@@ -2600,8 +2630,8 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String fetchAllResponse = fetchAllIterator.fetchAll("items");
         assertThat(fetchAllResponse, startsWith("{\"items\":[{\"id\":1"));
-        assertThat(fetchAllResponse, containsString(String.format(templateItem, 1)));
-        assertThat(fetchAllResponse, containsString(String.format(templateItem, 250)));
+        assertThat(fetchAllResponse, containsString(String.format(expectedItem, 1)));
+        assertThat(fetchAllResponse, containsString(String.format(expectedItem, 250)));
     }
 
     @Test
@@ -2895,6 +2925,30 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         public void setNonIndex(String nonIndex) {
             this.nonIndex = nonIndex;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof NestedTest)) return false;
+            NestedTest testItem = (NestedTest) o;
+            return Objects.equals(value, testItem.value) &&
+                   Objects.equals(test, testItem.test) &&
+                   Objects.equals(nonIndex, testItem.nonIndex);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value, test, nonIndex);
+        }
+
+        @Override
+        public String toString() {
+            return "NestedTest{" +
+                   "value='" + value + '\'' +
+                   ", test=" + test +
+                   ", nonIndex='" + nonIndex + '\'' +
+                   '}';
         }
     }
 
