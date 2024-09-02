@@ -53,11 +53,6 @@ import static ru.rt.restream.reindexer.FieldType.UUID;
 public class ReindexAnnotationScanner implements ReindexScanner {
 
     private static final Map<Class<?>, FieldType> MAPPED_TYPES;
-    /**
-     * The maximum number of indexes in a namespace.
-     * If the number is more, then IllegalAnnotationException will be thrown.
-     */
-    private static final int INDEXES_MAX_COUNT = 63;
 
     static {
         MAPPED_TYPES = new HashMap<>();
@@ -89,14 +84,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     @Override
     public List<ReindexerIndex> parseIndexes(Class<?> itemClass) {
-        List<ReindexerIndex> indexes = parseIndexes(itemClass, false, "", "", new HashMap<>());
-        if (indexes.size() > INDEXES_MAX_COUNT) {
-            throw new IndexConflictException(String.format(
-                    "Too many indexes in the class %s: %s",
-                    itemClass.getName(),
-                    indexes.size()));
-        }
-        return indexes;
+        return parseIndexes(itemClass, false, "", "", new HashMap<>());
     }
 
     List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String reindexBasePath, String jsonBasePath,
