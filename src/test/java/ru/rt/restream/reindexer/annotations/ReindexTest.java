@@ -37,7 +37,7 @@ public class ReindexTest extends DbBaseTest {
                         ItemWithNonUniqueIndexes.class),
                 "Expected IndexConflictException() to throw, but it didn't"
         );
-        assertTrue(thrown.getMessage().startsWith("Non-unique name index name in class"));
+        assertTrue(thrown.getMessage().startsWith("Non-unique index name in class"));
     }
 
     @Test

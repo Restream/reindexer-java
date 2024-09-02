@@ -32,10 +32,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.UUID;
 
 import static ru.rt.restream.reindexer.FieldType.BOOL;
@@ -98,7 +97,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         List<ReindexerIndex> indexes = new ArrayList<>();
-        Set<String> indexNames = new HashSet<>();
+        Map<String, ReindexerIndex> nameToIndexMap = new HashMap<>();
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Reindex reindex = field.getAnnotation(Reindex.class);
@@ -107,20 +106,17 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             if (reindex == null || "-".equals(reindex.name()) || field.isAnnotationPresent(Transient.class)) {
                 continue;
             }
-            if (!indexNames.add(reindex.name())) {
-                throw new IndexConflictException(String.format(
-                        "Non-unique name index name in class %s: %s",
-                        itemClass.getName(),
-                        reindex.name()));
-            }
+
             String reindexPath = reindexBasePath + reindex.name();
             Json json = field.getAnnotation(Json.class);
             String jsonPath = jsonBasePath + (json == null ? field.getName() : json.value());
             FieldInfo fieldInfo = getFieldInfo(field);
 
             // If at least one array (collection) is encountered on a nested path for some field,
-            // or the field itself is an array, then the index on it must also be an array.
-            if (subArray) {
+            // or the field itself is an array,
+            // or the field is appendable
+            // then the index on it must also be an array.
+            if (subArray || reindex.isAppendable()) {
                 fieldInfo.isArray = true;
             }
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
@@ -148,8 +144,20 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid);
-                indexes.add(index);
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable());
+
+                ReindexerIndex sameNameIndex = nameToIndexMap.get(reindex.name());
+                if (isIndexesExistAppendableAndEqual(sameNameIndex, index)) {
+                    sameNameIndex.getJsonPaths().add(jsonPath);
+                } else if (sameNameIndex != null) {
+                    throw new IndexConflictException(String.format(
+                            "Non-unique index name in class %s: %s",
+                            itemClass.getName(),
+                            reindex.name()));
+                } else {
+                    indexes.add(index);
+                    nameToIndexMap.put(reindex.name(), index);
+                }
             }
         }
 
@@ -160,11 +168,31 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false, false);
             indexes.add(compositeIndex);
         }
 
         return indexes;
+    }
+
+    private boolean isIndexesExistAppendableAndEqual(ReindexerIndex prev, ReindexerIndex index) {
+        // why don't use isAppendable() + ReindexerIndex.equals() -  must be skipped jsonPath
+        return prev != null
+                && index != null
+                && prev.isAppendable()
+                && index.isAppendable()
+                && prev.getFieldType() == index.getFieldType()
+                && prev.getIndexType() == index.getIndexType()
+                && prev.getCollateMode() == index.getCollateMode()
+                && prev.isArray() == index.isArray()
+                && prev.isDense() == index.isDense()
+                && prev.isPk() == index.isPk()
+                && prev.isSparse() == index.isSparse()
+                && prev.isUuid() == index.isUuid()
+                && Objects.equals(prev.getName(), index.getName())
+                && Objects.equals(prev.getPrecept(), index.getPrecept())
+                && Objects.equals(prev.getSortOrder(), index.getSortOrder())
+                && Objects.equals(prev.getFullTextConfig(), index.getFullTextConfig());
     }
 
     private void validateUuidFieldHasIndex(Class<?> itemClass, Field field, Reindex reindex) {
@@ -205,22 +233,22 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
-                                       FullTextConfig textConfig, boolean isUuid) {
+                                       FullTextConfig textConfig, boolean isUuid, boolean isAppendable) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
         index.setCollateMode(collateMode);
-        index.setJsonPaths(Collections.singletonList(reindexPath));
+        index.setJsonPaths(new ArrayList<>(jsonPath));
         index.setDense(isDense);
         index.setSparse(isSparse);
         index.setPk(isPk);
         index.setArray(isArray);
-        index.setJsonPaths(jsonPath);
         index.setIndexType(indexType);
         index.setFieldType(fieldType);
         index.setPrecept(precept);
         index.setFullTextConfig(textConfig);
         index.setUuid(isUuid);
+        index.setAppendable(isAppendable);
         return index;
     }
 

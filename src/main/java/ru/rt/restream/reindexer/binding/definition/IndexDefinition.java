@@ -72,7 +72,7 @@ public class IndexDefinition {
         indexDefinition.setJsonPaths(index.getJsonPaths());
         indexDefinition.setSparse(index.isSparse());
         indexDefinition.setLinear(false);
-        indexDefinition.setAppendable(false);
+        indexDefinition.setAppendable(index.isAppendable());
         indexDefinition.setConfig(index.getFullTextConfig());
         indexDefinition.setUuid(index.isUuid());
         return indexDefinition;

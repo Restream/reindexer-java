@@ -50,6 +50,8 @@ public class ReindexerIndex {
 
     private boolean isUuid;
 
+    private boolean isAppendable;
+
     /**
      * Get the current index name.
      *
@@ -290,4 +292,23 @@ public class ReindexerIndex {
     public void setUuid(boolean uuid) {
         isUuid = uuid;
     }
+
+    /**
+     * Get the indication, that the current index is appendable.
+     *
+     * @return true, is the current index is appendable
+     */
+    public boolean isAppendable() {
+        return isAppendable;
+    }
+
+    /**
+     * Set the indication, that the current index is appendable.
+     *
+     * @param appendable true, if the current index is appendable
+     */
+    public void setAppendable(boolean appendable) {
+        isAppendable = appendable;
+    }
+
 }

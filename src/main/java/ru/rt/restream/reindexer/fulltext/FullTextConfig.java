@@ -19,6 +19,7 @@ import ru.rt.restream.reindexer.annotations.FullText;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -429,4 +430,36 @@ public class FullTextConfig {
         this.extraWordSymbols = extraWordSymbols;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FullTextConfig that = (FullTextConfig) o;
+        return enableKbLayout == that.enableKbLayout
+                && enableNumbersSearch == that.enableNumbersSearch
+                && enableTranslit == that.enableTranslit
+                && enableWarmupOnNsCopy == that.enableWarmupOnNsCopy
+                && Double.compare(that.bm25Boost, bm25Boost) == 0
+                && Double.compare(that.bm25Weight, bm25Weight) == 0
+                && Double.compare(that.positionBoost, positionBoost) == 0
+                && Double.compare(that.positionWeight, positionWeight) == 0
+                && Double.compare(that.distanceBoost, distanceBoost) == 0
+                && Double.compare(that.distanceWeight, distanceWeight) == 0
+                && Double.compare(that.termLenBoost, termLenBoost) == 0
+                && Double.compare(that.termLenWeight, termLenWeight) == 0
+                && Double.compare(that.fullMatchBoost, fullMatchBoost) == 0
+                && Double.compare(that.minRelevancy, minRelevancy) == 0
+                && Double.compare(that.sumRanksByFieldsRatio, sumRanksByFieldsRatio) == 0
+                && logLevel == that.logLevel
+                && mergeLimit == that.mergeLimit
+                && maxTypos == that.maxTypos
+                && maxTypoLen == that.maxTypoLen
+                && maxRebuildSteps == that.maxRebuildSteps
+                && maxStepSize == that.maxStepSize
+                && partialMatchDecrease == that.partialMatchDecrease
+                && Objects.equals(stemmers, that.stemmers)
+                && Objects.equals(stopWords, that.stopWords)
+                && Objects.equals(synonyms, that.synonyms)
+                && Objects.equals(extraWordSymbols, that.extraWordSymbols);
+    }
 }
