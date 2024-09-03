@@ -99,6 +99,22 @@ public interface Binding {
     void addIndex(String namespace, IndexDefinition index);
 
     /**
+     * Update an index based on passed definition.
+     *
+     * @param namespace the namespace name
+     * @param index     an index definition to add
+     */
+    void updateIndex(String namespace, IndexDefinition index);
+
+    /**
+     * Drop an index by name/
+     *
+     * @param namespace the namespace name
+     * @param indexName name of index
+     */
+    void dropIndex(String namespace, String indexName);
+
+    /**
      * Modifies namespace item data.
      *
      * @param namespaceName name of a namespace item belongs to

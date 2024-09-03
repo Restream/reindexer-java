@@ -162,6 +162,32 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
     return res;
 }
 
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_updateIndex(JNIEnv *env, jobject,
+                                                                                                jlong rx, jlong ctxId,
+                                                                                                jlong timeout,
+                                                                                                jstring namespaceName,
+                                                                                                jstring indexJson) {
+    reindexer_string nsName = rx_string(env, namespaceName);
+    reindexer_string indexDefJson = rx_string(env, indexJson);
+    jobject res = j_res(env, reindexer_update_index(rx, nsName, indexDefJson, rx_ctx(ctxId, timeout)));
+    env->ReleaseStringUTFChars(namespaceName, reinterpret_cast<const char *>(nsName.p));
+    env->ReleaseStringUTFChars(indexJson, reinterpret_cast<const char *>(indexDefJson.p));
+    return res;
+}
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_dropIndex(JNIEnv *env, jobject,
+                                                                                                jlong rx, jlong ctxId,
+                                                                                                jlong timeout,
+                                                                                                jstring namespaceName,
+                                                                                                jstring indexName) {
+    reindexer_string nsName = rx_string(env, namespaceName);
+    reindexer_string index = rx_string(env, indexName);
+    jobject res = j_res(env, reindexer_drop_index(rx, nsName, index, rx_ctx(ctxId, timeout)));
+    env->ReleaseStringUTFChars(namespaceName, reinterpret_cast<const char *>(nsName.p));
+    env->ReleaseStringUTFChars(indexName, reinterpret_cast<const char *>(index.p));
+    return res;
+}
+
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_modifyItem(JNIEnv *env, jobject,
                                                                                                   jlong rx, jlong ctxId,
                                                                                                   jlong timeout,

@@ -38,6 +38,8 @@ public class ClearDbReindexer extends Reindexer {
         Binding binding = getBinding();
         namespaceMap.values().stream()
                 .map(ReindexerNamespace::getName)
+                // skip service namespaces
+                .filter(name -> !name.startsWith("#"))
                 .distinct()
                 .forEach(binding::dropNamespace);
         namespaceMap.clear();
