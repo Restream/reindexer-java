@@ -15,6 +15,11 @@
  */
 package ru.rt.restream.reindexer;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 
 import java.util.List;
@@ -22,6 +27,11 @@ import java.util.List;
 /**
  * Contains the reindexer index configuration.
  */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ReindexerIndex {
 
     private String name;
@@ -36,12 +46,23 @@ public class ReindexerIndex {
 
     private String sortOrder;
 
+    /**
+     * Full text search config for current index.
+     * Type of index must be TEXT.
+     */
     private FullTextConfig fullTextConfig;
 
+    /**
+     * Precept is a special reindexer embedded function, such as serial(), now().
+     * {@link ru.rt.restream.reindexer.annotations.Serial}
+     */
     private String precept;
 
     private boolean isArray;
 
+    /**
+     * Indication, that the current index is a primary key.
+     */
     private boolean isPk;
 
     private boolean isDense;
@@ -51,124 +72,6 @@ public class ReindexerIndex {
     private boolean isUuid;
 
     private boolean isAppendable;
-
-    /**
-     * Get the current index name.
-     *
-     * @return the current index name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * Set the current index name.
-     *
-     * @param name the index name
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /**
-     * Get the current index json paths.
-     *
-     * @return the current index json paths
-     */
-    public List<String> getJsonPaths() {
-        return jsonPaths;
-    }
-
-    /**
-     * Set the current index json paths.
-     *
-     * @param jsonPaths the index json paths
-     */
-    public void setJsonPaths(List<String> jsonPaths) {
-        this.jsonPaths = jsonPaths;
-    }
-
-    /**
-     * Get the current index type. {@link IndexType}
-     *
-     * @return the current index type
-     */
-    public IndexType getIndexType() {
-        return indexType;
-    }
-
-    /**
-     * Set the current index type. {@link IndexType}
-     *
-     * @param indexType the index type
-     */
-    public void setIndexType(IndexType indexType) {
-        this.indexType = indexType;
-    }
-
-    /**
-     * Get the current index field type. {@link FieldType}
-     *
-     * @return the current index field type
-     */
-    public FieldType getFieldType() {
-        return fieldType;
-    }
-
-    /**
-     * Set the current index field type. {@link FieldType}
-     *
-     * @param fieldType the index field type
-     */
-    public void setFieldType(FieldType fieldType) {
-        this.fieldType = fieldType;
-    }
-
-    /**
-     * Get the current index collate mode. {@link CollateMode}
-     *
-     * @return the current index collate mode
-     */
-    public CollateMode getCollateMode() {
-        return collateMode;
-    }
-
-    /**
-     * Set the current index collate mode. {@link CollateMode}
-     *
-     * @param collateMode the index collate mode
-     */
-    public void setCollateMode(CollateMode collateMode) {
-        this.collateMode = collateMode;
-    }
-
-    /**
-     * Get the current index sort order.
-     *
-     * @return the current index sort order string
-     */
-    public String getSortOrder() {
-        return sortOrder;
-    }
-
-    /**
-     * Set the current index sort order.
-     *
-     * @param sortOrder the sequence of letters, which defines the index sort order
-     */
-    public void setSortOrder(String sortOrder) {
-        this.sortOrder = sortOrder;
-    }
-
-    /**
-     * Get full text search config for current index.
-     * Type of index must be TEXT.
-     *
-     * @return full text search config
-     */
-    public FullTextConfig getFullTextConfig() {
-        return fullTextConfig;
-    }
 
     /**
      * Set full text search config for current index, if the index is text index.
@@ -181,134 +84,6 @@ public class ReindexerIndex {
             throw new IllegalArgumentException("Type of index must be TEXT for full text search config.");
         }
         this.fullTextConfig = fullTextConfig;
-    }
-
-    /**
-     * Get the current index precept. Precept is a special reindexer embedded function, such as serial(), now().
-     * {@link ru.rt.restream.reindexer.annotations.Serial}
-     *
-     * @return the current index precept
-     */
-    public String getPrecept() {
-        return precept;
-    }
-
-    /**
-     * Set the current index precepts. Precept is a special reindexer embedded function, such as serial(), now().
-     * {@link ru.rt.restream.reindexer.annotations.Serial}
-     *
-     * @param precept the index precept
-     */
-    public void setPrecept(String precept) {
-        this.precept = precept;
-    }
-
-    /**
-     * Get the indication, that the current index is array.
-     *
-     * @return true, if the current index is array
-     */
-    public boolean isArray() {
-        return isArray;
-    }
-
-    /**
-     * Set the indication, that the current index is array.
-     *
-     * @param array true, if the current index is array
-     */
-    public void setArray(boolean array) {
-        isArray = array;
-    }
-
-    /**
-     * Get the indication, that the current index is a primary key.
-     *
-     * @return true, if the current index is a primary key
-     */
-    public boolean isPk() {
-        return isPk;
-    }
-
-    /**
-     * Set the indication, that the current index is a primary key.
-     *
-     * @param pk true, if the current index is a primary key
-     */
-    public void setPk(boolean pk) {
-        isPk = pk;
-    }
-
-    /**
-     * Get the indication, that the current index is dense.
-     *
-     * @return true, if the current index is dense
-     */
-    public boolean isDense() {
-        return isDense;
-    }
-
-    /**
-     * Set the indication, that the current index is dense.
-     *
-     * @param dense true, if the current index is dense
-     */
-    public void setDense(boolean dense) {
-        isDense = dense;
-    }
-
-    /**
-     * Get the indication, that the current index is sparse.
-     *
-     * @return true, if the current index is sparse
-     */
-    public boolean isSparse() {
-        return isSparse;
-    }
-
-    /**
-     * Set the indication, that the current index is sparse.
-     *
-     * @param sparse true, if the current index is sparse
-     */
-    public void setSparse(boolean sparse) {
-        isSparse = sparse;
-    }
-
-    /**
-     * Get the indication, that the current index is for UUID.
-     *
-     * @return true, if the current index is for UUID
-     */
-    public boolean isUuid() {
-        return isUuid;
-    }
-
-    /**
-     * Set the indication, that the current index is for UUID.
-     *
-     * @param uuid true, if the current index is for UUID
-     */
-    public void setUuid(boolean uuid) {
-        isUuid = uuid;
-    }
-
-    /**
-     * Get the indication, that the current index is appendable.
-     *
-     * @return true, is the current index is appendable
-     */
-    public boolean isAppendable() {
-        return isAppendable;
-    }
-
-    /**
-     * Set the indication, that the current index is appendable.
-     *
-     * @param appendable true, if the current index is appendable
-     */
-    public void setAppendable(boolean appendable) {
-        isAppendable = appendable;
     }
 
 }

@@ -113,13 +113,13 @@ public abstract class IndexOperationTest extends DbBaseTest {
     }
 
     private ReindexerIndex createIndex(String name, String jsonPath, IndexType indexType, FieldType fieldType) {
-        ReindexerIndex addedIndex = new ReindexerIndex();
-        addedIndex.setName(name);
-        addedIndex.setJsonPaths(Collections.singletonList(jsonPath));
-        addedIndex.setIndexType(indexType);
-        addedIndex.setFieldType(fieldType);
-        addedIndex.setCollateMode(CollateMode.NONE);
-        return addedIndex;
+        return ReindexerIndex.builder()
+                .name(name)
+                .jsonPaths(Collections.singletonList(jsonPath))
+                .indexType(indexType)
+                .fieldType(fieldType)
+                .collateMode(CollateMode.NONE)
+                .build();
     }
 
     private void createNamespaceWithRecords(String nameSpaceName, int recordsCnt) {
