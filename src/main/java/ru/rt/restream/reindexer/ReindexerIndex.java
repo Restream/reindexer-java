@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -26,16 +27,20 @@ import java.util.List;
 
 /**
  * Contains the reindexer index configuration.
+ *
+ * `equals()` is used to compare index configuration without the jsonPaths field.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class ReindexerIndex {
 
     private String name;
 
+    @EqualsAndHashCode.Exclude
     private List<String> jsonPaths;
 
     private IndexType indexType;

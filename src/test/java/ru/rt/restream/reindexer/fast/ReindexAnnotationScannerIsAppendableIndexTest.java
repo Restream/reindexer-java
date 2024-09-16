@@ -66,7 +66,18 @@ public class ReindexAnnotationScannerIsAppendableIndexTest {
                 () -> scanner.parseIndexes(ItemWithDifferentAppendableIndexes.class),
                 "Expected IndexConflictException() to throw, but it didn't"
         );
-        assertTrue(thrown.getMessage().startsWith("Non-unique index name in class"));
+        assertTrue(thrown.getMessage().matches("Appendable indexes with name .* must have the same configuration"));
+    }
+
+    @Test
+    public void testAppendableAndNonAppendableIndexes() {
+        IndexConflictException thrown = assertThrows(
+                IndexConflictException.class,
+                () -> scanner.parseIndexes(ItemWithOnlyOneAppendableIndex.class),
+                "Expected IndexConflictException() to throw, but it didn't"
+        );
+        assertTrue(thrown.getMessage().matches("Multiple indexes with name .* " +
+                "but at least one of them is not marked as appendable"));
     }
 
     private ReindexerIndex getIndexByName(List<ReindexerIndex> indexes, String indexName) {
@@ -109,6 +120,17 @@ public class ReindexAnnotationScannerIsAppendableIndexTest {
         private String name;
 
         @Reindex(name = "name", isAppendable = true, type = TEXT)
+        private String description;
+    }
+
+    static class ItemWithOnlyOneAppendableIndex {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name", isAppendable = true, type = TEXT)
+        private String name;
+
+        @Reindex(name = "name", type = TEXT)
         private String description;
     }
 }

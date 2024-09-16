@@ -34,7 +34,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import static ru.rt.restream.reindexer.FieldType.BOOL;
@@ -147,16 +146,27 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                         fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable());
 
                 ReindexerIndex sameNameIndex = nameToIndexMap.get(reindex.name());
-                if (isIndexesExistAppendableAndEqual(sameNameIndex, index)) {
-                    sameNameIndex.getJsonPaths().add(jsonPath);
-                } else if (sameNameIndex != null) {
-                    throw new IndexConflictException(String.format(
-                            "Non-unique index name in class %s: %s",
-                            itemClass.getName(),
-                            reindex.name()));
-                } else {
+                if (sameNameIndex == null) {
                     indexes.add(index);
                     nameToIndexMap.put(reindex.name(), index);
+                } else if (sameNameIndex.isAppendable() && index.isAppendable() && sameNameIndex.equals(index)) {
+                    sameNameIndex.getJsonPaths().add(jsonPath);
+                } else {
+                    String errorMessage;
+                    if (reindex.isAppendable() && sameNameIndex.isAppendable()) {
+                        errorMessage = String.format("Appendable indexes with name '%s' in class '%s' " +
+                                        "must have the same configuration",
+                                reindex.name(), itemClass.getName());
+                    } else if (reindex.isAppendable() ^ sameNameIndex.isAppendable()) {
+                        errorMessage = String.format("Multiple indexes with name '%s' in class '%s'," +
+                                        " but at least one of them is not marked as appendable",
+                                reindex.name(), itemClass.getName());
+                    } else {
+                        errorMessage = String.format(
+                                "Non-unique index name in class %s: %s",
+                                itemClass.getName(), reindex.name());
+                    }
+                    throw new IndexConflictException(errorMessage);
                 }
             }
         }
@@ -173,26 +183,6 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         return indexes;
-    }
-
-    private boolean isIndexesExistAppendableAndEqual(ReindexerIndex prev, ReindexerIndex index) {
-        // why don't use isAppendable() + ReindexerIndex.equals() -  must be skipped jsonPath
-        return prev != null
-                && index != null
-                && prev.isAppendable()
-                && index.isAppendable()
-                && prev.getFieldType() == index.getFieldType()
-                && prev.getIndexType() == index.getIndexType()
-                && prev.getCollateMode() == index.getCollateMode()
-                && prev.isArray() == index.isArray()
-                && prev.isDense() == index.isDense()
-                && prev.isPk() == index.isPk()
-                && prev.isSparse() == index.isSparse()
-                && prev.isUuid() == index.isUuid()
-                && Objects.equals(prev.getName(), index.getName())
-                && Objects.equals(prev.getPrecept(), index.getPrecept())
-                && Objects.equals(prev.getSortOrder(), index.getSortOrder())
-                && Objects.equals(prev.getFullTextConfig(), index.getFullTextConfig());
     }
 
     private void validateUuidFieldHasIndex(Class<?> itemClass, Field field, Reindex reindex) {
