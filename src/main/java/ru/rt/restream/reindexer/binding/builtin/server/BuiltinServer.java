@@ -132,6 +132,16 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
+    public void updateIndex(String namespace, IndexDefinition index) {
+        builtin.updateIndex(namespace, index);
+    }
+
+    @Override
+    public void dropIndex(String namespace, String indexName) {
+        builtin.dropIndex(namespace, indexName);
+    }
+
+    @Override
     public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken) {
         builtin.modifyItem(namespaceName, data, format, mode, precepts, stateToken);
     }

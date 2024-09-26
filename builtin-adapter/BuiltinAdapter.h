@@ -47,6 +47,14 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
                                                                                                 jlong, jlong, jlong,
                                                                                                 jstring, jstring);
 
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_updateIndex(JNIEnv *, jobject,
+                                                                                                   jlong, jlong, jlong,
+                                                                                                   jstring, jstring);
+
+JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_dropIndex(JNIEnv *, jobject,
+                                                                                                 jlong, jlong, jlong,
+                                                                                                 jstring, jstring);
+
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_modifyItem(JNIEnv *, jobject,
                                                                                                   jlong, jlong, jlong,
                                                                                                   jbyteArray,

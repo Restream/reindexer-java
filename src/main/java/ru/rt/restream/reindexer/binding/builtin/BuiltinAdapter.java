@@ -189,6 +189,30 @@ public class BuiltinAdapter {
     public native ReindexerResponse addIndex(long rx, long ctxId, long timeout, String namespaceName, String indexJson);
 
     /**
+     * Adds an index.
+     *
+     * @param rx            the Reindexer instance pointer
+     * @param ctxId         the context id
+     * @param timeout       the execution timeout
+     * @param namespaceName the namespace name
+     * @param indexJson     the index JSON string
+     * @return the {@link ReindexerResponse} to use
+     */
+    public native ReindexerResponse updateIndex(long rx, long ctxId, long timeout, String namespaceName, String indexJson);
+
+    /**
+     * Adds an index.
+     *
+     * @param rx            the Reindexer instance pointer
+     * @param ctxId         the context id
+     * @param timeout       the execution timeout
+     * @param namespaceName the namespace name
+     * @param indexName     the index JSON string
+     * @return the {@link ReindexerResponse} to use
+     */
+    public native ReindexerResponse dropIndex(long rx, long ctxId, long timeout, String namespaceName, String indexName);
+
+    /**
      * Modifies an item.
      *
      * @param rx      the Reindexer instance pointer

@@ -282,6 +282,32 @@ public class Reindexer implements AutoCloseable {
         return new Query<>(this, namespace, null);
     }
 
+    /**
+     * ONLY FOR TEST PURPOSES!
+     */
+    @Deprecated
+    public void addIndex(String namespaceName, ReindexerIndex index) {
+        IndexDefinition indexDefinition = IndexDefinition.fromIndex(index);
+        binding.addIndex(namespaceName, indexDefinition);
+    }
+
+    /**
+     * ONLY FOR TEST PURPOSES!
+     */
+    @Deprecated
+    public void updateIndex(String namespaceName, ReindexerIndex index) {
+        IndexDefinition indexDefinition = IndexDefinition.fromIndex(index);
+        binding.updateIndex(namespaceName, indexDefinition);
+    }
+
+    /**
+     * ONLY FOR TEST PURPOSES!
+     */
+    @Deprecated
+    public void dropIndex(String namespaceName, String indexName) {
+        binding.dropIndex(namespaceName, indexName);
+    }
+
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
         ReindexerNamespace<?> namespace = namespaceMap.get(namespaceName);
         if (namespace == null) {

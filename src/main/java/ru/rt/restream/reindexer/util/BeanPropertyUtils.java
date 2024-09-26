@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.util;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
@@ -132,9 +133,19 @@ public final class BeanPropertyUtils {
     }
 
     private static BiConsumer createSetter(Class<?> itemClass, String property) {
+        final boolean isBooleanField = property.length() > 2
+                && property.startsWith("is")
+                && FieldUtils.getField(itemClass, property, true).getType() == boolean.class;
         return Stream.of(itemClass.getMethods())
                 .filter(BeanPropertyUtils::isSetterMethod)
-                .filter(method -> method.getName().equals(SETTER_PREFIX + StringUtils.capitalize(property)))
+                .filter(method -> method.getName().equals(SETTER_PREFIX + StringUtils.capitalize(property))
+                                // lombok setter for Boolean field 'isValue' is 'setIsValue',
+                                // but for boolean field 'isValue' setter is 'setValue'
+                                || (isBooleanField
+                                && method.getName().equals(SETTER_PREFIX + StringUtils.capitalize(property.substring(2)))
+                        )
+                )
+                .findFirst()
                 .map(method -> {
                     try {
                         return createSetter(LOOKUP.unreflect(method));
@@ -142,7 +153,6 @@ public final class BeanPropertyUtils {
                         throw new RuntimeException(e);
                     }
                 })
-                .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
                         "Public setter is not found for the field: '" + property + "'"));
     }

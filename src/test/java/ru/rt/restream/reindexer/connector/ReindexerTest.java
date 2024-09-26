@@ -16,6 +16,11 @@
 package ru.rt.restream.reindexer.connector;
 
 import com.google.gson.Gson;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
@@ -59,6 +64,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static ru.rt.restream.reindexer.IndexType.TEXT;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.LE;
 import static ru.rt.restream.reindexer.Query.Condition.RANGE;
@@ -2736,22 +2742,48 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(testItem, is(foundOnStrUuidByString));
     }
 
-    public static class SerialIdTestItem {
+    @Test
+    public void testIsAppendableIndexItem() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), ItemWithAppendableIndexes.class);
+        for (int i = 0; i < 10; i++) {
+            ItemWithAppendableIndexes testItem = new ItemWithAppendableIndexes(i, "TestName" + i, "Description" + i);
+            db.upsert(namespaceName, testItem);
+        }
 
+        Iterator<ItemWithAppendableIndexes> iterator = db.query("items", ItemWithAppendableIndexes.class)
+                .where("name", EQ, "TestName3")
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        ItemWithAppendableIndexes foundByName = iterator.next();
+        assertThat(foundByName.id, is(3));
+        assertThat(foundByName.name, is("TestName3"));
+        assertThat(foundByName.description, is("Description3"));
+        assertThat(iterator.hasNext(), is(false));
+
+        iterator = db.query("items", ItemWithAppendableIndexes.class)
+                .where("name", EQ, "Description3")
+                .execute();
+
+        assertThat(iterator.hasNext(), is(true));
+        ItemWithAppendableIndexes foundByDescription = iterator.next();
+        assertThat(foundByDescription.id, is(3));
+        assertThat(foundByDescription.name, is("TestName3"));
+        assertThat(foundByDescription.description, is("Description3"));
+        assertThat(iterator.hasNext(), is(false));
+    }
+
+    @Getter
+    @Setter
+    public static class SerialIdTestItem {
         @Serial
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
     }
 
+    @Getter
+    @Setter
     @Reindex(name = "composite", subIndexes = {"id", "name"})
     public static class TestItem {
         @Reindex(name = "id", isPrimaryKey = true)
@@ -2768,70 +2800,6 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Reindex(name = "integers")
         private List<Integer> integers;
         private Double doubleValue;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public void setValue(String value) {
-            this.value = value;
-        }
-
-        public String getNonIndex() {
-            return nonIndex;
-        }
-
-        public void setNonIndex(String nonIndex) {
-            this.nonIndex = nonIndex;
-        }
-
-        public NestedTest getNestedTest() {
-            return nestedTest;
-        }
-
-        public void setNestedTest(NestedTest nestedTest) {
-            this.nestedTest = nestedTest;
-        }
-
-        public List<NestedTest> getListNested() {
-            return listNested;
-        }
-
-        public void setListNested(List<NestedTest> listNested) {
-            this.listNested = listNested;
-        }
-
-        public List<Integer> getIntegers() {
-            return integers;
-        }
-
-        public void setIntegers(List<Integer> integers) {
-            this.integers = integers;
-        }
-
-        public Double getDoubleValue() {
-            return doubleValue;
-        }
-
-        public void setDoubleValue(Double doubleValue) {
-            this.doubleValue = doubleValue;
-        }
 
         @Override
         public boolean equals(Object o) {
@@ -2862,56 +2830,27 @@ public abstract class ReindexerTest extends DbBaseTest {
                    ", integers=" + integers +
                    '}';
         }
-
     }
 
+    @Getter
+    @Setter
     public static class NestedTest {
-
         @Reindex(name = "value")
         private String value;
         @Reindex(name = "test")
         private Integer test;
         private String nonIndex;
-
-        public String getValue() {
-            return value;
-        }
-
-        public void setValue(String value) {
-            this.value = value;
-        }
-
-        public Integer getTest() {
-            return test;
-        }
-
-        public void setTest(Integer test) {
-            this.test = test;
-        }
-
-        public String getNonIndex() {
-            return nonIndex;
-        }
-
-        public void setNonIndex(String nonIndex) {
-            this.nonIndex = nonIndex;
-        }
     }
 
+    @Getter
+    @Setter
     public static class TestItemId {
-
         private Integer id;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
     }
 
+    @Getter
+    @Setter
+    @EqualsAndHashCode
     public static class UuidItem {
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;
@@ -2922,63 +2861,20 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Reindex(name = "str")
         private String str;
         private String noIndexStrUuid;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public UUID getUuid() {
-            return uuid;
-        }
-
-        public void setUuid(UUID uuid) {
-            this.uuid = uuid;
-        }
-
-        public String getStrUuid() {
-            return strUuid;
-        }
-
-        public void setStrUuid(String strUuid) {
-            this.strUuid = strUuid;
-        }
-
-        public String getNoIndexStrUuid() {
-            return noIndexStrUuid;
-        }
-
-        public void setNoIndexStrUuid(String noIndexStrUuid) {
-            this.noIndexStrUuid = noIndexStrUuid;
-        }
-
-        public String getStr() {
-            return str;
-        }
-
-        public void setStr(String str) {
-            this.str = str;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            UuidItem uuidItem = (UuidItem) o;
-            return Objects.equals(id, uuidItem.id)
-                    && Objects.equals(uuid, uuidItem.uuid)
-                    && Objects.equals(strUuid, uuidItem.strUuid)
-                    && Objects.equals(str, uuidItem.str)
-                    && Objects.equals(noIndexStrUuid, uuidItem.noIndexStrUuid);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id);
-        }
     }
 
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ItemWithAppendableIndexes {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name", isAppendable = true, type = TEXT)
+        private String name;
+
+        @Reindex(name = "name", isAppendable = true, type = TEXT)
+        private String description;
+    }
 }

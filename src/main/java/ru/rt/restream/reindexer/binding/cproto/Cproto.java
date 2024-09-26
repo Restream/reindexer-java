@@ -83,6 +83,22 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
+    public void updateIndex(String namespace, IndexDefinition index) {
+        rpcCallNoResults(UPDATE_INDEX, namespace, toJson(index));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void dropIndex(String namespace, String indexName) {
+        rpcCallNoResults(DROP_INDEX, namespace, indexName);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts,
                            int stateToken) {
         byte[] packedPercepts = packPrecepts(precepts);

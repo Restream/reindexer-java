@@ -106,6 +106,20 @@ public class Builtin implements Binding {
     }
 
     @Override
+    public void updateIndex(String namespace, IndexDefinition index) {
+        ReindexerResponse response = adapter.updateIndex(rx, next.getAndIncrement(), timeout.toMillis(), namespace,
+                gson.toJson(index));
+        checkResponse(response);
+    }
+
+    @Override
+    public void dropIndex(String namespace, String indexName) {
+        ReindexerResponse response = adapter.dropIndex(rx, next.getAndIncrement(), timeout.toMillis(), namespace,
+                indexName);
+        checkResponse(response);
+    }
+
+    @Override
     public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken) {
         ByteBuffer args = new ByteBuffer()
                 .putVString(namespaceName)

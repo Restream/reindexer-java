@@ -15,6 +15,11 @@
  */
 package ru.rt.restream.reindexer.fulltext;
 
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import ru.rt.restream.reindexer.annotations.FullText;
 
 import java.util.Arrays;
@@ -30,6 +35,10 @@ import java.util.stream.Collectors;
  * Does not check values for out of bounds, if you used too small or too big value,
  * you have exception when you add or update the index.
  */
+@Setter
+@Getter
+@EqualsAndHashCode
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FullTextConfig {
 
     /**
@@ -167,14 +176,6 @@ public class FullTextConfig {
      */
     private String extraWordSymbols;
 
-    /**
-     * For use in method of() only.
-     * Don't make public the constructor!
-     */
-    private FullTextConfig() {
-    }
-
-
     public static FullTextConfig of(FullText annotation) {
         FullTextConfig config = new FullTextConfig();
         config.setEnableNumbersSearch(annotation.enableNumbersSearch());
@@ -200,8 +201,8 @@ public class FullTextConfig {
         config.setMaxTypoLen(annotation.maxTypoLen());
         config.setMergeLimit(annotation.mergeLimit());
         config.setPartialMatchDecrease(annotation.partialMatchDecrease());
-        config.setStemmers(annotation.stemmers());
-        config.setStopWords(annotation.stopWords());
+        config.setStemmers(Arrays.asList(annotation.stemmers()));
+        config.setStopWords(Arrays.asList(annotation.stopWords()));
         config.setSynonyms(getSynonymsList(annotation.synonyms()));
         config.setExtraWordSymbols(annotation.extraWordSymbols());
         return config;
@@ -212,221 +213,4 @@ public class FullTextConfig {
                 .map(a -> new Synonym(a.tokens(), a.alternatives()))
                 .collect(Collectors.toList());
     }
-
-    public boolean isEnableKbLayout() {
-        return enableKbLayout;
-    }
-
-    public void setEnableKbLayout(boolean enableKbLayout) {
-        this.enableKbLayout = enableKbLayout;
-    }
-
-    public boolean isEnableNumbersSearch() {
-        return enableNumbersSearch;
-    }
-
-    public void setEnableNumbersSearch(boolean enableNumbersSearch) {
-        this.enableNumbersSearch = enableNumbersSearch;
-    }
-
-    public boolean isEnableTranslit() {
-        return enableTranslit;
-    }
-
-    public void setEnableTranslit(boolean enableTranslit) {
-        this.enableTranslit = enableTranslit;
-    }
-
-    public boolean isEnableWarmupOnNsCopy() {
-        return enableWarmupOnNsCopy;
-    }
-
-    public void setEnableWarmupOnNsCopy(boolean enableWarmupOnNsCopy) {
-        this.enableWarmupOnNsCopy = enableWarmupOnNsCopy;
-    }
-
-    public double getBm25Boost() {
-        return bm25Boost;
-    }
-
-    public void setBm25Boost(double bm25Boost) {
-        this.bm25Boost = bm25Boost;
-    }
-
-    public double getBm25Weight() {
-        return bm25Weight;
-    }
-
-    public void setBm25Weight(double bm25Weight) {
-        this.bm25Weight = bm25Weight;
-    }
-
-    public double getPositionBoost() {
-        return positionBoost;
-    }
-
-    public void setPositionBoost(double positionBoost) {
-        this.positionBoost = positionBoost;
-    }
-
-    public double getPositionWeight() {
-        return positionWeight;
-    }
-
-    public void setPositionWeight(double positionWeight) {
-        this.positionWeight = positionWeight;
-    }
-
-    public double getDistanceBoost() {
-        return distanceBoost;
-    }
-
-    public void setDistanceBoost(double distanceBoost) {
-        this.distanceBoost = distanceBoost;
-    }
-
-    public double getDistanceWeight() {
-        return distanceWeight;
-    }
-
-    public void setDistanceWeight(double distanceWeight) {
-        this.distanceWeight = distanceWeight;
-    }
-
-    public double getFullMatchBoost() {
-        return fullMatchBoost;
-    }
-
-    public void setFullMatchBoost(double fullMatchBoost) {
-        this.fullMatchBoost = fullMatchBoost;
-    }
-
-    public double getMinRelevancy() {
-        return minRelevancy;
-    }
-
-    public void setMinRelevancy(double minRelevancy) {
-        this.minRelevancy = minRelevancy;
-    }
-
-    public double getSumRanksByFieldsRatio() {
-        return sumRanksByFieldsRatio;
-    }
-
-    public void setSumRanksByFieldsRatio(double sumRanksByFieldsRatio) {
-        this.sumRanksByFieldsRatio = sumRanksByFieldsRatio;
-    }
-
-    public double getTermLenBoost() {
-        return termLenBoost;
-    }
-
-    public void setTermLenBoost(double termLenBoost) {
-        this.termLenBoost = termLenBoost;
-    }
-
-    public double getTermLenWeight() {
-        return termLenWeight;
-    }
-
-    public void setTermLenWeight(double termLenWeight) {
-        this.termLenWeight = termLenWeight;
-    }
-
-    public int getLogLevel() {
-        return logLevel;
-    }
-
-    public void setLogLevel(int logLevel) {
-        this.logLevel = logLevel;
-    }
-
-    public int getMaxRebuildSteps() {
-        return maxRebuildSteps;
-    }
-
-    public void setMaxRebuildSteps(int maxRebuildSteps) {
-        this.maxRebuildSteps = maxRebuildSteps;
-    }
-
-    public int getMaxStepSize() {
-        return maxStepSize;
-    }
-
-    public void setMaxStepSize(int maxStepSize) {
-        this.maxStepSize = maxStepSize;
-    }
-
-    public int getMaxTypoLen() {
-        return maxTypoLen;
-    }
-
-    public void setMaxTypoLen(int maxTypoLen) {
-        this.maxTypoLen = maxTypoLen;
-    }
-
-    public int getMaxTypos() {
-        return maxTypos;
-    }
-
-    public void setMaxTypos(int maxTypos) {
-        this.maxTypos = maxTypos;
-    }
-
-    public int getMergeLimit() {
-        return mergeLimit;
-    }
-
-    public void setMergeLimit(int mergeLimit) {
-        this.mergeLimit = mergeLimit;
-    }
-
-    public int getPartialMatchDecrease() {
-        return partialMatchDecrease;
-    }
-
-    public void setPartialMatchDecrease(int partialMatchDecrease) {
-        this.partialMatchDecrease = partialMatchDecrease;
-    }
-
-    public List<String> getStemmers() {
-        return stemmers;
-    }
-
-    public void setStemmers(List<String> stemmers) {
-        this.stemmers = stemmers;
-    }
-
-    public void setStemmers(String... stemmers) {
-        this.stemmers = Arrays.asList(stemmers);
-    }
-
-    public List<String> getStopWords() {
-        return stopWords;
-    }
-
-    public void setStopWords(List<String> stopWords) {
-        this.stopWords = stopWords;
-    }
-
-    public void setStopWords(String... stopWords) {
-        this.stopWords = Arrays.asList(stopWords);
-    }
-
-    public List<Synonym> getSynonyms() {
-        return synonyms;
-    }
-
-    public void setSynonyms(List<Synonym> synonyms) {
-        this.synonyms = synonyms;
-    }
-
-    public String getExtraWordSymbols() {
-        return extraWordSymbols;
-    }
-
-    public void setExtraWordSymbols(String extraWordSymbols) {
-        this.extraWordSymbols = extraWordSymbols;
-    }
-
 }
