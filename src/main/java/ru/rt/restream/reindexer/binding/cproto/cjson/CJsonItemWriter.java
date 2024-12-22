@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
+import ru.rt.restream.reindexer.EnumType;
+import ru.rt.restream.reindexer.annotations.Enumerated;
 import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
@@ -90,6 +92,14 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                     if (field.getType() == String.class && field.isAnnotationPresent(Reindex.class)
                             && field.getAnnotation(Reindex.class).isUuid()) {
                         cjsonElement = new CjsonPrimitive(UUID.fromString((String) fieldValue));
+                    } else if (Enum.class.isAssignableFrom(field.getType())) {
+                        Enumerated enumerated = field.getAnnotation(Enumerated.class);
+                        if (enumerated != null && enumerated.value() == EnumType.STRING) {
+                            cjsonElement = new CjsonPrimitive(((Enum<?>) fieldValue).name());
+                        } else {
+                            int ordinal = ((Enum<?>) fieldValue).ordinal();
+                            cjsonElement = new CjsonPrimitive((long) ordinal);
+                        }
                     } else {
                         cjsonElement = toCjson(fieldValue);
                     }

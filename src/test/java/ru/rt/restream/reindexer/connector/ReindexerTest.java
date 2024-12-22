@@ -22,11 +22,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.junit.jupiter.api.Test;
+import ru.rt.restream.reindexer.EnumType;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Transaction;
+import ru.rt.restream.reindexer.annotations.Enumerated;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.db.DbBaseTest;
@@ -2774,6 +2776,51 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(iterator.hasNext(), is(false));
     }
 
+    @Test
+    public void testTestItemEnumString() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumString.class);
+        db.upsert(namespaceName, new TestItemEnumString(1, "TestName", TestEnum.TEST_CONSTANT));
+        Iterator<TestItemEnumString> iterator = db.query(namespaceName, TestItemEnumString.class)
+                .where("testEnumString", EQ, TestEnum.TEST_CONSTANT.name())
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemEnumString foundByEnumString = iterator.next();
+        assertThat(foundByEnumString.id, is(1));
+        assertThat(foundByEnumString.name, is("TestName"));
+        assertThat(foundByEnumString.testEnum, is(TestEnum.TEST_CONSTANT));
+    }
+
+    @Test
+    public void testTestItemEnumOrdinal() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumOrdinal.class);
+        db.upsert(namespaceName, new TestItemEnumOrdinal(1, "TestName", TestEnum.TEST_CONSTANT));
+        Iterator<TestItemEnumOrdinal> iterator = db.query(namespaceName, TestItemEnumOrdinal.class)
+                .where("testEnum", EQ, TestEnum.TEST_CONSTANT.ordinal())
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemEnumOrdinal foundByEnumOrdinal = iterator.next();
+        assertThat(foundByEnumOrdinal.id, is(1));
+        assertThat(foundByEnumOrdinal.name, is("TestName"));
+        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT));
+    }
+
+    @Test
+    public void testTestItemEnumDefault() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumDefault.class);
+        db.upsert(namespaceName, new TestItemEnumDefault(1, "TestName", TestEnum.TEST_CONSTANT));
+        Iterator<TestItemEnumDefault> iterator = db.query(namespaceName, TestItemEnumDefault.class)
+                .where("testEnum", EQ, TestEnum.TEST_CONSTANT.ordinal())
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemEnumDefault foundByEnumOrdinal = iterator.next();
+        assertThat(foundByEnumOrdinal.id, is(1));
+        assertThat(foundByEnumOrdinal.name, is("TestName"));
+        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT));
+    }
+
     @Getter
     @Setter
     public static class SerialIdTestItem {
@@ -2876,5 +2923,56 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         @Reindex(name = "name", isAppendable = true, type = TEXT)
         private String description;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemEnumString {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
+
+        @Enumerated(EnumType.STRING)
+        @Reindex(name = "testEnumString")
+        private TestEnum testEnum;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemEnumOrdinal {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
+
+        @Enumerated(EnumType.ORDINAL)
+        @Reindex(name = "testEnumOrdinal")
+        private TestEnum testEnum;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemEnumDefault {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
+
+        @Reindex(name = "testEnum")
+        private TestEnum testEnum;
+    }
+
+    public enum TestEnum {
+        TEST_CONSTANT
     }
 }

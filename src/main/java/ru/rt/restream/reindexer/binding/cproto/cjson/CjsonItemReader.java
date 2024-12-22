@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
+import ru.rt.restream.reindexer.EnumType;
+import ru.rt.restream.reindexer.annotations.Enumerated;
 import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemReader;
@@ -85,6 +87,12 @@ public class CjsonItemReader<T> implements ItemReader<T> {
                 elements.add(convert(cjsonElement, (Class<?>) elementType));
             }
             return elements;
+        } else if (Enum.class.isAssignableFrom(fieldType)) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            if (enumerated != null && enumerated.value() == EnumType.STRING) {
+                return Enum.valueOf(fieldType.asSubclass(Enum.class), property.getAsString());
+            }
+            return fieldType.getEnumConstants()[property.getAsInteger()];
         } else {
             return convert(property, field.getType());
         }
