@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.annotations;
 
 import ru.rt.restream.reindexer.CollateMode;
+import ru.rt.restream.reindexer.EnumType;
 import ru.rt.restream.reindexer.FieldType;
 import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ReindexScanner;
@@ -259,6 +260,9 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 fieldType = getFieldTypeByClass(componentType);
                 fieldInfo.componentType = componentType;
             }
+        } else if (Enum.class.isAssignableFrom(type)) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            fieldType = enumerated != null && enumerated.value() == EnumType.STRING ? STRING : INT;
         } else {
             fieldType = getFieldTypeByClass(type);
         }
