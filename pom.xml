@@ -47,9 +47,8 @@
     </developers>
 
     <properties>
-        <java.version>1.8</java.version>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <java.version>8</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <cmake.source.directory>${project.basedir}/builtin-adapter</cmake.source.directory>
         <cmake.binary.directory>${project.build.directory}/builtin-adapter/build</cmake.binary.directory>
         <tests>builtin,cproto</tests>
@@ -175,7 +174,7 @@
             <plugin>
                 <groupId>com.googlecode.cmake-maven-project</groupId>
                 <artifactId>cmake-maven-plugin</artifactId>
-                <version>3.4.1-b1</version>
+                <version>3.19.2-b1</version>
                 <configuration>
                     <generator>Unix Makefiles</generator>
                     <sourcePath>${cmake.source.directory}</sourcePath>
