@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'Restream/reindexer-java'
     env:
-      MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE_1 }}
 
     steps:
       - uses: actions/checkout@v2
@@ -15,7 +15,7 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.11
-          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_1 }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       - name: Install Reindexer
