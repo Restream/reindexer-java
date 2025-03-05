@@ -48,8 +48,7 @@
 
     <properties>
         <java.version>8</java.version>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <cmake.source.directory>${project.basedir}/builtin-adapter</cmake.source.directory>
         <cmake.binary.directory>${project.build.directory}/builtin-adapter/build</cmake.binary.directory>
         <tests>builtin,cproto</tests>
