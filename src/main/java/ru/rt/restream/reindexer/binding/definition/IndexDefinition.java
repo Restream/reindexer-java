@@ -57,6 +57,8 @@ public class IndexDefinition {
 
     private FullTextConfig config;
 
+    private boolean isNoColumn;
+
     /**
      * Construct a new IndexDefinition from a {@link ReindexerIndex} object.
      *
@@ -69,6 +71,7 @@ public class IndexDefinition {
         indexDefinition.setCollateMode(index.getCollateMode().getName());
         indexDefinition.setSortOrder(index.getSortOrder());
         indexDefinition.setDense(index.isDense());
+        indexDefinition.setNoColumn(index.isNoColumn());
         indexDefinition.setFieldType(index.getFieldType().getName());
         indexDefinition.setIndexType(index.getIndexType().getName());
         indexDefinition.setArray(index.isArray());

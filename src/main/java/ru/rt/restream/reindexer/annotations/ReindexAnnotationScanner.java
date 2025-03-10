@@ -144,7 +144,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable());
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid,
+                        reindex.isAppendable(), reindex.isNoColumn());
 
                 ReindexerIndex sameNameIndex = nameToIndexMap.get(reindex.name());
                 if (sameNameIndex == null) {
@@ -179,7 +180,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false, false);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false,
+                    false, composite.isNoColumn());
             indexes.add(compositeIndex);
         }
 
@@ -224,7 +226,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
-                                       FullTextConfig textConfig, boolean isUuid, boolean isAppendable) {
+                                       FullTextConfig textConfig, boolean isUuid, boolean isAppendable,
+                                       boolean isNoColumn) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -240,6 +243,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setFullTextConfig(textConfig);
         index.setUuid(isUuid);
         index.setAppendable(isAppendable);
+        index.setNoColumn(isNoColumn);
         return index;
     }
 
