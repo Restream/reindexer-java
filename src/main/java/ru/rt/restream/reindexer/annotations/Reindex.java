@@ -58,6 +58,15 @@ public @interface Reindex {
     boolean isDense() default false;
 
     /**
+     * Reduces the index size. Allows to save ~(`stored_type_size` * `namespace_items_count`) bytes,
+     * where `stored_type_size` is the size of the type stored in the index, and `namespace_items_count`
+     * is the number of items in the namespace. May reduce performance.
+     *
+     * @return true, if index
+     */
+    boolean isNoColumn() default false;
+
+    /**
      * Row (document) contains a value of Sparse index only in case if it's set on purpose - there are no empty
      * (or default) records of this type of indexes in the row (document). It allows to save RAM but it will cost you
      * performance - it works a bit slower than regular indexes.
