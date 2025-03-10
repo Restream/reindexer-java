@@ -403,6 +403,15 @@ public class ByteBuffer {
     }
 
     /**
+     * Reads float value from a buffer. Increments buffer position.
+     *
+     * @return the float read from a backed array
+     */
+    public float getFloat() {
+        return Float.intBitsToFloat((int) readIntBits(Integer.BYTES));
+    }
+
+    /**
      * Reads byte array from a buffer. The length of array is encoded into backed array.
      * Increments buffer position.
      *
@@ -475,6 +484,10 @@ public class ByteBuffer {
 
     public void putDouble(Double value) {
         putIntBits(Double.doubleToLongBits(value), Long.BYTES, -1);
+    }
+
+    public void putFloat(Float value) {
+        putIntBits(Float.floatToIntBits(value), Integer.BYTES, -1);
     }
 
     public void truncateStart(int length) {

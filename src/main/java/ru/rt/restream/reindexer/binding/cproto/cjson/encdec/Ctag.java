@@ -35,6 +35,8 @@ class Ctag {
 
     static final int UUID = 8;
 
+    static final int FLOAT = 9;
+
     /**
      * |31     29|28        25|24     15|14     3|2     0|
      * |  TYPE1  |  RESERVED  |  FIELD  |  NAME  | TYPE0 |
@@ -97,6 +99,8 @@ class Ctag {
             return "<string>";
         } else if (tagType == DOUBLE) {
             return "<double>";
+        } else if (tagType == FLOAT) {
+            return "<float>";
         } else if (tagType == NULL) {
             return "<null>";
         } else if (tagType == UUID) {

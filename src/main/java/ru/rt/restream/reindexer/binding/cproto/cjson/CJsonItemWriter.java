@@ -67,7 +67,7 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
         } else if (source instanceof Double) {
             return new CjsonPrimitive(((Double) source));
         } else if (source instanceof Float) {
-            return new CjsonPrimitive(((Float) source).doubleValue());
+            return new CjsonPrimitive((Float) source);
         } else if (source instanceof UUID) {
             return new CjsonPrimitive((UUID) source);
         } else if (source instanceof List) {

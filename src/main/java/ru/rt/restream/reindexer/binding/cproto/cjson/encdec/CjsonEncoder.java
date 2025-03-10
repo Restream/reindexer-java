@@ -102,6 +102,10 @@ public class CjsonEncoder {
                 for (CjsonElement element : elements) {
                     buffer.putDouble(element.getAsDouble());
                 }
+            } else if (ctagType == Ctag.FLOAT) {
+                for (CjsonElement element : elements) {
+                    buffer.putFloat(element.getAsFloat());
+                }
             } else if (ctagType == Ctag.STRING) {
                 for (CjsonElement element : elements) {
                     buffer.putVString(element.getAsString());
@@ -131,6 +135,8 @@ public class CjsonEncoder {
                 return Ctag.VARINT;
             } else if (cjsonPrimitive.isDouble()) {
                 return Ctag.DOUBLE;
+            } else if (cjsonPrimitive.isFloat()) {
+                return Ctag.FLOAT;
             } else if (cjsonPrimitive.isString()) {
                 return Ctag.STRING;
             } else if (cjsonPrimitive.isBoolean()) {
@@ -153,6 +159,11 @@ public class CjsonEncoder {
             Double value = cjsonPrimitive.getAsDouble();
             buffer.putVarUInt32(ctag.getValue());
             buffer.putDouble(value);
+        } else if (cjsonPrimitive.isFloat()) {
+            Ctag ctag = new Ctag(Ctag.FLOAT, ctagName, 0);
+            Float value = cjsonPrimitive.getAsFloat();
+            buffer.putVarUInt32(ctag.getValue());
+            buffer.putFloat(value);
         } else if (cjsonPrimitive.isString()) {
             Ctag ctag = new Ctag(Ctag.STRING, ctagName, 0);
             String value = cjsonPrimitive.getAsString();

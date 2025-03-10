@@ -40,6 +40,7 @@ import java.util.UUID;
 import static ru.rt.restream.reindexer.FieldType.BOOL;
 import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
 import static ru.rt.restream.reindexer.FieldType.DOUBLE;
+import static ru.rt.restream.reindexer.FieldType.FLOAT;
 import static ru.rt.restream.reindexer.FieldType.INT;
 import static ru.rt.restream.reindexer.FieldType.INT64;
 import static ru.rt.restream.reindexer.FieldType.STRING;
@@ -69,8 +70,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         MAPPED_TYPES.put(long.class, INT64);
         MAPPED_TYPES.put(Long.class, INT64);
         //Floats
-        MAPPED_TYPES.put(float.class, DOUBLE);
-        MAPPED_TYPES.put(Float.class, DOUBLE);
+        MAPPED_TYPES.put(float.class, FLOAT);
+        MAPPED_TYPES.put(Float.class, FLOAT);
         MAPPED_TYPES.put(double.class, DOUBLE);
         MAPPED_TYPES.put(Double.class, DOUBLE);
         //String
