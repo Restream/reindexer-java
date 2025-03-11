@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ru.rt.restream.reindexer.annotations.FullText;
+import ru.rt.restream.reindexer.binding.definition.IndexConfig;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class FullTextConfig {
+public class FullTextConfig implements IndexConfig {
 
     /**
      * Enable wrong keyboard layout variants processing. e.g. term "keynbr" will match word "лунтик".

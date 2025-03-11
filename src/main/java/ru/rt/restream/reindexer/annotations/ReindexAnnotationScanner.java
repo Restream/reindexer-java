@@ -238,7 +238,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setIndexType(indexType);
         index.setFieldType(fieldType);
         index.setPrecept(precept);
-        index.setFullTextConfig(textConfig);
+        index.setConfig(textConfig);
         index.setUuid(isUuid);
         index.setAppendable(isAppendable);
         return index;

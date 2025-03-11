@@ -15,12 +15,14 @@
  */
 package ru.rt.restream.reindexer;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ru.rt.restream.reindexer.binding.definition.IndexConfig;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.vector.HnswConfig;
 import ru.rt.restream.reindexer.vector.IvfConfig;
@@ -58,24 +60,28 @@ public class ReindexerIndex {
      * Full text search config for current index.
      * Type of index must be TEXT.
      */
+    @Setter(AccessLevel.NONE)
     private FullTextConfig fullTextConfig;
 
     /**
      * Float vector search config for current index.
      * Type of index must be HNSW.
      */
+    @Setter(AccessLevel.NONE)
     private HnswConfig hnswConfig;
 
     /**
      * Float vector search config for current index.
      * Type of index must be IVF.
      */
+    @Setter(AccessLevel.NONE)
     private IvfConfig ivfConfig;
 
     /**
      * Float vector search config for current index.
      * Type of index must be VEC_BF.
      */
+    @Setter(AccessLevel.NONE)
     private VecBfConfig vecBfConfig;
 
     /**
@@ -105,11 +111,46 @@ public class ReindexerIndex {
      * @param fullTextConfig full text search configuration of text index
      * @throws IllegalArgumentException if type of index is not TEXT and fullText config is not null
      */
-    public void setFullTextConfig(FullTextConfig fullTextConfig) {
+    public void setConfig(FullTextConfig fullTextConfig) {
         if (indexType != IndexType.TEXT && fullTextConfig != null) {
             throw new IllegalArgumentException("Type of index must be TEXT for full text search config.");
         }
         this.fullTextConfig = fullTextConfig;
     }
 
+    public void setConfig(HnswConfig hnswConfig) {
+        if (indexType != IndexType.HNSW && hnswConfig != null) {
+            throw new IllegalArgumentException("Type of index must be HNSW for float vector search config.");
+        }
+        this.hnswConfig = hnswConfig;
+    }
+
+    public void setConfig(IvfConfig ivfConfig) {
+        if (indexType != IndexType.IVF && ivfConfig != null) {
+            throw new IllegalArgumentException("Type of index must be IVF for float vector search config.");
+        }
+        this.ivfConfig = ivfConfig;
+    }
+
+    public void setConfig(VecBfConfig vecBfConfig) {
+        if (indexType != IndexType.VEC_BF && vecBfConfig != null) {
+            throw new IllegalArgumentException("Type of index must be VEC_BF for float vector search config.");
+        }
+        this.vecBfConfig = vecBfConfig;
+    }
+
+    public IndexConfig getConfig() {
+        switch (indexType) {
+            case TEXT:
+                return fullTextConfig;
+            case HNSW:
+                return hnswConfig;
+            case IVF:
+                return ivfConfig;
+            case VEC_BF:
+                return vecBfConfig;
+            default:
+                return null;
+        }
+    }
 }

@@ -20,6 +20,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ru.rt.restream.reindexer.binding.definition.IndexConfig;
 
 /**
  * Contains the float vector search configuration for IVF index.
@@ -32,7 +33,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
-public class IvfConfig {
+public class IvfConfig implements IndexConfig {
     /**
      * Type of metrics for calculating the measure of similarity of vectors. It should be explicitly specified.
      */
