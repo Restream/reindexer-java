@@ -54,6 +54,21 @@ public enum IndexType {
     COLUMN("-"),
 
     /**
+     * Float vector index based on HNSW algorithm of approximate nearest neighbor search.
+     */
+    HNSW("hnsw"),
+
+    /**
+     * Float vector index based on FAISS IVF algorithm of approximate nearest neighbor search.
+     */
+    IVF("ivf"),
+
+    /**
+     * Float vector index based on bruteforce.
+     */
+    VEC_BF("vec_bf"),
+
+    /**
      * Default index type will be used.
      */
     DEFAULT(null);

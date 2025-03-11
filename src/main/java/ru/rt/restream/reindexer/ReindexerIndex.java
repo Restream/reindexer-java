@@ -22,6 +22,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
+import ru.rt.restream.reindexer.vector.HnswConfig;
+import ru.rt.restream.reindexer.vector.IvfConfig;
+import ru.rt.restream.reindexer.vector.VecBfConfig;
 
 import java.util.List;
 
@@ -56,6 +59,24 @@ public class ReindexerIndex {
      * Type of index must be TEXT.
      */
     private FullTextConfig fullTextConfig;
+
+    /**
+     * Float vector search config for current index.
+     * Type of index must be HNSW.
+     */
+    private HnswConfig hnswConfig;
+
+    /**
+     * Float vector search config for current index.
+     * Type of index must be IVF.
+     */
+    private IvfConfig ivfConfig;
+
+    /**
+     * Float vector search config for current index.
+     * Type of index must be VEC_BF.
+     */
+    private VecBfConfig vecBfConfig;
 
     /**
      * Precept is a special reindexer embedded function, such as serial(), now().
