@@ -45,6 +45,11 @@ public enum FieldType {
     FLOAT("float"),
 
     /**
+     * Reindexer float vector type.
+     */
+    FLOAT_VECTOR("float_vector"),
+
+    /**
      * Reindexer string type.
      */
     STRING("string"),

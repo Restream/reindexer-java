@@ -24,7 +24,14 @@ import ru.rt.restream.reindexer.ReindexerIndex;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
+import ru.rt.restream.reindexer.vector.HnswConfig;
+import ru.rt.restream.reindexer.vector.HnswConfigs;
+import ru.rt.restream.reindexer.vector.IvfConfig;
+import ru.rt.restream.reindexer.vector.IvfConfigs;
+import ru.rt.restream.reindexer.vector.VecBfConfig;
+import ru.rt.restream.reindexer.vector.VecBfConfigs;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -41,6 +48,7 @@ import static ru.rt.restream.reindexer.FieldType.BOOL;
 import static ru.rt.restream.reindexer.FieldType.COMPOSITE;
 import static ru.rt.restream.reindexer.FieldType.DOUBLE;
 import static ru.rt.restream.reindexer.FieldType.FLOAT;
+import static ru.rt.restream.reindexer.FieldType.FLOAT_VECTOR;
 import static ru.rt.restream.reindexer.FieldType.INT;
 import static ru.rt.restream.reindexer.FieldType.INT64;
 import static ru.rt.restream.reindexer.FieldType.STRING;
@@ -141,11 +149,21 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
                 validateUuidIndexHasTypeUuidOrString(reindex, fieldInfo);
                 boolean isUuid = reindex.isUuid() || fieldInfo.fieldType == UUID;
-                IndexType indexType = (isUuid && reindex.type() == IndexType.DEFAULT) ? IndexType.HASH : reindex.type();
+                IndexType indexType = specifyDefaultIndexType(reindex, field, fieldInfo);
+                validateVectorIndexes(indexType, field, fieldInfo);
+                if (indexType.isVectorIndex()) {
+                    fieldInfo.isArray = false;
+                    fieldInfo.fieldType = FLOAT_VECTOR;
+                }
                 FieldType fieldType = isUuid ? UUID : fieldInfo.fieldType;
+                HnswConfig hnswConfig = getHnswConfig(field, indexType);
+                IvfConfig ivfConfig = getIvfConfig(field, indexType);
+                VecBfConfig vecBfConfig = getVecBfConfig(field, indexType);
+
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
-                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable());
+                        fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable(),
+                        hnswConfig, ivfConfig, vecBfConfig);
 
                 ReindexerIndex sameNameIndex = nameToIndexMap.get(reindex.name());
                 if (sameNameIndex == null) {
@@ -180,12 +198,36 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             String sortOrder = getSortOrder(collateMode, collate);
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
-                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false, false);
+                    composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false,
+                    false, null, null, null);
             indexes.add(compositeIndex);
         }
 
         return indexes;
     }
+
+    private IndexType specifyDefaultIndexType(Reindex reindex, Field field, FieldInfo fieldInfo) {
+        if (reindex.type() != IndexType.DEFAULT) {
+            return reindex.type();
+        }
+
+        if (reindex.isUuid() || fieldInfo.fieldType == UUID) {
+            return IndexType.HASH;
+        }
+
+        if (fieldInfo.isFloatVector) {
+            if (field.isAnnotationPresent(Hnsw.class)) {
+                return IndexType.HNSW;
+            } else if (field.isAnnotationPresent(Ivf.class)) {
+                return IndexType.IVF;
+            } else if (field.isAnnotationPresent(VecBf.class)) {
+                return IndexType.VEC_BF;
+            }
+        }
+        return IndexType.DEFAULT;
+    }
+
+
 
     private void validateUuidFieldHasIndex(Class<?> itemClass, Field field, Reindex reindex) {
         if (reindex == null && field.getType() == UUID.class) {
@@ -200,11 +242,60 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
     }
 
-    private FullTextConfig getFullTextConfig(Field field, IndexType type) {
-        if (type != IndexType.TEXT || !field.isAnnotationPresent(FullText.class)) {
-            return null;
+    private void validateVectorIndexes(IndexType indexType, Field field, FieldInfo fieldInfo) {
+        if (!indexType.isVectorIndex()) {
+            return;
         }
-        return FullTextConfig.of(field.getAnnotation(FullText.class));
+        // for vector indices
+        if (!fieldInfo.isFloatVector) {
+            throw new RuntimeException("Only a float array field can have vector index");
+        }
+        Class<? extends Annotation> aClass;
+        switch (indexType) {
+            case HNSW:
+                aClass = Hnsw.class;
+                break;
+            case IVF:
+                aClass = Ivf.class;
+                break;
+            case VEC_BF:
+                aClass = VecBf.class;
+                break;
+            default:
+                throw new RuntimeException("Unknown vector index type: " + indexType);
+        }
+        if (!field.isAnnotationPresent(aClass)) {
+            String errorMessage = String.format("Vector index %s must have annotation @%s", indexType, aClass.getSimpleName());
+            throw new RuntimeException(errorMessage);
+        }
+    }
+
+    private FullTextConfig getFullTextConfig(Field field, IndexType type) {
+        if (type == IndexType.TEXT && field.isAnnotationPresent(FullText.class)) {
+            return FullTextConfig.of(field.getAnnotation(FullText.class));
+        }
+        return null;
+    }
+
+    private HnswConfig getHnswConfig(Field field, IndexType type) {
+        if (type == IndexType.HNSW && field.isAnnotationPresent(Hnsw.class)) {
+            return HnswConfigs.of(field.getAnnotation(Hnsw.class));
+        }
+        return null;
+    }
+
+    private IvfConfig getIvfConfig(Field field, IndexType type) {
+        if (type == IndexType.IVF && field.isAnnotationPresent(Ivf.class)) {
+            return IvfConfigs.of(field.getAnnotation(Ivf.class));
+        }
+        return null;
+    }
+
+    private VecBfConfig getVecBfConfig(Field field, IndexType type) {
+        if (type == IndexType.VEC_BF && field.isAnnotationPresent(VecBf.class)) {
+            return VecBfConfigs.of(field.getAnnotation(VecBf.class));
+        }
+        return null;
     }
 
     private String getSortOrder(CollateMode collateMode, String collate) {
@@ -225,7 +316,8 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
-                                       FullTextConfig textConfig, boolean isUuid, boolean isAppendable) {
+                                       FullTextConfig textConfig, boolean isUuid, boolean isAppendable,
+                                       HnswConfig hnswConfig, IvfConfig ivfConfig, VecBfConfig vecBfConfig) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -239,6 +331,9 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setFieldType(fieldType);
         index.setPrecept(precept);
         index.setConfig(textConfig);
+        index.setConfig(hnswConfig);
+        index.setConfig(ivfConfig);
+        index.setConfig(vecBfConfig);
         index.setUuid(isUuid);
         index.setAppendable(isAppendable);
         return index;
@@ -253,6 +348,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             Class<?> componentType = type.getComponentType();
             fieldType = getFieldTypeByClass(componentType);
             fieldInfo.componentType = componentType;
+            fieldInfo.isFloatVector = (fieldType == FLOAT);
         } else if (field.getGenericType() instanceof ParameterizedType && fieldInfo.isArray) {
             ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
             Type typeArgument = parameterizedType.getActualTypeArguments()[0];
@@ -284,6 +380,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         private FieldType fieldType;
         private boolean isArray;
         private Class<?> componentType;
+        private boolean isFloatVector;
 
         private boolean isInt() {
             return fieldType == INT || fieldType == INT64;

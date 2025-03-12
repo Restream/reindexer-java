@@ -78,6 +78,13 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                 cjsonArray.add(cjsonElement);
             }
             return cjsonArray;
+        } else if (source.getClass().isArray() && source.getClass().getComponentType() == float.class) {
+            float[] floatVector = (float[]) source;
+            CjsonArray cjsonArray = new CjsonArray();
+            for (float el : floatVector) {
+                cjsonArray.add(new CjsonPrimitive(el));
+            }
+            return cjsonArray;
         } else {
             CjsonObject cjsonObject = new CjsonObject();
             List<Field> fields = BeanPropertyUtils.getInheritedFields(source.getClass());

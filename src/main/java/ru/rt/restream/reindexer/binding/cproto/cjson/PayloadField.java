@@ -34,6 +34,8 @@ public class PayloadField {
 
     private final List<String> jsonPaths;
 
+    private final int floatVectorDimension;
+
     /**
      * Creates an instance.
      *
@@ -44,13 +46,14 @@ public class PayloadField {
      * @param isArray   true, if field is array
      * @param jsonPaths json paths to that field
      */
-    public PayloadField(long type, String name, long offset, long size, boolean isArray, List<String> jsonPaths) {
+    public PayloadField(long type, String name, long offset, long size, boolean isArray, List<String> jsonPaths, int floatVectorDimension) {
         this.type = type;
         this.name = name;
         this.offset = offset;
         this.size = size;
         this.isArray = isArray;
         this.jsonPaths = jsonPaths;
+        this.floatVectorDimension = floatVectorDimension;
     }
 
     /**

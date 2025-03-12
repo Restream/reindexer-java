@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ru.rt.restream.reindexer.binding.Consts.VALUE_FLOAT_VECTOR;
+
 /**
  * A {@link QueryResult} reader.
  */
@@ -108,9 +110,14 @@ public class QueryResultReader {
                 //read payload fields
                 long pStringHdrOffset = buffer.getVarUInt();
                 List<PayloadField> fields = new ArrayList<>();
+
+                // see reindexer/cjson/creflect.go::Read
                 long fieldsCount = buffer.getVarUInt();
                 for (int j = 0; j < fieldsCount; j++) {
                     long type = buffer.getVarUInt();
+                    int floatVectorDimension = (type == VALUE_FLOAT_VECTOR)
+                            ? (int) buffer.getVarUInt()
+                            : 0;
                     String name = buffer.getVString();
                     long offset = buffer.getVarUInt();
                     long size = buffer.getVarUInt();
@@ -120,7 +127,7 @@ public class QueryResultReader {
                     for (int k = 0; k < jsonPathCnt; k++) {
                         jsonPaths.add(buffer.getVString());
                     }
-                    fields.add(new PayloadField(type, name, offset, size, isArray, jsonPaths));
+                    fields.add(new PayloadField(type, name, offset, size, isArray, jsonPaths, floatVectorDimension));
                 }
                 PayloadType payloadType = new PayloadType(namespaceId, namespaceName, version, stateToken,
                         pStringHdrOffset, tags, fields);

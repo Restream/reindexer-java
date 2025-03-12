@@ -28,6 +28,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -93,6 +94,17 @@ public class CjsonItemReader<T> implements ItemReader<T> {
                 return Enum.valueOf(fieldType.asSubclass(Enum.class), property.getAsString());
             }
             return fieldType.getEnumConstants()[property.getAsInteger()];
+        } else if ( fieldType.isArray() && fieldType.getComponentType() == float.class) {
+            // float_vector
+            CjsonArray array = property.getAsCjsonArray();
+            int size = array.list().size();
+            float[] elements = new float[size];
+            int i = 0;
+            Iterator<CjsonElement> iterator = array.iterator();
+            while (iterator.hasNext()) {
+                elements[i++] = iterator.next().getAsFloat();
+            }
+            return elements;
         } else {
             return convert(property, field.getType());
         }

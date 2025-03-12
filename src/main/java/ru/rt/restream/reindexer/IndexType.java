@@ -86,4 +86,8 @@ public enum IndexType {
         return name;
     }
 
+    public boolean isVectorIndex() {
+        return this == HNSW || this == IVF || this == VEC_BF;
+    }
+
 }
