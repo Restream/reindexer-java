@@ -24,7 +24,6 @@ import ru.rt.restream.reindexer.annotations.ReindexAnnotationScanner;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 
 import java.util.List;
-import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
@@ -33,6 +32,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static ru.rt.restream.reindexer.IndexType.TEXT;
+import static ru.rt.restream.util.ReindexerUtils.getIndexByName;
 
 public class ReindexAnnotationScannerIsAppendableIndexTest {
     private final ReindexScanner scanner = new ReindexAnnotationScanner();
@@ -80,14 +80,7 @@ public class ReindexAnnotationScannerIsAppendableIndexTest {
                 "but at least one of them is not marked as appendable"));
     }
 
-    private ReindexerIndex getIndexByName(List<ReindexerIndex> indexes, String indexName) {
-        for (ReindexerIndex index : indexes) {
-            if (Objects.equals(index.getName(), indexName)) {
-                return index;
-            }
-        }
-        return null;
-    }
+
 
 
     static class ItemWithNonUniqueIndexes {
