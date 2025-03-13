@@ -242,14 +242,6 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         if (queryResult.isWithItemId()) {
             params.id = buffer.getVarUInt();
             params.version = buffer.getVarUInt();
-            if (queryResult.isWithShardId()) {
-                if (queryResult.getShardId() != Consts.SHARDING_PROXY_OFF) {
-                    params.shardId = queryResult.getShardId();
-                } else {
-                    params.shardId = (int) buffer.getVarUInt();
-                }
-
-            }
         }
 
         if (queryResult.isWithNsId()) {
@@ -258,7 +250,20 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
 
         if (queryResult.isWithRank()) {
             //used for full-text search
-            params.rank = buffer.getVarUInt();
+            if (queryResult.getRankFormat() == 0) {
+                params.rank = buffer.getFloat();
+            } else {
+                params.rank = buffer.getVarUInt();
+            }
+        }
+
+        if (queryResult.isWithShardId()) {
+            if (queryResult.getShardId() != Consts.SHARDING_PROXY_OFF) {
+                params.shardId = queryResult.getShardId();
+            } else {
+                params.shardId = (int) buffer.getVarUInt();
+            }
+
         }
 
         if (queryResult.isWithResultsPtr()) {
@@ -306,14 +311,14 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
     }
 
     private static class ItemParams {
-        private long rank = -1;
+        private float rank = -1;
         private long id = -1;
         private int shardId = Consts.SHARDING_PROXY_OFF;
         private long version = -1;
         private long cptr;
         private int nsId = 0;
 
-        public long getRank() {
+        public float getRank() {
             return rank;
         }
 

@@ -16,12 +16,11 @@
 package ru.rt.restream.reindexer.binding;
 
 /**
- * Different constants. TODO: move to classes
+ * Different constants from type_consts.h and reindexer_ctypes.h
  */
 public final class Consts {
 
-    private Consts() {
-    }
+    public static final String REINDEXER_VERSION = "v5.0.0";
 
     public static final int ERROR = 1;
     public static final int WARNING = 2;
@@ -69,6 +68,14 @@ public final class Consts {
     public static final int MODE_CACHED_TOTAL = 1;
     public static final int MODE_ACCURATE_TOTAL = 2;
 
+    public static final int QUERY_RESULT_END = 0;
+    public static final int QUERY_RESULT_AGGREGATION = 1;
+    public static final int QUERY_RESULT_EXPLAIN = 2;
+    public static final int QUERY_RESULT_SHARDING_VERSION = 3;
+    public static final int QUERY_RESULT_SHARD_ID = 4;
+    public static final int QUERY_RESULT_INCARNATION_TAGS = 5;
+    public static final int QUERY_RESULT_RANK_FORMAT = 6;
+
     public static final int RESULTS_FORMAT_MASK = 0xF;
     public static final int RESULTS_PURE = 0x0;
     public static final int RESULTS_PTRS = 0x1;
@@ -77,9 +84,11 @@ public final class Consts {
 
     public static final int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
     public static final int RESULTS_WITH_ITEM_ID = 0x20;
-    public static final int RESULTS_WITH_PERCENTS = 0x40;
+    public static final int RESULTS_WITH_RANK = 0x40;
     public static final int RESULTS_WITH_NS_ID = 0x80;
     public static final int RESULTS_WITH_JOINED = 0x100;
+    public static final int RESULTS_WITH_SHARD_ID = 0x800;
+    public static final int RESULTS_SUPPORT_IDLE_TIMEOUT = 0x2000;
 
     public static final int INDEX_OPT_PK = 1 << 7;
     public static final int INDEX_OPT_ARRAY = 1 << 6;
@@ -90,6 +99,18 @@ public final class Consts {
     public static final int STORAGE_OPT_ENABLED = 1;
     public static final int STORAGE_OPT_DROP_ON_FILE_FORMAT_ERROR = 1 << 1;
     public static final int STORAGE_OPT_CREATE_IF_MISSING = 1 << 2;
+
+    public static final int CONNECT_OPT_OPEN_NAMESPACES = 1;
+    public static final int CONNECT_OPT_ALLOW_NAMESPACE_ERRORS = 1 << 1;
+    public static final int CONNECT_OPT_AUTOREPAIR = 1 << 2;
+    public static final int CONNECT_OPT_WARN_VERSION = 1 << 4;
+
+    public static final long BINDING_CAPABILITY_QR_IDLE_TIMEOUTS = 1;
+    public static final long BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS = 1 << 1;
+    public static final long BINDING_CAPABILITY_NAMESPACE_INCARNATIONS = 1 << 2;
+    public static final long BINDING_CAPABILITY_COMPLEX_RANK = 1 << 3;
+
+    public static final int RANK_FORMAT_SINGLE_FLOAT = 0;
 
     public static final int ERR_OK = 0;
     public static final int ERR_PARSE_SQL = 1;
@@ -107,6 +128,7 @@ public final class Consts {
     public static final int ERR_NOT_FOUND = 13;
     public static final int ERR_STATE_INVALIDATED = 14;
 
+    public static final int SHARDING_NOT_SET = -1;
     public static final int SHARDING_PROXY_OFF = -2;
     public static final int NOT_SHARDED = -3;
 

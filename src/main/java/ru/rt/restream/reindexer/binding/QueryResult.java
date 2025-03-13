@@ -22,6 +22,9 @@ import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.util.List;
+import java.util.Map;
+
+import ru.rt.restream.reindexer.binding.Consts.*;
 
 /**
  * Result of a query.
@@ -114,5 +117,17 @@ public class QueryResult {
      * Version of the sharding config.
      */
     private long shardingVersion;
+
+    /**
+     *
+     */
+    private Map<Integer, long[]> incarnationTags;
+
+    /**
+     * Numeric value of rank format.
+     *
+     * <p>It supports only {@link ru.rt.restream.reindexer.binding.Consts#RANK_FORMAT_SINGLE_FLOAT}.
+     */
+    private long rankFormat;
 
 }

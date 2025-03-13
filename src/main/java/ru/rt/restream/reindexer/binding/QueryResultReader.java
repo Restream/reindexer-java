@@ -24,42 +24,33 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_AGGREGATION;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_END;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_EXPLAIN;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_INCARNATION_TAGS;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_RANK_FORMAT;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARDING_VERSION;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARD_ID;
+import static ru.rt.restream.reindexer.binding.Consts.RANK_FORMAT_SINGLE_FLOAT;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_FORMAT_MASK;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_JSON;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_PTRS;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_ITEM_ID;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_JOINED;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_NS_ID;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_PAYLOAD_TYPES;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_RANK;
+import static ru.rt.restream.reindexer.binding.Consts.RESULTS_WITH_SHARD_ID;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_FLOAT_VECTOR;
 
 /**
  * A {@link QueryResult} reader.
  */
 public class QueryResultReader {
-
-    private static final int QUERY_RESULT_END = 0;
-
-    private static final int QUERY_RESULT_AGGREGATION = 1;
-
-    private static final int QUERY_RESULT_EXPLAIN = 2;
-
-    private static final int QUERY_RESULT_SHARDING_VERSION = 3;
-
-    private static final int QUERY_RESULT_SHARD_ID = 4;
-
-    private static final int RESULTS_FORMAT_MASK = 0xF;
-
-    private static final int RESULTS_JSON = 0x3;
-
-    private static final int RESULTS_WITH_RANK = 0x40;
-
-    private static final int RESULTS_WITH_ITEM_ID = 0x20;
-
-    private static final int RESULTS_WITH_NS_ID = 0x80;
-
-    private static final int RESULTS_WITH_PAYLOAD_TYPES = 0x10;
-
-    private static final int RESULTS_WITH_JOINED = 0x100;
-
-    private static final int RESULTS_WITH_SHARD_ID = 0x800;
-
-    private static final int RESULTS_PTRS = 0x1;
 
     private final Gson gson = new Gson();
 
@@ -71,30 +62,14 @@ public class QueryResultReader {
      */
     public QueryResult read(byte[] rawQueryResult) {
         ByteBuffer buffer = new ByteBuffer(rawQueryResult).rewind();
-        long flags = buffer.getVarUInt();
-        boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULTS_JSON;
-        boolean withRank = (flags & RESULTS_WITH_RANK) != 0;
-        boolean withItemId = (flags & RESULTS_WITH_ITEM_ID) != 0;
-        boolean withNsId = (flags & RESULTS_WITH_NS_ID) != 0;
-        boolean withPayloadTypes = (flags & RESULTS_WITH_PAYLOAD_TYPES) != 0;
-        boolean withJoined = (flags & RESULTS_WITH_JOINED) != 0;
-        boolean withResultsPtr = (flags & RESULTS_PTRS) != 0;
-        boolean withShardId = (flags & RESULTS_WITH_SHARD_ID) != 0;
-        QueryResult queryResult = new QueryResult();
-        queryResult.setJson(isJson);
-        queryResult.setWithRank(withRank);
+        QueryResult queryResult = getQueryResultWithFlags(buffer.getVarUInt());
         queryResult.setTotalCount(buffer.getVarUInt());
         queryResult.setQCount(buffer.getVarUInt());
         queryResult.setCount(buffer.getVarUInt());
-        queryResult.setWithItemId(withItemId);
-        queryResult.setWithNsId(withNsId);
-        queryResult.setWithPayloadTypes(withPayloadTypes);
-        queryResult.setWithJoined(withJoined);
-        queryResult.setWithResultsPtr(withResultsPtr);
-        queryResult.setWithShardId(withShardId);
+
         List<PayloadType> payloadTypes = new ArrayList<>();
         queryResult.setPayloadTypes(payloadTypes);
-        if (!isJson && queryResult.isWithPayloadTypes()) {
+        if (!queryResult.isJson() && queryResult.isWithPayloadTypes()) {
             int ptCount = (int) buffer.getVarUInt();
             for (int i = 0; i < ptCount; i++) {
                 long namespaceId = buffer.getVarUInt();
@@ -135,8 +110,9 @@ public class QueryResultReader {
             }
         }
 
+        // result_serializer.go::readExtraResults
         int tag = (int) buffer.getVarUInt();
-        ArrayList<AggregationResult> aggregationResults = new ArrayList<AggregationResult>();
+        ArrayList<AggregationResult> aggregationResults = new ArrayList<>();
         while (tag != QUERY_RESULT_END) {
             switch (tag) {
                 case QUERY_RESULT_AGGREGATION:
@@ -152,6 +128,30 @@ public class QueryResultReader {
                 case QUERY_RESULT_SHARD_ID:
                     queryResult.setShardId((int) buffer.getVarUInt());
                     break;
+                case QUERY_RESULT_INCARNATION_TAGS:
+                    int shardsCnt = (int) buffer.getVarUInt();
+                    Map<Integer, long[]> incarnationTags = new HashMap<>();
+                    queryResult.setIncarnationTags(incarnationTags);
+                    for (int i = 0; i < shardsCnt; i++) {
+                        int shardId = (int) buffer.getVarInt();
+                        int nsCnt = (int) buffer.getVarUInt();
+                        if (nsCnt > 0) {
+                            long[] sl = new long[nsCnt];
+                            for (int j = 0; j < nsCnt; j++) {
+                                sl[j] = buffer.getVarInt();
+                            }
+                            incarnationTags.put(shardId, sl);
+                        }
+                    }
+                    break;
+                case QUERY_RESULT_RANK_FORMAT:
+                    int format = (int) buffer.getVarUInt();
+                    if (format != RANK_FORMAT_SINGLE_FLOAT) {
+                        String errorMessage = String.format("Unexpected rank format value: %d - only supported format is 0 (single float rank)", format);
+                        throw new RuntimeException(errorMessage);
+                    }
+                    queryResult.setRankFormat(format);
+                    break;
                 default:
                     throw new RuntimeException("Illegal QueryResults tag: " + tag);
             }
@@ -160,6 +160,27 @@ public class QueryResultReader {
         queryResult.setAggResults(aggregationResults);
         queryResult.setBuffer(new ByteBuffer(buffer.getBytes()).rewind());
 
+        return queryResult;
+    }
+
+    private static QueryResult getQueryResultWithFlags(long flags) {
+        boolean isJson = (flags & RESULTS_FORMAT_MASK) == RESULTS_JSON;
+        boolean withRank = (flags & RESULTS_WITH_RANK) != 0;
+        boolean withItemId = (flags & RESULTS_WITH_ITEM_ID) != 0;
+        boolean withNsId = (flags & RESULTS_WITH_NS_ID) != 0;
+        boolean withPayloadTypes = (flags & RESULTS_WITH_PAYLOAD_TYPES) != 0;
+        boolean withJoined = (flags & RESULTS_WITH_JOINED) != 0;
+        boolean withResultsPtr = (flags & RESULTS_PTRS) != 0;
+        boolean withShardId = (flags & RESULTS_WITH_SHARD_ID) != 0;
+        QueryResult queryResult = new QueryResult();
+        queryResult.setJson(isJson);
+        queryResult.setWithRank(withRank);
+        queryResult.setWithItemId(withItemId);
+        queryResult.setWithNsId(withNsId);
+        queryResult.setWithPayloadTypes(withPayloadTypes);
+        queryResult.setWithJoined(withJoined);
+        queryResult.setWithResultsPtr(withResultsPtr);
+        queryResult.setWithShardId(withShardId);
         return queryResult;
     }
 
