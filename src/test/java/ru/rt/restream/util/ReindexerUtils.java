@@ -16,7 +16,9 @@
 
 package ru.rt.restream.util;
 
+import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.ReindexerNamespace;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,5 +31,12 @@ public class ReindexerUtils {
             }
         }
         return null;
+    }
+
+    public static ReindexerIndex getIndexByName(Namespace<?> ns, String name) {
+        return ((ReindexerNamespace<?>) ns).getIndexes().stream()
+                .filter(i -> i.getName().equals(name))
+                .findFirst()
+                .orElse(null);
     }
 }

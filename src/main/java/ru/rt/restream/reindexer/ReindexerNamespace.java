@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import lombok.AccessLevel;
+import lombok.Getter;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.util.List;
@@ -23,30 +25,71 @@ import java.util.Objects;
 /**
  * Contains the reindexer namespace configuration and methods for manipulating the linked reindexer namespace data.
  */
+@Getter
 public class ReindexerNamespace<T> implements Namespace<T> {
 
-    private final String name;
-
-    private final Class<T> itemClass;
-
-    private final boolean enableStorage;
-
-    private final boolean createStorageIfMissing;
-
-    private final boolean dropStorageOnFileFormatError;
-
-    private final boolean dropOnIndexConflict;
-
-    private final boolean disableObjCache;
-
-    private final long objCacheItemsCount;
-
-    private final List<ReindexerIndex> indexes;
-
-    private final String[] precepts;
-
+    @Getter(value = AccessLevel.NONE)
     private final Reindexer reindexer;
 
+    /**
+     * Namespace's name.
+     */
+    private final String name;
+
+    /**
+     * Class of objects that are stored in the current namespace.
+     */
+    private final Class<T> itemClass;
+
+    /**
+     * An indication, that storage is enabled for the current namespace.
+     */
+    private final boolean enableStorage;
+
+    /**
+     * Indication, that the namespace storage will be created if not exists.
+     */
+    private final boolean createStorageIfMissing;
+
+    /**
+     * Indication, that the namespace storage will be dropped on file format error.
+     */
+    private final boolean dropStorageOnFileFormatError;
+
+    /**
+     * Indication, that the namespace will be dropped on index conflict.
+     */
+    private final boolean dropOnIndexConflict;
+
+    /**
+     * Indication, that the namespace object cache is disabled.
+     */
+    private final boolean disableObjCache;
+
+    /**
+     * Object cache item count.
+     */
+    private final long objCacheItemsCount;
+
+    /**
+     * List of namespace indexes.
+     */
+    private final List<ReindexerIndex> indexes;
+
+    /**
+     * List of namespace precepts.
+     *
+     * <p>Precept is a special reindexer embedded function, such as serial(), now().
+     */
+    private final String[] precepts;
+
+    /**
+     * Current namespace payload type.
+     *
+     * <p>It is an item descriptor that contains current item type
+     * state - fields, tags, version and namespace information.
+     */
+    @Getter
     private volatile PayloadType payloadType;
 
     /**
@@ -76,107 +119,6 @@ public class ReindexerNamespace<T> implements Namespace<T> {
     }
 
     /**
-     * Get the current namespace name.
-     *
-     * @return the current namespace name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * Get the class of objects that are stored in the current namespace.
-     *
-     * @return the current namespace item class
-     */
-    public Class<T> getItemClass() {
-        return itemClass;
-    }
-
-    /**
-     * An indication, that storage is enabled for the current namespace.
-     *
-     * @return true, if external storage enabled
-     */
-    public boolean isEnableStorage() {
-        return enableStorage;
-    }
-
-    /**
-     * Get the indication, that the namespace storage will be created if not exists.
-     *
-     * @return true, if external storage will be created if not exists
-     */
-    public boolean isCreateStorageIfMissing() {
-        return createStorageIfMissing;
-    }
-
-    /**
-     * Get the indication, that the namespace storage will be dropped on file format error.
-     *
-     * @return true, if external storage will be dropped on file format error
-     */
-    public boolean isDropStorageOnFileFormatError() {
-        return dropStorageOnFileFormatError;
-    }
-
-    /**
-     * Get the indication, that the namespace will be dropped on index conflict.
-     *
-     * @return true, if namespace will be dropped on index conflict
-     */
-    public boolean isDropOnIndexConflict() {
-        return dropOnIndexConflict;
-    }
-
-    /**
-     * Get the indication, that the namespace object cache is disabled.
-     *
-     * @return true, if object cache is disabled
-     */
-    public boolean isDisableObjCache() {
-        return disableObjCache;
-    }
-
-    /**
-     * Get the object cache item count.
-     *
-     * @return the object cache item count
-     */
-    public long getObjCacheItemsCount() {
-        return objCacheItemsCount;
-    }
-
-
-    /**
-     * Get the list of namespace indexes. {@link ReindexerIndex}
-     *
-     * @return list of namespace indexes
-     */
-    public List<ReindexerIndex> getIndexes() {
-        return indexes;
-    }
-
-    /**
-     * Get the list of namespace precepts. Precept is a special reindexer embedded function, such as serial(), now().
-     *
-     * @return the namespace precepts
-     */
-    public String[] getPrecepts() {
-        return precepts;
-    }
-
-    /**
-     * Get the current namespace payload type. {@link PayloadType} is a item descriptor that contains current item type
-     * state - fields, tags, version and namespace information.
-     *
-     * @return the namespace item payload type
-     */
-    public PayloadType getPayloadType() {
-        return payloadType;
-    }
-
-    /**
      * Update the current namespace payload type. If current payload type version is lower than passed or payload type
      * state token is lower than passed. Payload type will be updated.
      *
@@ -184,7 +126,7 @@ public class ReindexerNamespace<T> implements Namespace<T> {
      */
     public synchronized void updatePayloadType(PayloadType payloadType) {
         if (this.payloadType == null || this.payloadType.getVersion() < payloadType.getVersion()
-            || this.payloadType.getStateToken() != payloadType.getStateToken()) {
+                || this.payloadType.getStateToken() != payloadType.getStateToken()) {
             this.payloadType = payloadType;
         }
     }

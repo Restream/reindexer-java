@@ -15,12 +15,14 @@
  */
 package ru.rt.restream.reindexer.connector;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.AggregationResult;
-import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
@@ -169,6 +171,8 @@ public abstract class AggregationTest extends DbBaseTest {
         }
     }
 
+    @Setter
+    @Getter
     public static class Item {
 
         @Reindex(name = "id", isPrimaryKey = true)
@@ -178,30 +182,6 @@ public abstract class AggregationTest extends DbBaseTest {
         private int price;
 
         private String name;
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public int getPrice() {
-            return price;
-        }
-
-        public void setPrice(int price) {
-            this.price = price;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
     }
 
 }

@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding.cproto.cjson;
 
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.Map;
 /**
  * Reindexer item type descriptor.
  */
+@Getter
 public class PayloadType {
 
     private final long namespaceId;
@@ -32,6 +35,9 @@ public class PayloadType {
 
     private final int stateToken;
 
+    /**
+     * The payload type header offset.
+     */
     private final long pStringHdrOffset;
 
     private final List<String> tags;
@@ -65,67 +71,5 @@ public class PayloadType {
         }
     }
 
-    /**
-     * Get the current payload type namespace id.
-     *
-     * @return the current payload type namespace id
-     */
-    public long getNamespaceId() {
-        return namespaceId;
-    }
-
-    /**
-     * Get the current payload type namespace name.
-     *
-     * @return the current payload type namespace name
-     */
-    public String getNamespaceName() {
-        return namespaceName;
-    }
-
-    /**
-     * Get the current payload type version.
-     *
-     * @return the current payload type version
-     */
-    public long getVersion() {
-        return version;
-    }
-
-    /**
-     * Get the current payload type state token.
-     *
-     * @return the current payload type state token
-     */
-    public int getStateToken() {
-        return stateToken;
-    }
-
-    /**
-     * Get the current payload type header offset.
-     *
-     * @return the current payload type header offset
-     */
-    public long getpStringHdrOffset() {
-        return pStringHdrOffset;
-    }
-
-    /**
-     * Get the current payload type tags.
-     *
-     * @return the current payload type tags
-     */
-    public List<String> getTags() {
-        return tags;
-    }
-
-    /**
-     * Get the current payload type fields.
-     *
-     * @return the current payload type fields
-     */
-    public List<PayloadField> getFields() {
-        return fields;
-    }
 }
 

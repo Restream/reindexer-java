@@ -15,13 +15,14 @@
  */
 package ru.rt.restream.reindexer.annotations;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.ReindexerIndex;
-import ru.rt.restream.reindexer.ReindexerNamespace;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.fulltext.Synonym;
@@ -36,6 +37,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static ru.rt.restream.reindexer.IndexType.TEXT;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.util.ReindexerUtils.getIndexByName;
 
 @CprotoTest
 public class FullTextTest extends DbBaseTest {
@@ -102,13 +104,8 @@ public class FullTextTest extends DbBaseTest {
         assertThat(items.get(1).name, is("Processor"));
     }
 
-    private ReindexerIndex getIndexByName(Namespace<?> ns, String name) {
-        return ((ReindexerNamespace<?>) ns).getIndexes().stream()
-                .filter(i -> i.getName().equals(name))
-                .findFirst()
-                .orElse(null);
-    }
-
+    @Getter
+    @Setter
     public static class ItemWithFullTextAnnotation {
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;
@@ -117,35 +114,12 @@ public class FullTextTest extends DbBaseTest {
         private String name;
 
         @Reindex(name = "description", type = TEXT)
-        @FullText(synonyms = @FullText.Synonym(tokens = {"cpu"}, alternatives = {"processor"})
-        )
+        @FullText(synonyms = @FullText.Synonym(tokens = {"cpu"}, alternatives = {"processor"}))
         private String description;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public void setDescription(String description) {
-            this.description = description;
-        }
     }
 
+    @Getter
+    @Setter
     public static class ItemWithoutFullTextAnnotation {
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;
@@ -155,30 +129,6 @@ public class FullTextTest extends DbBaseTest {
 
         @Reindex(name = "description", type = TEXT)
         private String description;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public void setDescription(String description) {
-            this.description = description;
-        }
     }
 
 }

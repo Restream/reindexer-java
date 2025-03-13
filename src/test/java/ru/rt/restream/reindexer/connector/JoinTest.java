@@ -19,11 +19,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.Test;
-import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.NamespaceOptions;
-import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.Query;
+import ru.rt.restream.reindexer.QueryResultJsonIterator;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.db.DbBaseTest;
@@ -974,8 +976,9 @@ public abstract class JoinTest extends DbBaseTest {
         assertThat(items[5].joinedActors.get(0).name, is("ActorName2"));
     }
 
+    @Setter
+    @Getter
     public static class Actor {
-
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;
 
@@ -984,33 +987,10 @@ public abstract class JoinTest extends DbBaseTest {
 
         @Reindex(name = "is_visible")
         private boolean visible;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public boolean isVisible() {
-            return visible;
-        }
-
-        public void setVisible(boolean visible) {
-            this.visible = visible;
-        }
-
     }
 
+    @Setter
+    @Getter
     public static class ItemWithJoin {
 
         @Reindex(name = "id", isPrimaryKey = true)
@@ -1030,54 +1010,6 @@ public abstract class JoinTest extends DbBaseTest {
 
         @Transient
         private Actor joinedActor;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public List<Integer> getActorsIds() {
-            return actorsIds;
-        }
-
-        public void setActorsIds(List<Integer> actorsIds) {
-            this.actorsIds = actorsIds;
-        }
-
-        public String getActorName() {
-            return actorName;
-        }
-
-        public void setActorName(String actorName) {
-            this.actorName = actorName;
-        }
-
-        public List<Actor> getJoinedActors() {
-            return joinedActors;
-        }
-
-        public void setJoinedActors(List<Actor> joinedActors) {
-            this.joinedActors = joinedActors;
-        }
-
-        public Actor getJoinedActor() {
-            return joinedActor;
-        }
-
-        public void setJoinedActor(Actor joinedActor) {
-            this.joinedActor = joinedActor;
-        }
     }
 
 }

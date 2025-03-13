@@ -84,7 +84,7 @@ public class QueryResultReader {
         queryResult.setJson(isJson);
         queryResult.setWithRank(withRank);
         queryResult.setTotalCount(buffer.getVarUInt());
-        queryResult.setqCount(buffer.getVarUInt());
+        queryResult.setQCount(buffer.getVarUInt());
         queryResult.setCount(buffer.getVarUInt());
         queryResult.setWithItemId(withItemId);
         queryResult.setWithNsId(withNsId);

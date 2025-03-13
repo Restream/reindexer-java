@@ -15,6 +15,10 @@
  */
 package ru.rt.restream.reindexer.connector;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
@@ -222,127 +226,46 @@ public abstract class SubQueryTest extends DbBaseTest {
         assertThat(bannerNotExistsIterator.hasNext(), is(false));
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Person {
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
+
         @Reindex(name = "full_name")
         private String fullName;
+
         @Reindex(name = "age")
         private int age;
-
-        public Person() {
-        }
-
-        public Person(int id, String fullName, int age) {
-            this.id = id;
-            this.fullName = fullName;
-            this.age = age;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public String getFullName() {
-            return fullName;
-        }
-
-        public void setFullName(String fullName) {
-            this.fullName = fullName;
-        }
-
-        public int getAge() {
-            return age;
-        }
-
-        public void setAge(int age) {
-            this.age = age;
-        }
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Purchase {
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
+
         @Reindex(name = "person_id")
         private int personId;
+
         @Reindex(name = "price")
         private int price;
+
         private String assetName;
-
-        public Purchase() {
-        }
-
-        public Purchase(int id, int personId, int price, String assetName) {
-            this.id = id;
-            this.personId = personId;
-            this.price = price;
-            this.assetName = assetName;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public int getPersonId() {
-            return personId;
-        }
-
-        public void setPersonId(int personId) {
-            this.personId = personId;
-        }
-
-        public int getPrice() {
-            return price;
-        }
-
-        public void setPrice(int price) {
-            this.price = price;
-        }
-
-        public String getAssetName() {
-            return assetName;
-        }
-
-        public void setAssetName(String assetName) {
-            this.assetName = assetName;
-        }
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Banner {
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
+
         private String name;
-
-        public Banner() {
-        }
-
-        public Banner(int id, String name) {
-            this.id = id;
-            this.name = name;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
     }
 }
