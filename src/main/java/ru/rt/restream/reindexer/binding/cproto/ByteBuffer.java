@@ -490,6 +490,13 @@ public class ByteBuffer {
         putIntBits(Float.floatToIntBits(value), Integer.BYTES, -1);
     }
 
+    public void putFloatVector(float[] vector) {
+        putVarUInt32(((long) vector.length) << 1);
+        for (float v : vector) {
+            putIntBits(Float.floatToIntBits(v), Integer.BYTES, -1);
+        }
+    }
+
     public void truncateStart(int length) {
         byte[] bytes = new byte[buffer.length - length];
         System.arraycopy(buffer, length, bytes, 0, buffer.length - length);

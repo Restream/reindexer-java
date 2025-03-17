@@ -17,6 +17,9 @@ package ru.rt.restream.reindexer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.annotations.Hnsw;
+import ru.rt.restream.reindexer.annotations.Ivf;
+import ru.rt.restream.reindexer.annotations.VecBf;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -24,6 +27,7 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.util.JsonSerializer;
+import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -103,6 +107,8 @@ public class Query<T> {
     private static final int QUERY_ALWAYS_TRUE_CONDITION = 28;
     private static final int QUERY_SUB_QUERY_CONDITION = 29;
     private static final int QUERY_FIELD_SUB_QUERY_CONDITION = 30;
+    private static final int QUERY_LOCAL = 31;
+    private static final int QUERY_KNN_CONDITION = 32;
 
     /**
      * Condition types.
@@ -447,6 +453,32 @@ public class Query<T> {
                 .putVString(indexName)
                 .putVarUInt32(condition.code)
                 .putVBytes(subquery.buffer.bytes());
+
+        this.nextOperation = OP_AND;
+        this.queryCount++;
+
+        return this;
+    }
+
+    /**
+     * The condition are possible only on the vector indexed fields,
+     * marked with {@link Hnsw}, {@link Ivf}, {@link VecBf} annotations.
+     *
+     * <p>It is not possible to use multiply the operation in a query, and it is impossible to combine it with fulltext.
+     *
+     * @param indexName index name
+     * @param vector    condition value
+     * @param params    parameter set depends on the specific index type
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> whereKnn(String indexName, float[] vector, KnnSearchParam params) {
+//        logBuilder.whereKnn(nextOperation, indexName, vector, params);
+        buffer.putVarUInt32(QUERY_KNN_CONDITION)
+                .putVString(indexName)
+                .putVarUInt32(nextOperation)
+                .putFloatVector(vector);
+
+        params.serializeBy(buffer);
 
         this.nextOperation = OP_AND;
         this.queryCount++;

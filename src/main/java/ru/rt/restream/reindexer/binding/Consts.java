@@ -76,6 +76,13 @@ public final class Consts {
     public static final int QUERY_RESULT_INCARNATION_TAGS = 5;
     public static final int QUERY_RESULT_RANK_FORMAT = 6;
 
+    public static final int KNN_QUERY_TYPE_BASE = 0;
+    public static final int KNN_QUERY_TYPE_BRUTE_FORCE = 1;
+    public static final int KNN_QUERY_TYPE_HNSW = 2;
+    public static final int KNN_QUERY_TYPE_IVF = 3;
+
+    public static final int KNN_QUERY_PARAMS_VERSION = 0;
+
     public static final int RESULTS_FORMAT_MASK = 0xF;
     public static final int RESULTS_PURE = 0x0;
     public static final int RESULTS_PTRS = 0x1;
