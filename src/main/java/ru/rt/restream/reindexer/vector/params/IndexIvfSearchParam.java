@@ -20,6 +20,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_PARAMS_VERSION;
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_TYPE_IVF;
 
@@ -49,5 +52,13 @@ public class IndexIvfSearchParam implements KnnSearchParam {
                 .putVarUInt32(KNN_QUERY_PARAMS_VERSION)
                 .putVarUInt32(k)
                 .putVarUInt32(nProbe);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> toLog() {
+        return Arrays.asList("k=" + k, "nprobe=" + nProbe);
     }
 }

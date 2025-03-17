@@ -17,6 +17,8 @@ package ru.rt.restream.reindexer.vector.params;
 
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
+import java.util.List;
+
 /**
  * Common interface for KNN search parameters.
  */
@@ -32,4 +34,9 @@ public interface KnnSearchParam {
      * Utility method for serializing KNN parameters to CJSON avoiding switch.
      */
     void serializeBy(ByteBuffer buffer);
+
+    /**
+     * Utility method for serializing KNN parameters for logging purposes.
+     */
+    List<String> toLog();
 }

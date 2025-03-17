@@ -472,7 +472,7 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> whereKnn(String indexName, float[] vector, KnnSearchParam params) {
-//        logBuilder.whereKnn(nextOperation, indexName, vector, params);
+        logBuilder.whereKnn(nextOperation, indexName, vector, params);
         buffer.putVarUInt32(QUERY_KNN_CONDITION)
                 .putVString(indexName)
                 .putVarUInt32(nextOperation)

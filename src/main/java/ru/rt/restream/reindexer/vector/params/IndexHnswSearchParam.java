@@ -20,6 +20,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_PARAMS_VERSION;
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_TYPE_HNSW;
 
@@ -49,5 +53,13 @@ public class IndexHnswSearchParam implements KnnSearchParam {
                 .putVarUInt32(KNN_QUERY_PARAMS_VERSION)
                 .putVarUInt32(k)
                 .putVarInt32(ef);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> toLog() {
+        return Arrays.asList("k=" + k, "ef=" + ef);
     }
 }
