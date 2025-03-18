@@ -229,6 +229,15 @@ public class Query<T> {
     }
 
     /**
+     * Selects all {@code fields} of items, including vector fields.
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> selectAllFields() {
+        return select("*", "vectors()");
+    }
+
+    /**
      * Inner joins 2 queries, alias for innerJoin.
      *
      * @param <J>       type of joined items
