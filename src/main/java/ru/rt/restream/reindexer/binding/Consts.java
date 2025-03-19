@@ -21,6 +21,8 @@ package ru.rt.restream.reindexer.binding;
 public final class Consts {
 
     public static final String REINDEXER_VERSION = "v5.0.0";
+    public static final String DEF_APP_NAME = "java-connector";
+    public static final String APP_PROPERTY_NAME = "app.name";
 
     public static final int ERROR = 1;
     public static final int WARNING = 2;

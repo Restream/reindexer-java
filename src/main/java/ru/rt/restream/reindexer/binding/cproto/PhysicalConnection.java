@@ -46,8 +46,10 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static ru.rt.restream.reindexer.binding.Consts.APP_PROPERTY_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_COMPLEX_RANK;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS;
+import static ru.rt.restream.reindexer.binding.Consts.DEF_APP_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.REINDEXER_VERSION;
 
 /**
@@ -117,16 +119,20 @@ public class PhysicalConnection implements Connection {
             readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
             writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
             ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database,
-                    false, // create if missing
-                    false,
-                    -1,
+                    false, // create DB if missing
+                    false, // checkClusterID
+                    -1,    // expectedClusterID
                     REINDEXER_VERSION,
-                    "rx-connector", // appName
+                    getAppName(),
                     BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS | BINDING_CAPABILITY_COMPLEX_RANK);
         } catch (Exception e) {
             onError(e);
             throw new NetworkException(e);
         }
+    }
+
+    private Object getAppName() {
+        return System.getProperty(APP_PROPERTY_NAME, DEF_APP_NAME);
     }
 
     /**
