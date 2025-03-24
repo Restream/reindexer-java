@@ -486,6 +486,13 @@ class QueryLogBuilder {
     }
 
     /**
+     * Add Rank to builder.
+     */
+    void withRank() {
+        selectFields.add("RANK()");
+    }
+
+    /**
      * Open a bracket in builder.
      *
      * @param operationCode operation code, which will be applied to expression in brackets (AND, OR ...)

@@ -47,6 +47,11 @@ public interface ResultIterator<E> extends Iterator<E>, AutoCloseable {
     List<AggregationResult> aggResults();
 
     /**
+     * Returns rank of current item.
+     */
+    float getCurrentRank();
+
+    /**
      * Closes the iterator.
      */
     @Override

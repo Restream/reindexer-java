@@ -15,6 +15,7 @@
  */
 package ru.rt.restream.reindexer;
 
+import org.apache.commons.lang3.NotImplementedException;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
@@ -126,6 +127,10 @@ public class QueryResultJsonIterator implements ResultIterator<String> {
     @Override
     public List<AggregationResult> aggResults() {
         return queryResult.getAggResults();
+    }
+
+    public float getCurrentRank() {
+        throw new NotImplementedException();
     }
 
     @Override

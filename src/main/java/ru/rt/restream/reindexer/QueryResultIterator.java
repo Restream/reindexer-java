@@ -66,6 +66,8 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
 
     private boolean closed;
 
+    private float currentRank;
+
     public QueryResultIterator(ReindexerNamespace<?> namespace,
                                Class<T> itemClass,
                                RequestContext requestContext,
@@ -252,6 +254,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             //used for full-text search
             if (queryResult.getRankFormat() == 0) {
                 params.rank = buffer.getFloat();
+                currentRank = params.rank;
             } else {
                 params.rank = buffer.getVarUInt();
             }
@@ -296,6 +299,14 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
     @Override
     public List<AggregationResult> aggResults() {
         return queryResult.getAggResults();
+    }
+
+    @Override
+    public float getCurrentRank() {
+        if (queryResult.isWithRank()) {
+            return currentRank;
+        }
+        return -1f;
     }
 
     /**

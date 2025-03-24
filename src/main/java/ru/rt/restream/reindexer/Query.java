@@ -27,6 +27,7 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.util.JsonSerializer;
+import ru.rt.restream.reindexer.util.Pair;
 import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
@@ -101,6 +102,8 @@ public class Query<T> {
     private static final int QUERY_JOIN_CONDITION = 20;
     private static final int QUERY_DROP_FIELD = 21;
     private static final int QUERY_UPDATE_OBJECT = 22;
+    private static final int QUERY_WITH_RANK = 23;
+    private static final int QUERY_STRICT_MODE = 24;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
     private static final int QUERY_BETWEEN_FIELDS_CONDITION = 26;
     private static final int QUERY_ALWAYS_FALSE_CONDITION = 27;
@@ -512,6 +515,15 @@ public class Query<T> {
                 .putVString(secondField);
         nextOperation = OP_AND;
         queryCount++;
+        return this;
+    }
+
+    /**
+     * Request to return the rank value of each document in the query result.
+     */
+    public Query<T> withRank() {
+        logBuilder.withRank();
+        buffer.putVarUInt32(QUERY_WITH_RANK);
         return this;
     }
 
@@ -986,6 +998,24 @@ public class Query<T> {
         updatePayloadTypes(queryResult);
 
         return new QueryResultJsonIterator(requestContext, fetchCount);
+    }
+
+    /**
+     * Will execute query, and return slice of items and slice of ranks.
+     */
+    public Pair<List<T>, float[]> executeAllWithRank() {
+        try (ResultIterator<T> iterator = execute()) {
+            int totalCount = (int) iterator.size();
+            float[] ranks = new float[totalCount];
+            List<T> items = new ArrayList<>(totalCount);
+            int cnt = 0;
+            while (iterator.hasNext()) {
+                items.add(iterator.next());
+                ranks[cnt++] = iterator.getCurrentRank();
+            }
+
+            return new Pair<>(items, ranks);
+        }
     }
 
     private void updatePayloadTypes(QueryResult queryResult) {
