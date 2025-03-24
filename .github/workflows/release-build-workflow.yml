@@ -23,7 +23,7 @@ jobs:
           sudo curl https://repo.reindexer.io/RX-KEY.GPG -o /etc/apt/trusted.gpg.d/reindexer.asc
           echo 'deb https://repo.reindexer.io/ubuntu-noble /' | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install reindexer-dev
+          sudo apt-get install -y reindexer-dev libopenblas-pthread-dev
 
       - name: Prepare release
         run: |
