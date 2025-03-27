@@ -24,14 +24,11 @@ import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_AGGREGATION;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_END;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_EXPLAIN;
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_INCARNATION_TAGS;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_RANK_FORMAT;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARDING_VERSION;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARD_ID;
@@ -127,22 +124,6 @@ public class QueryResultReader {
                     break;
                 case QUERY_RESULT_SHARD_ID:
                     queryResult.setShardId((int) buffer.getVarUInt());
-                    break;
-                case QUERY_RESULT_INCARNATION_TAGS:
-                    int shardsCnt = (int) buffer.getVarUInt();
-                    Map<Integer, long[]> incarnationTags = new HashMap<>();
-                    queryResult.setIncarnationTags(incarnationTags);
-                    for (int i = 0; i < shardsCnt; i++) {
-                        int shardId = (int) buffer.getVarInt();
-                        int nsCnt = (int) buffer.getVarUInt();
-                        if (nsCnt > 0) {
-                            long[] sl = new long[nsCnt];
-                            for (int j = 0; j < nsCnt; j++) {
-                                sl[j] = buffer.getVarInt();
-                            }
-                            incarnationTags.put(shardId, sl);
-                        }
-                    }
                     break;
                 case QUERY_RESULT_RANK_FORMAT:
                     int format = (int) buffer.getVarUInt();
