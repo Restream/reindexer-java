@@ -109,7 +109,7 @@ class QueryLogBuilder {
         ALLSET("ALLSET"),
         EMPTY("IS NULL"),
         LIKE("LIKE"),
-        WITHIN("WITHIN"),
+        DWITHIN("DWITHIN"),
         KNN("KNN");
 
 
@@ -555,7 +555,7 @@ class QueryLogBuilder {
             case 10:
                 return Condition.LIKE;
             case 11:
-                return Condition.WITHIN;
+                return Condition.DWITHIN;
             case 12:
                 return Condition.KNN;
             default:

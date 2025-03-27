@@ -476,7 +476,7 @@ public class Query<T> {
      * The condition are possible only on the vector indexed fields,
      * marked with {@link Hnsw}, {@link Ivf}, {@link VecBf} annotations.
      *
-     * <p>It is not possible to use multiply the operation in a query, and it is impossible to combine it with fulltext.
+     * <p>It is not possible to use multiple KNN-conditions in a single query or combine it with fulltext condtions.
      *
      * @param indexName index name
      * @param vector    condition value
