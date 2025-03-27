@@ -22,6 +22,6 @@ import ru.rt.restream.category.BuiltinTest;
  * Tests for Builtin implementation.
  */
 @BuiltinTest
-public class BuiltinRankTest extends RankTest {
+public class BuiltinVectorRankTest extends VectorRankTest {
 
 }

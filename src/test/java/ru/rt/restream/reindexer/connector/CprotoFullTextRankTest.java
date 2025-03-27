@@ -19,9 +19,9 @@ package ru.rt.restream.reindexer.connector;
 import ru.rt.restream.category.CprotoTest;
 
 /**
- * Tests for Builtin implementation.
+ * Tests for Cproto implementation.
  */
 @CprotoTest
-public class CprotoRankTest extends RankTest {
+public class CprotoFullTextRankTest extends FullTextRankTest {
 
 }

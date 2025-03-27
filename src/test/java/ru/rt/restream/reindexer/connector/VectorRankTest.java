@@ -45,7 +45,7 @@ import static ru.rt.restream.reindexer.binding.Consts.EMPTY_RANK;
 /**
  * Base float vector rank test.
  */
-public abstract class RankTest extends DbBaseTest {
+public abstract class VectorRankTest extends DbBaseTest {
 
     private final String namespaceName = "items";
     private Namespace<VectorItem> vectorNs;
@@ -58,7 +58,6 @@ public abstract class RankTest extends DbBaseTest {
             db.insert(namespaceName, item);
         }
     }
-
 
     @Test
     public void testWithRankAndNoWhereKnn_throwsException() {
@@ -88,7 +87,7 @@ public abstract class RankTest extends DbBaseTest {
     }
 
     @Test
-    public void testGetItemWithoutWhereKnn_returnsMinusOne() {
+    public void testGetItemWithoutWhereKnn_returnsEmptyRank() {
         ResultIterator<VectorItem> iterator = db.query(namespaceName, VectorItem.class)
                 .where("id", EQ, 1)
                 .execute();
@@ -166,5 +165,4 @@ public abstract class RankTest extends DbBaseTest {
         @Hnsw(metric = Metric.L2, dimension = 8)
         private float[] vector;
     }
-
 }
