@@ -306,7 +306,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         if (queryResult.isWithRank()) {
             return currentRank;
         }
-        return -1f;
+        return Consts.EMPTY_RANK;
     }
 
     /**

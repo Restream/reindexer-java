@@ -120,6 +120,7 @@ public final class Consts {
     public static final long BINDING_CAPABILITY_COMPLEX_RANK = 1 << 3;
 
     public static final int RANK_FORMAT_SINGLE_FLOAT = 0;
+    public static final float EMPTY_RANK = Float.NEGATIVE_INFINITY;
 
     public static final int ERR_OK = 0;
     public static final int ERR_PARSE_SQL = 1;

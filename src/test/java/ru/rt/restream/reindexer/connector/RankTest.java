@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.reindexer.binding.Consts.EMPTY_RANK;
 
 /**
  * Base float vector rank test.
@@ -80,7 +81,7 @@ public abstract class RankTest extends DbBaseTest {
         while (iterator.hasNext()) {
             VectorItem item = iterator.next();
             float rank = iterator.getCurrentRank();
-            assertThat(rank, is(not(-1.0f)));
+            assertThat(rank, is(not(EMPTY_RANK)));
             count++;
         }
         assertThat(count, is(5));
@@ -94,7 +95,7 @@ public abstract class RankTest extends DbBaseTest {
 
         VectorItem item = iterator.next();
         float rank = iterator.getCurrentRank();
-        assertThat(rank, is(-1.0f));
+        assertThat(rank, is(EMPTY_RANK));
     }
 
     @Test
@@ -107,7 +108,7 @@ public abstract class RankTest extends DbBaseTest {
 
         VectorItem item = iterator.next();
         float rank = iterator.getCurrentRank();
-        assertThat(rank, is(not(-1.0f)));
+        assertThat(rank, is(not(EMPTY_RANK)));
     }
 
     @Test
@@ -123,7 +124,7 @@ public abstract class RankTest extends DbBaseTest {
         assertThat(items.size(), is(5));
         assertThat(ranks.length, is(5));
         for (float rank : ranks) {
-            assertThat(rank, is(not(-1.0f)));
+            assertThat(rank, is(not(EMPTY_RANK)));
         }
     }
 
