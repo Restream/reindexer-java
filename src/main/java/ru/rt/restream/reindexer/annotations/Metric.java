@@ -31,7 +31,7 @@ public enum Metric {
     L2("l2"),
 
     /**
-     * Inner product similarity calculates as: 1.0 - (v1 ∙ v2).
+     * Inner product similarity calculates as: (v1 ∙ v2).
      */
     INNER_PRODUCT("inner_product"),
 
