@@ -21,6 +21,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -132,48 +135,21 @@ class JsonTest extends DbBaseTest {
         assertThat(updateItem.testValue, is("updated"));
     }
 
+    @Setter
+    @Getter
     public static class TestItem {
         @Reindex(name = "id", isPrimaryKey = true)
         @Json("i")
         private Integer id;
+
         @Json("t_v")
         private String testValue;
+
         @Json("l_i")
         private List<Integer> listIntegers;
+
         @Json("l_n")
         private List<Nested> listNested;
-
-        public Integer getId() {
-            return id;
-        }
-
-        public void setId(Integer id) {
-            this.id = id;
-        }
-
-        public String getTestValue() {
-            return testValue;
-        }
-
-        public void setTestValue(String testValue) {
-            this.testValue = testValue;
-        }
-
-        public List<Integer> getListIntegers() {
-            return listIntegers;
-        }
-
-        public void setListIntegers(List<Integer> listIntegers) {
-            this.listIntegers = listIntegers;
-        }
-
-        public List<Nested> getListNested() {
-            return listNested;
-        }
-
-        public void setListNested(List<Nested> listNested) {
-            this.listNested = listNested;
-        }
 
         @Override
         public boolean equals(Object o) {
@@ -192,43 +168,21 @@ class JsonTest extends DbBaseTest {
         }
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
     public static class Nested {
         @Json("v")
         private String value;
+
         @Json("n")
         private Nested nested;
+
         @Json("n_l")
         private List<Nested> nestedList = new ArrayList<>();
 
         public Nested(String value) {
             this.value = value;
-        }
-
-        public Nested() {
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public void setValue(String value) {
-            this.value = value;
-        }
-
-        public Nested getNested() {
-            return nested;
-        }
-
-        public void setNested(Nested nested) {
-            this.nested = nested;
-        }
-
-        public List<Nested> getNestedList() {
-            return nestedList;
-        }
-
-        public void setNestedList(List<Nested> nestedList) {
-            this.nestedList = nestedList;
         }
 
         @Override

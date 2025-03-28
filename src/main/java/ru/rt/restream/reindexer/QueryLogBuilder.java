@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer;
 
 import org.apache.commons.lang3.StringUtils;
+import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -107,7 +108,10 @@ class QueryLogBuilder {
         SET("IN"),
         ALLSET("ALLSET"),
         EMPTY("IS NULL"),
-        LIKE("LIKE");
+        LIKE("LIKE"),
+        DWITHIN("DWITHIN"),
+        KNN("KNN");
+
 
         private final String name;
 
@@ -295,6 +299,17 @@ class QueryLogBuilder {
         }
     }
 
+    void whereKnn(int operationCode, String indexName, float[] vector, KnnSearchParam params) {
+        QueryEntry queryEntry = new QueryEntry();
+        queryEntry.operation = getOperation(operationCode);
+        queryEntry.field = indexName;
+        queryEntry.condition = Condition.KNN;
+        queryEntry.values.add(indexName);
+        queryEntry.values.add(Arrays.toString(vector));
+        queryEntry.values.addAll(params.toLog());
+        whereEntries.add(queryEntry);
+    }
+
     void where(int operationCode, Query<?> subquery, int conditionCode, Object... values) {
         where(operationCode, mapToString(subquery), conditionCode, values);
     }
@@ -471,6 +486,13 @@ class QueryLogBuilder {
     }
 
     /**
+     * Add Rank to builder.
+     */
+    void withRank() {
+        selectFields.add("RANK()");
+    }
+
+    /**
      * Open a bracket in builder.
      *
      * @param operationCode operation code, which will be applied to expression in brackets (AND, OR ...)
@@ -532,6 +554,10 @@ class QueryLogBuilder {
                 return Condition.EMPTY;
             case 10:
                 return Condition.LIKE;
+            case 11:
+                return Condition.DWITHIN;
+            case 12:
+                return Condition.KNN;
             default:
                 throw new RuntimeException("Illegal condition: " + conditionCode);
         }
@@ -638,6 +664,16 @@ class QueryLogBuilder {
                 }
                 stringBuilder.append("(").append(getWherePart(whereEntry.children))
                         .append(")");
+            } else if (whereEntry.condition == Condition.KNN) {
+                stringBuilder.append("KNN(");
+                Object start = whereEntry.values.get(0);
+                for (Object value : whereEntry.values) {
+                    if (value != start) {
+                        stringBuilder.append(", ");
+                    }
+                    stringBuilder.append(value);
+                }
+                stringBuilder.append(")");
             } else {
                 if (whereEntry != whereEntries.get(0)) {
                     stringBuilder.append(" ").append(whereEntry.operation).append(" ");

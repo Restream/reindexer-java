@@ -54,6 +54,21 @@ public enum IndexType {
     COLUMN("-"),
 
     /**
+     * Float vector index based on HNSW algorithm of approximate nearest neighbor search.
+     */
+    HNSW("hnsw"),
+
+    /**
+     * Float vector index based on FAISS IVF algorithm of approximate nearest neighbor search.
+     */
+    IVF("ivf"),
+
+    /**
+     * Float vector index based on bruteforce.
+     */
+    VEC_BF("vec_bf"),
+
+    /**
      * Default index type will be used.
      */
     DEFAULT(null);
@@ -69,6 +84,10 @@ public enum IndexType {
      */
     public String getName() {
         return name;
+    }
+
+    public boolean isVectorIndex() {
+        return this == HNSW || this == IVF || this == VEC_BF;
     }
 
 }

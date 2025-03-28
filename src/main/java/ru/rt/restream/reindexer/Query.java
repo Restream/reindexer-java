@@ -17,6 +17,9 @@ package ru.rt.restream.reindexer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.rt.restream.reindexer.annotations.Hnsw;
+import ru.rt.restream.reindexer.annotations.Ivf;
+import ru.rt.restream.reindexer.annotations.VecBf;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
@@ -24,6 +27,8 @@ import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.util.JsonSerializer;
+import ru.rt.restream.reindexer.util.Pair;
+import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -97,12 +102,16 @@ public class Query<T> {
     private static final int QUERY_JOIN_CONDITION = 20;
     private static final int QUERY_DROP_FIELD = 21;
     private static final int QUERY_UPDATE_OBJECT = 22;
+    private static final int QUERY_WITH_RANK = 23;
+    private static final int QUERY_STRICT_MODE = 24;
     private static final int QUERY_UPDATE_FIELD_V2 = 25;
     private static final int QUERY_BETWEEN_FIELDS_CONDITION = 26;
     private static final int QUERY_ALWAYS_FALSE_CONDITION = 27;
     private static final int QUERY_ALWAYS_TRUE_CONDITION = 28;
     private static final int QUERY_SUB_QUERY_CONDITION = 29;
     private static final int QUERY_FIELD_SUB_QUERY_CONDITION = 30;
+    private static final int QUERY_LOCAL = 31;
+    private static final int QUERY_KNN_CONDITION = 32;
 
     /**
      * Condition types.
@@ -220,6 +229,15 @@ public class Query<T> {
             buffer.putVarUInt32(QUERY_SELECT_FILTER).putVString(field);
         }
         return this;
+    }
+
+    /**
+     * Selects all {@code fields} of items, including vector fields.
+     *
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> selectAllFields() {
+        return select("*", "vectors()");
     }
 
     /**
@@ -455,6 +473,32 @@ public class Query<T> {
     }
 
     /**
+     * The condition are possible only on the vector indexed fields,
+     * marked with {@link Hnsw}, {@link Ivf}, {@link VecBf} annotations.
+     *
+     * <p>It is not possible to use multiple KNN-conditions in a single query or combine it with fulltext condtions.
+     *
+     * @param indexName index name
+     * @param vector    condition value
+     * @param params    parameter set depends on the specific index type
+     * @return the {@link Query} for further customizations
+     */
+    public Query<T> whereKnn(String indexName, float[] vector, KnnSearchParam params) {
+        logBuilder.whereKnn(nextOperation, indexName, vector, params);
+        buffer.putVarUInt32(QUERY_KNN_CONDITION)
+                .putVString(indexName)
+                .putVarUInt32(nextOperation)
+                .putFloatVector(vector);
+
+        params.serializeBy(buffer);
+
+        this.nextOperation = OP_AND;
+        this.queryCount++;
+
+        return this;
+    }
+
+    /**
      * Where - Add comparing two fields where condition to DB query.
      *
      * @param firstField  the first field to use
@@ -471,6 +515,15 @@ public class Query<T> {
                 .putVString(secondField);
         nextOperation = OP_AND;
         queryCount++;
+        return this;
+    }
+
+    /**
+     * Request to return the rank value of each document in the query result.
+     */
+    public Query<T> withRank() {
+        logBuilder.withRank();
+        buffer.putVarUInt32(QUERY_WITH_RANK);
         return this;
     }
 
@@ -945,6 +998,24 @@ public class Query<T> {
         updatePayloadTypes(queryResult);
 
         return new QueryResultJsonIterator(requestContext, fetchCount);
+    }
+
+    /**
+     * Will execute query, and return slice of items and slice of ranks.
+     */
+    public Pair<List<T>, float[]> executeAllWithRank() {
+        try (ResultIterator<T> iterator = execute()) {
+            int totalCount = (int) iterator.size();
+            float[] ranks = new float[totalCount];
+            List<T> items = new ArrayList<>(totalCount);
+            int cnt = 0;
+            while (iterator.hasNext()) {
+                items.add(iterator.next());
+                ranks[cnt++] = iterator.getCurrentRank();
+            }
+
+            return new Pair<>(items, ranks);
+        }
     }
 
     private void updatePayloadTypes(QueryResult queryResult) {

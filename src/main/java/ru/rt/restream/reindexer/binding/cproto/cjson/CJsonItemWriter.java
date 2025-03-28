@@ -67,7 +67,7 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
         } else if (source instanceof Double) {
             return new CjsonPrimitive(((Double) source));
         } else if (source instanceof Float) {
-            return new CjsonPrimitive(((Float) source).doubleValue());
+            return new CjsonPrimitive((Float) source);
         } else if (source instanceof UUID) {
             return new CjsonPrimitive((UUID) source);
         } else if (source instanceof List) {
@@ -76,6 +76,13 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
             for (Object element : sourceList) {
                 CjsonElement cjsonElement = toCjson(element);
                 cjsonArray.add(cjsonElement);
+            }
+            return cjsonArray;
+        } else if (source.getClass().isArray() && source.getClass().getComponentType() == float.class) {
+            float[] floatVector = (float[]) source;
+            CjsonArray cjsonArray = new CjsonArray();
+            for (float el : floatVector) {
+                cjsonArray.add(new CjsonPrimitive(el));
             }
             return cjsonArray;
         } else {

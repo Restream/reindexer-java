@@ -909,10 +909,6 @@ public abstract class ReindexerTest extends DbBaseTest {
             db.upsert(namespaceName, testItem);
         }
 
-        NestedTest nested = new NestedTest();
-        nested.test = 5;
-        nested.value = "updated";
-        nested.nonIndex = "updatedNonIndex";
         db.query("items", TestItem.class)
                 .where("id", EQ, 77)
                 .set("nestedTest", null)

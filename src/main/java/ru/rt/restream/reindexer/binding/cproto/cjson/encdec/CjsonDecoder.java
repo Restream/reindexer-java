@@ -68,6 +68,8 @@ public class CjsonDecoder {
             return readCjsonPrimitive(ctagType);
         } else if (ctagType == Ctag.UUID) {
             return readCjsonPrimitive(ctagType);
+        } else if (ctagType == Ctag.FLOAT) {
+            return readCjsonPrimitive(ctagType);
         } else if (ctagType == Ctag.NULL) {
             return CjsonNull.INSTANCE;
         } else {
@@ -108,6 +110,8 @@ public class CjsonDecoder {
                 return new CjsonPrimitive(buffer.getVarUInt() == 1L);
             case Ctag.DOUBLE:
                 return new CjsonPrimitive(buffer.getDouble());
+            case Ctag.FLOAT:
+                return new CjsonPrimitive(buffer.getFloat());
             case Ctag.STRING:
                 return new CjsonPrimitive(buffer.getVString());
             case Ctag.UUID:

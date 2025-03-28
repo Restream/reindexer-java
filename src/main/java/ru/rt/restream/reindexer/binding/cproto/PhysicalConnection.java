@@ -46,6 +46,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static ru.rt.restream.reindexer.binding.Consts.APP_PROPERTY_NAME;
+import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_COMPLEX_RANK;
+import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS;
+import static ru.rt.restream.reindexer.binding.Consts.DEF_APP_NAME;
+import static ru.rt.restream.reindexer.binding.Consts.REINDEXER_VERSION;
+
 /**
  * A "Physical" connection with a specific reindexer instance. Uses reindexer rpc protocol.
  * Commands are executed and results are returned within the context of a connection.
@@ -62,7 +68,7 @@ public class PhysicalConnection implements Connection {
 
     static final long CPROTO_MAGIC = 0xEEDD1132L;
 
-    static final int CPROTO_VERSION = 0x101;
+    static final int CPROTO_VERSION = 0x104;
 
     static final int CPROTO_HDR_LEN = 16;
 
@@ -112,11 +118,21 @@ public class PhysicalConnection implements Connection {
             }
             readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
             writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
-            ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database);
+            ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database,
+                    false, // create DB if missing
+                    false, // checkClusterID
+                    -1,    // expectedClusterID
+                    REINDEXER_VERSION,
+                    getAppName(),
+                    BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS | BINDING_CAPABILITY_COMPLEX_RANK);
         } catch (Exception e) {
             onError(e);
             throw new NetworkException(e);
         }
+    }
+
+    private Object getAppName() {
+        return System.getProperty(APP_PROPERTY_NAME, DEF_APP_NAME);
     }
 
     /**

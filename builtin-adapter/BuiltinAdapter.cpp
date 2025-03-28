@@ -101,7 +101,8 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
                                                                                                jstring version) {
     reindexer_string dsn = rx_string(env, path);
     reindexer_string vers = rx_string(env, version);
-    reindexer_error error = reindexer_connect(rx, dsn, ConnectOpts(), vers, BindingCapabilities(kBindingCapabilityResultsWithShardIDs));
+    reindexer_error error = reindexer_connect(rx, dsn, ConnectOpts(), vers, BindingCapabilities(
+        kBindingCapabilityResultsWithShardIDs | kBindingCapabilityComplexRank));
     env->ReleaseStringUTFChars(path, reinterpret_cast<const char *>(dsn.p));
     env->ReleaseStringUTFChars(version, reinterpret_cast<const char *>(vers.p));
     return j_res(env, error);

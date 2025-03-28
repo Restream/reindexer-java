@@ -29,7 +29,7 @@ import static ru.rt.restream.reindexer.db.DbLocator.Type.CPROTO;
 /**
  * A base class for all of the test classes that use the Reindexer instance.
  *
- * Base class descendant must have either {@link BuiltinTest} annotation or {@link CprotoTest} annotation.
+ * <p>Base class descendant must have either {@link BuiltinTest} annotation or {@link CprotoTest} annotation.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(DbCloseExtension.class)

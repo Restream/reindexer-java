@@ -40,6 +40,10 @@ public class CjsonPrimitive extends CjsonElement {
         this.value = value;
     }
 
+    public CjsonPrimitive(Float value) {
+        this.value = value;
+    }
+
     public CjsonPrimitive(UUID value) {
         this.value = value;
     }
@@ -52,6 +56,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Boolean.parseBoolean((String) value);
         } else if (value instanceof Double) {
             return (Double) value == 1.0D;
+        } else if (value instanceof Float) {
+            return (Float) value == 1.0F;
         } else if (value instanceof Boolean) {
             return (Boolean) value;
         } else {
@@ -72,6 +78,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Double.parseDouble((String) value);
         } else if (value instanceof Double) {
             return (Double) value;
+        } else if (value instanceof Float) {
+            return ((Float) value).doubleValue();
         } else if (value instanceof Boolean) {
             return (Boolean) value ? 1.0D : 0D;
         } else {
@@ -85,10 +93,12 @@ public class CjsonPrimitive extends CjsonElement {
             return ((Long) value).floatValue();
         } else if (value instanceof String) {
             return Float.parseFloat((String) value);
+        } else if (value instanceof Double) {
+            return ((Double) value).floatValue();
         } else if (value instanceof Float) {
             return (Float) value;
         } else if (value instanceof Boolean) {
-            return (Boolean) value ? 1.0f : 0f;
+            return (Boolean) value ? 1.0F : 0F;
         } else {
             throw new IllegalStateException(String.format("Unexpected value type: %s", value.getClass().getName()));
         }
@@ -102,6 +112,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Long.parseLong((String) value);
         } else if (value instanceof Double) {
             return ((Double) value).longValue();
+        } else if (value instanceof Float) {
+            return ((Float) value).longValue();
         } else if (value instanceof Boolean) {
             return (Boolean) value ? 1L : 0L;
         } else {
@@ -117,6 +129,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Integer.parseInt((String) value);
         } else if (value instanceof Double) {
             return ((Double) value).intValue();
+        } else if (value instanceof Float) {
+            return ((Float) value).intValue();
         } else if (value instanceof Boolean) {
             return (Boolean) value ? 1 : 0;
         } else {
@@ -132,6 +146,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Byte.parseByte((String) value);
         } else if (value instanceof Double) {
             return ((Double) value).byteValue();
+        } else if (value instanceof Float) {
+            return ((Float) value).byteValue();
         } else if (value instanceof Boolean) {
             return (byte) ((Boolean) value ? 1 : 0);
         } else {
@@ -147,6 +163,8 @@ public class CjsonPrimitive extends CjsonElement {
             return Short.parseShort((String) value);
         } else if (value instanceof Double) {
             return ((Double) value).shortValue();
+        } else if (value instanceof Float) {
+            return ((Float) value).shortValue();
         } else if (value instanceof Boolean) {
             return (short) ((Boolean) value ? 1 : 0);
         } else {
@@ -177,10 +195,19 @@ public class CjsonPrimitive extends CjsonElement {
     /**
      * Check that value is a double type
      *
-     * @return true if value is an double type
+     * @return true if value is a double type
      */
     public boolean isDouble() {
         return value instanceof Double;
+    }
+
+    /**
+     * Check that value is a float type
+     *
+     * @return true if value is a float type
+     */
+    public boolean isFloat() {
+        return value instanceof Float;
     }
 
     /**

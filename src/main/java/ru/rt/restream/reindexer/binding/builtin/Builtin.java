@@ -35,14 +35,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static ru.rt.restream.reindexer.binding.Consts.REINDEXER_VERSION;
+
 /**
  * A {@link Binding} to Reindexer, which establish a connection to Reindexer instance via native calls.
  */
 public class Builtin implements Binding {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Builtin.class);
-
-    private static final String REINDEXER_VERSION = "v2.14.1";
 
     private final AtomicLong next = new AtomicLong(0L);
 

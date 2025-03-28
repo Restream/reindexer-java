@@ -15,6 +15,10 @@
  */
 package ru.rt.restream.reindexer.connector;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.junit.jupiter.api.Test;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
@@ -74,9 +78,13 @@ public abstract class MergeTest extends DbBaseTest {
         }
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
     public static class Item {
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
+
         @Reindex(name = "foo")
         private boolean foo;
 
@@ -85,66 +93,21 @@ public abstract class MergeTest extends DbBaseTest {
         @Transient
         private SubItem subItem;
 
-        public Item() {
-        }
-
         public Item(int id, boolean foo, int subItemId) {
             this.id = id;
             this.foo = foo;
             this.subItemId = subItemId;
         }
 
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public boolean isFoo() {
-            return foo;
-        }
-
-        public void setFoo(boolean foo) {
-            this.foo = foo;
-        }
-
-        public int getSubItemId() {
-            return subItemId;
-        }
-
-        public void setSubItemId(int subItemId) {
-            this.subItemId = subItemId;
-        }
-
-        public SubItem getSubItem() {
-            return subItem;
-        }
-
-        public void setSubItem(SubItem subItem) {
-            this.subItem = subItem;
-        }
     }
 
+    @Setter
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SubItem {
         @Reindex(name = "id", isPrimaryKey = true)
         private int id;
-
-        public SubItem() {
-        }
-
-        public SubItem(int id) {
-            this.id = id;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
     }
 
 }

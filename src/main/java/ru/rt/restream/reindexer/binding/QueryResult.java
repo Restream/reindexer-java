@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer.binding;
 
+import lombok.Getter;
+import lombok.Setter;
 import ru.rt.restream.reindexer.AggregationResult;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
@@ -24,345 +26,100 @@ import java.util.List;
 /**
  * Result of a query.
  */
+@Getter
+@Setter
 public class QueryResult {
 
+    /**
+     * Result total count.
+     */
     private long totalCount;
 
+    /**
+     * The current query item count.
+     */
     private long qCount;
 
+    /**
+     * The current query fetched items count.
+     */
     private long count;
 
+    /**
+     * The query result pointer (for builtin bindings)
+     */
     private long resultsPtr;
-
-    private boolean isJson;
-
-    private boolean withRank;
-
-    private boolean withShardId;
-
-    private boolean withItemId;
-
-    private boolean withNsId;
-
-    private boolean withPayloadTypes;
-
-    private boolean withResultsPtr;
-
-    private List<PayloadType> payloadTypes;
-
-    private boolean withJoined;
-
-    private List<AggregationResult> aggResults;
-
-    private ByteBuffer buffer;
-
-    private int shardId = Consts.SHARDING_PROXY_OFF;
-
-    private long shardingVersion;
-
-    /**
-     * Get the current query result total count.
-     *
-     * @return the current query total count
-     */
-    public long getTotalCount() {
-        return totalCount;
-    }
-
-    /**
-     * Set the current total count.
-     *
-     * @param totalCount total count
-     */
-    public void setTotalCount(long totalCount) {
-        this.totalCount = totalCount;
-    }
-
-    /**
-     * Get the current query count.
-     *
-     * @return the current query item count
-     */
-    public long getQCount() {
-        return qCount;
-    }
-
-    /**
-     * Set the current query count.
-     *
-     * @param qCount query count
-     */
-    public void setqCount(long qCount) {
-        this.qCount = qCount;
-    }
-
-    /**
-     * Get the current query result fetched items count.
-     *
-     * @return the current query fetched items count
-     */
-    public long getCount() {
-        return count;
-    }
-
-    /**
-     * Set the current query result fetched items count.
-     *
-     * @param count number of fetched items
-     */
-    public void setCount(long count) {
-        this.count = count;
-    }
-
-    /**
-     * Get the query result pointer (for builtin bindings).
-     *
-     * @return the query result pointer
-     */
-    public long getResultsPtr() {
-        return resultsPtr;
-    }
-
-    /**
-     * Set the query result pointer (for builtin bindings).
-     *
-     * @param resultsPtr query result pointer
-     */
-    public void setResultsPtr(long resultsPtr) {
-        this.resultsPtr = resultsPtr;
-    }
 
     /**
      * An indication that the query result is in json format.
-     *
-     * @return true, if the query result is in json format
      */
-    public boolean isJson() {
-        return isJson;
-    }
-
-    /**
-     * Set the indication that the query result is in json format.
-     *
-     * @param json true, if the query result is in json format
-     */
-    public void setJson(boolean json) {
-        isJson = json;
-    }
+    private boolean isJson;
 
     /**
      * An indication that the query result contains rank values.
-     *
-     * @return true, if query result contains rank values
      */
-    public boolean isWithRank() {
-        return withRank;
-    }
-
-    /**
-     * Set the indication that the query result contains rank values.
-     *
-     * @param withRank true, if query result contains rank values
-     */
-    public void setWithRank(boolean withRank) {
-        this.withRank = withRank;
-    }
+    private boolean withRank;
 
     /**
      * An indication that the query result contains shard ID values.
-     *
-     * @return true, if query result contains shard ID values
      */
-    public boolean isWithShardId() {
-        return withShardId;
-    }
-
-    /**
-     * Set the indication that the query result contains shard ID values.
-     *
-     * @param withShardId true, if query result contains shard ID values
-     */
-    public void setWithShardId(boolean withShardId) {
-        this.withShardId = withShardId;
-    }
-
-    /**
-     * Get the {@link ByteBuffer} with query result data
-     *
-     * @return the {@link ByteBuffer} with query result data
-     */
-    public ByteBuffer getBuffer() {
-        return buffer;
-    }
-
-    /**
-     * Set the {@link ByteBuffer} with query result data
-     *
-     * @param buffer byte buffer with query result data
-     */
-    public void setBuffer(ByteBuffer buffer) {
-        this.buffer = buffer;
-    }
+    private boolean withShardId;
 
     /**
      * An indication that the query result contains item ids.
-     *
-     * @return true, if the query result contains item ids
      */
-    public boolean isWithItemId() {
-        return withItemId;
-    }
-
-    /**
-     * Set the indication that the query result contains item ids.
-     *
-     * @param withItemId true, if query result contains contains item ids
-     */
-    public void setWithItemId(boolean withItemId) {
-        this.withItemId = withItemId;
-    }
+    private boolean withItemId;
 
     /**
      * An indication that the query result contains namespace ids.
-     *
-     * @return true, if the query result contains namespace id
      */
-    public boolean isWithNsId() {
-        return withNsId;
-    }
-
-    /**
-     * Set the indication that the query result contains namespace ids.
-     *
-     * @param withNsId true, if query result contains contains namespace ids
-     */
-    public void setWithNsId(boolean withNsId) {
-        this.withNsId = withNsId;
-    }
+    private boolean withNsId;
 
     /**
      * An indication that the query result contains payload types.
-     *
-     * @return true, if the query result contains payload types
      */
-    public boolean isWithPayloadTypes() {
-        return withPayloadTypes;
-    }
-
-    /**
-     * Set the indication that the query result contains namespace ids.
-     *
-     * @param withPayloadTypes true, if query result contains contains payload types
-     */
-    public void setWithPayloadTypes(boolean withPayloadTypes) {
-        this.withPayloadTypes = withPayloadTypes;
-    }
+    private boolean withPayloadTypes;
 
     /**
      * An indication that the query result contains result pointer (for builtin bindings).
-     *
-     * @return true, if the query result contains result pointer
      */
-    public boolean isWithResultsPtr() {
-        return withResultsPtr;
-    }
+    private boolean withResultsPtr;
 
     /**
-     * Set the indication that the query result result pointer (for builtin bindings).
-     *
-     * @param withResultsPtr true, if query result contains contains result pointer.
+     * The current query result payload types.
      */
-    public void setWithResultsPtr(boolean withResultsPtr) {
-        this.withResultsPtr = withResultsPtr;
-    }
-
-    /**
-     * Get the current query result payload types.
-     *
-     * @return list of {@link PayloadType}
-     */
-    public List<PayloadType> getPayloadTypes() {
-        return payloadTypes;
-    }
-
-    /**
-     * Set the current query result payload types.
-     *
-     * @param payloadTypes query result payload types
-     */
-    public void setPayloadTypes(List<PayloadType> payloadTypes) {
-        this.payloadTypes = payloadTypes;
-    }
+    private List<PayloadType> payloadTypes;
 
     /**
      * An indication that the query result contains joined data.
-     *
-     * @return true, if the query result contains joined data
      */
-    public boolean isWithJoined() {
-        return withJoined;
-    }
+    private boolean withJoined;
 
     /**
-     * Set the indication that the query result contains joined data.
-     *
-     * @param withJoined true, if query result contains joined data
+     * The current query result aggregation results.
      */
-    public void setWithJoined(boolean withJoined) {
-        this.withJoined = withJoined;
-    }
+    private List<AggregationResult> aggResults;
 
     /**
-     * Get the current query result aggregation results.
-     *
-     * @return list of {@link AggregationResult}
+     * Get the {@link ByteBuffer} with query result data
      */
-    public List<AggregationResult> getAggResults() {
-        return aggResults;
-    }
+    private ByteBuffer buffer;
 
     /**
-     * Set the current query result aggregation results.
-     *
-     * @param aggResults query aggregation results
+     * The global shard ID value for query result.
      */
-    public void setAggResults(List<AggregationResult> aggResults) {
-        this.aggResults = aggResults;
-    }
+    private int shardId = Consts.SHARDING_PROXY_OFF;
 
     /**
-     * Get the global shard ID value for query result.
-     *
-     * @return global shard ID
+     * Version of the sharding config.
      */
-    public int getShardId() {
-        return shardId;
-    }
+    private long shardingVersion;
 
     /**
-     * Set the global shard ID value for query result.
+     * Numeric value of rank format.
      *
-     * @param shardId shard ID value
+     * <p>It supports only {@link ru.rt.restream.reindexer.binding.Consts#RANK_FORMAT_SINGLE_FLOAT}.
      */
-    public void setShardId(int shardId) {
-        this.shardId = shardId;
-    }
+    private long rankFormat;
 
-    /**
-     * Get version of the sharding config.
-     *
-     * @return sharding config version
-     */
-    public long getShardingVersion() {
-        return shardingVersion;
-    }
-
-    /**
-     * Get version of the sharding config.
-     *
-     * @param shardingVersion sharding config version
-     */
-    public void setShardingVersion(long shardingVersion) {
-        this.shardingVersion = shardingVersion;
-    }
 }

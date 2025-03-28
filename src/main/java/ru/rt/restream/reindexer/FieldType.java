@@ -40,6 +40,16 @@ public enum FieldType {
     DOUBLE("double"),
 
     /**
+     * Reindexer float type.
+     */
+    FLOAT("float"),
+
+    /**
+     * Reindexer float vector type.
+     */
+    FLOAT_VECTOR("float_vector"),
+
+    /**
      * Reindexer string type.
      */
     STRING("string"),
