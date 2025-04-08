@@ -163,7 +163,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 ReindexerIndex index = createIndex(reindexPath, Collections.singletonList(jsonPath), indexType,
                         fieldType, reindex.isDense(), reindex.isSparse(), reindex.isPrimaryKey(),
                         fieldInfo.isArray, collateMode, sortOrder, precept, fullTextConfig, isUuid, reindex.isAppendable(),
-                        hnswConfig, ivfConfig, vecBfConfig);
+                        reindex.isNoColumn(), hnswConfig, ivfConfig, vecBfConfig);
 
                 ReindexerIndex sameNameIndex = nameToIndexMap.get(reindex.name());
                 if (sameNameIndex == null) {
@@ -199,7 +199,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
             ReindexerIndex compositeIndex = createIndex(String.join("+", composite.subIndexes()),
                     Arrays.asList(composite.subIndexes()), composite.type(), COMPOSITE, composite.isDense(),
                     composite.isSparse(), composite.isPrimaryKey(), false, collateMode, sortOrder, null, null, false,
-                    false, null, null, null);
+                    false, composite.isNoColumn(), null, null, null);
             indexes.add(compositeIndex);
         }
 
@@ -317,7 +317,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
                                        boolean isArray, CollateMode collateMode, String sortOrder, String precept,
                                        FullTextConfig textConfig, boolean isUuid, boolean isAppendable,
-                                       HnswConfig hnswConfig, IvfConfig ivfConfig, VecBfConfig vecBfConfig) {
+                                       boolean isNoColumn, HnswConfig hnswConfig, IvfConfig ivfConfig, VecBfConfig vecBfConfig) {
         ReindexerIndex index = new ReindexerIndex();
         index.setName(reindexPath);
         index.setSortOrder(sortOrder);
@@ -336,6 +336,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         index.setConfig(vecBfConfig);
         index.setUuid(isUuid);
         index.setAppendable(isAppendable);
+        index.setNoColumn(isNoColumn);
         return index;
     }
 

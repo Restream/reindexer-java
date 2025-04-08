@@ -19,6 +19,8 @@ package ru.rt.restream.reindexer.connector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -63,6 +65,12 @@ public class CprotoReindexerTest extends ReindexerTest {
         assertThat(nameIdx.isPk, is(false));
         assertThat(nameIdx.name, is("name"));
         assertThat(nameIdx.fieldType, is("string"));
+        NamespaceResponse.IndexResponse valueIdx = indexes.get(7);
+        assertThat(valueIdx.isPk, is(false));
+        assertThat(valueIdx.name, is("value"));
+        assertThat(valueIdx.fieldType, is("string"));
+        assertThat(valueIdx.isSparse, is(true));
+        assertThat(valueIdx.isNoColumn, is(true));
     }
 
     @Test
@@ -96,6 +104,8 @@ public class CprotoReindexerTest extends ReindexerTest {
         }
     }
 
+    @Getter
+    @Setter
     private static class NamespaceResponse {
         private String name;
         private StorageResponse storage;
@@ -105,30 +115,8 @@ public class CprotoReindexerTest extends ReindexerTest {
             private boolean enabled;
         }
 
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public StorageResponse getStorage() {
-            return storage;
-        }
-
-        public void setStorage(StorageResponse storage) {
-            this.storage = storage;
-        }
-
-        public List<IndexResponse> getIndexes() {
-            return indexes;
-        }
-
-        public void setIndexes(List<IndexResponse> indexes) {
-            this.indexes = indexes;
-        }
-
+        @Getter
+        @Setter
         private static class IndexResponse {
             private String name;
             @SerializedName("json_paths")
@@ -145,6 +133,8 @@ public class CprotoReindexerTest extends ReindexerTest {
             private boolean isDense;
             @SerializedName("is_sparse")
             private boolean isSparse;
+            @SerializedName("is_no_column")
+            private boolean isNoColumn;
             @SerializedName("is_linear")
             private boolean isLinear;
             @SerializedName("is_simple_tag")
@@ -153,103 +143,6 @@ public class CprotoReindexerTest extends ReindexerTest {
             private String collateMode;
             @SerializedName("sort_order_letters")
             private String sortOrderLetters;
-
-            public String getName() {
-                return name;
-            }
-
-            public void setName(String name) {
-                this.name = name;
-            }
-
-            public List<String> getJsonPaths() {
-                return jsonPaths;
-            }
-
-            public void setJsonPaths(List<String> jsonPaths) {
-                this.jsonPaths = jsonPaths;
-            }
-
-            public String getFieldType() {
-                return fieldType;
-            }
-
-            public void setFieldType(String fieldType) {
-                this.fieldType = fieldType;
-            }
-
-            public String getIndexType() {
-                return indexType;
-            }
-
-            public void setIndexType(String indexType) {
-                this.indexType = indexType;
-            }
-
-            public boolean isPk() {
-                return isPk;
-            }
-
-            public void setPk(boolean pk) {
-                isPk = pk;
-            }
-
-            public boolean isArray() {
-                return isArray;
-            }
-
-            public void setArray(boolean array) {
-                isArray = array;
-            }
-
-            public boolean isDense() {
-                return isDense;
-            }
-
-            public void setDense(boolean dense) {
-                isDense = dense;
-            }
-
-            public boolean isSparse() {
-                return isSparse;
-            }
-
-            public void setSparse(boolean sparse) {
-                isSparse = sparse;
-            }
-
-            public boolean isLinear() {
-                return isLinear;
-            }
-
-            public void setLinear(boolean linear) {
-                isLinear = linear;
-            }
-
-            public boolean isSimpleTag() {
-                return isSimpleTag;
-            }
-
-            public void setSimpleTag(boolean simpleTag) {
-                isSimpleTag = simpleTag;
-            }
-
-            public String getCollateMode() {
-                return collateMode;
-            }
-
-            public void setCollateMode(String collateMode) {
-                this.collateMode = collateMode;
-            }
-
-            public String getSortOrderLetters() {
-                return sortOrderLetters;
-            }
-
-            public void setSortOrderLetters(String sortOrderLetters) {
-                this.sortOrderLetters = sortOrderLetters;
-            }
         }
     }
-
 }

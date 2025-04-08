@@ -2833,7 +2833,7 @@ public abstract class ReindexerTest extends DbBaseTest {
         private Integer id;
         @Reindex(name = "name")
         private String name;
-        @Reindex(name = "value", isSparse = true)
+        @Reindex(name = "value", isSparse = true, isNoColumn = true)
         private String value;
         private String nonIndex;
         @Reindex(name = "nestedTest")

@@ -99,6 +99,8 @@ public class ReindexerIndex {
 
     private boolean isDense;
 
+    private boolean isNoColumn;
+
     private boolean isSparse;
 
     private boolean isUuid;
