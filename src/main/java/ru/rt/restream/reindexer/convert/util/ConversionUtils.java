@@ -18,6 +18,7 @@ package ru.rt.restream.reindexer.convert.util;
 import org.apache.commons.lang3.reflect.TypeUtils;
 import ru.rt.restream.reindexer.util.Pair;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.Collection;
@@ -31,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ConversionUtils {
 
     private static final Map<Class<?>, Pair<ResolvableType, ResolvableType>> CONVERTIBLE_PAIR_CACHE = new ConcurrentHashMap<>();
+
+    private static final Map<Pair<Class<?>, String>, ResolvableType> FIELD_TYPE_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Resolves source and target types based on {@code [0]} and {@code [1]} parameters from {@code converterType} interface implementation.
@@ -71,6 +74,32 @@ public final class ConversionUtils {
                                 targetType, converterType.getName(), converterClass.getName()));
             }
             return new Pair<>(resolvableSourceType, resolvableTargetType);
+        });
+    }
+
+    /**
+     * Resolves a field type. If the field type is an array, the target type is determined
+     * by {@code Class#getComponentType}, in case of a generic return type, only {@code java.util.Collection}
+     * assignable types are considered, nested generic types (i.e. {@code List<List<String>>})
+     * are not supported, such types will not be recognized and IllegalArgumentException will be thrown.
+     * @param field the field to use
+     * @return the {@link ResolvableType} to use
+     */
+    public static ResolvableType resolveFieldType(Field field) {
+        Objects.requireNonNull(field, "field must not be null");
+        // https://bugs.openjdk.java.net/browse/JDK-8161372
+        Pair<Class<?>, String> key = new Pair<>(field.getDeclaringClass(), field.getName());
+        ResolvableType resolvableType = FIELD_TYPE_CACHE.get(key);
+        if (resolvableType != null) {
+            return resolvableType;
+        }
+        return FIELD_TYPE_CACHE.computeIfAbsent(key, k -> {
+            ResolvableType result = resolveType(field.getGenericType());
+            if (result == null) {
+                throw new IllegalArgumentException(String.format("Cannot resolve Field: %s.%s target type: %s",
+                        field.getDeclaringClass().getName(), field.getName(), field.getGenericType()));
+            }
+            return result;
         });
     }
 

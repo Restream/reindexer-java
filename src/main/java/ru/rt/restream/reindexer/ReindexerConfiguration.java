@@ -22,6 +22,8 @@ import ru.rt.restream.reindexer.binding.cproto.Cproto;
 import ru.rt.restream.reindexer.binding.cproto.DataSourceConfiguration;
 import ru.rt.restream.reindexer.binding.cproto.DataSourceFactory;
 import ru.rt.restream.reindexer.binding.cproto.DataSourceFactoryStrategy;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistry;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.exceptions.UnimplementedException;
 
 import java.net.URI;
@@ -29,6 +31,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Represents approach for bootstrapping Reindexer.
@@ -100,6 +103,17 @@ public final class ReindexerConfiguration {
      */
     public ReindexerConfiguration dataSourceFactory(DataSourceFactory dataSourceFactory) {
         this.dataSourceFactory = Objects.requireNonNull(dataSourceFactory, "dataSourceFactory cannot be null");
+        return this;
+    }
+
+    /**
+     * Allows customizing a {@link FieldConverterRegistry}.
+     * 
+     * @param customizer the {@link FieldConverterRegistry} customizer.
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration fieldConverterRegistry(Consumer<FieldConverterRegistry> customizer) {
+        customizer.accept(FieldConverterRegistryFactory.INSTANCE);
         return this;
     }
 
