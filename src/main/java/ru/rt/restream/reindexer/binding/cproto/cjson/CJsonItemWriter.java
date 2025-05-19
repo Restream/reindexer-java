@@ -23,8 +23,12 @@ import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemWriter;
 import ru.rt.restream.reindexer.binding.cproto.cjson.encdec.CjsonEncoder;
+import ru.rt.restream.reindexer.convert.FieldConverter;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.UUID;
@@ -43,11 +47,11 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
     @Override
     public void writeItem(ByteBuffer buffer, T item) {
         CjsonEncoder cjsonEncoder = new CjsonEncoder(ctagMatcher);
-        byte[] itemData = cjsonEncoder.encode(toCjson(item));
+        byte[] itemData = cjsonEncoder.encode(toCjson(item, CJsonItemWriter::defaultExtract));
         buffer.writeBytes(itemData);
     }
 
-    private CjsonElement toCjson(Object source) {
+    private CjsonElement toCjson(Object source, AnnotationExtractor annotationExtractor) {
         if (source == null) {
             return CjsonNull.INSTANCE;
         }
@@ -70,19 +74,25 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
             return new CjsonPrimitive((Float) source);
         } else if (source instanceof UUID) {
             return new CjsonPrimitive((UUID) source);
-        } else if (source instanceof List) {
+        } else if (source instanceof Enum<?>) {
+            Enumerated enumerated = annotationExtractor.extract(Enumerated.class);
+            if (enumerated != null && enumerated.value() == EnumType.STRING) {
+                return new CjsonPrimitive(((Enum<?>) source).name());
+            }
+            int ordinal = ((Enum<?>) source).ordinal();
+            return new CjsonPrimitive((long) ordinal);
+        } else if (source instanceof Iterable<?>) {
             CjsonArray cjsonArray = new CjsonArray();
-            List<?> sourceList = (List<?>) source;
-            for (Object element : sourceList) {
-                CjsonElement cjsonElement = toCjson(element);
+            for (Object element : (Iterable<?>) source) {
+                CjsonElement cjsonElement = toCjson(element, annotationExtractor);
                 cjsonArray.add(cjsonElement);
             }
             return cjsonArray;
-        } else if (source.getClass().isArray() && source.getClass().getComponentType() == float.class) {
-            float[] floatVector = (float[]) source;
+        } else if (source.getClass().isArray()) {
+            int length = Array.getLength(source);
             CjsonArray cjsonArray = new CjsonArray();
-            for (float el : floatVector) {
-                cjsonArray.add(new CjsonPrimitive(el));
+            for (int i = 0; i < length; i++) {
+                cjsonArray.add(toCjson(Array.get(source, i), annotationExtractor));
             }
             return cjsonArray;
         } else {
@@ -93,22 +103,18 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
                     continue;
                 }
                 Object fieldValue = readFieldValue(source, field);
+                FieldConverter<Object, ?> converter = FieldConverterRegistryFactory.INSTANCE.getFieldConverter(field);
+                if (converter != null) {
+                    fieldValue = converter.convertToDatabaseType(fieldValue);
+                }
                 if (fieldValue != null) {
                     CjsonElement cjsonElement;
                     // hack for serialization of String field with Reindex.isUuid() == true as UUID.
-                    if (field.getType() == String.class && field.isAnnotationPresent(Reindex.class)
+                    if (fieldValue instanceof String && field.isAnnotationPresent(Reindex.class)
                             && field.getAnnotation(Reindex.class).isUuid()) {
                         cjsonElement = new CjsonPrimitive(UUID.fromString((String) fieldValue));
-                    } else if (Enum.class.isAssignableFrom(field.getType())) {
-                        Enumerated enumerated = field.getAnnotation(Enumerated.class);
-                        if (enumerated != null && enumerated.value() == EnumType.STRING) {
-                            cjsonElement = new CjsonPrimitive(((Enum<?>) fieldValue).name());
-                        } else {
-                            int ordinal = ((Enum<?>) fieldValue).ordinal();
-                            cjsonElement = new CjsonPrimitive((long) ordinal);
-                        }
                     } else {
-                        cjsonElement = toCjson(fieldValue);
+                        cjsonElement = toCjson(fieldValue, field::getAnnotation);
                     }
                     Json json = field.getAnnotation(Json.class);
                     String tagName = json == null ? field.getName() : json.value();
@@ -123,4 +129,11 @@ public class CJsonItemWriter<T> implements ItemWriter<T> {
         return BeanPropertyUtils.getProperty(source, field.getName());
     }
 
+    private interface AnnotationExtractor {
+        <A extends Annotation> A extract(Class<A> annotationClass);
+    }
+
+    private static <A extends Annotation> A defaultExtract(Class<A> annotationClass) {
+        return null;
+    }
 }

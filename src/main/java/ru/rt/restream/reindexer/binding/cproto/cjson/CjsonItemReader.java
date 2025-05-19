@@ -21,14 +21,18 @@ import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.encdec.CjsonDecoder;
+import ru.rt.restream.reindexer.convert.FieldConverter;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
+import ru.rt.restream.reindexer.convert.util.ConversionUtils;
+import ru.rt.restream.reindexer.convert.util.ResolvableType;
+import ru.rt.restream.reindexer.util.CollectionUtils;
+import ru.rt.restream.reindexer.util.Pair;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -71,46 +75,45 @@ public class CjsonItemReader<T> implements ItemReader<T> {
     }
 
     private Object getTargetValue(Field field, CjsonElement property) {
-        Class<?> fieldType = field.getType();
+        FieldConverter<?, Object> converter = FieldConverterRegistryFactory.INSTANCE.getFieldConverter(field);
+        if (converter != null) {
+            Pair<ResolvableType, ResolvableType> convertiblePair = converter.getConvertiblePair();
+            return converter.convertToFieldType(getTargetValue(field, convertiblePair.getSecond(), property));
+        }
+        ResolvableType resolvableType = ConversionUtils.resolveFieldType(field);
+        return getTargetValue(field, resolvableType, property);
+    }
+
+    private Object getTargetValue(Field field, ResolvableType resolvableType, CjsonElement property) {
         if (property.isNull()) {
-            if (fieldType == List.class) {
-                return new ArrayList<>();
+            if (resolvableType.isCollectionLike()) {
+                return resolvableType.getType().isArray() ? Array.newInstance(resolvableType.getComponentType(), 0)
+                        : CollectionUtils.createCollection(resolvableType.getType(), resolvableType.getComponentType(), 0);
             }
             return null;
         }
 
-        if (fieldType == List.class) {
-            CjsonArray array = property.getAsCjsonArray();
-            ArrayList<Object> elements = new ArrayList<>();
-            ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-            Type elementType = genericType.getActualTypeArguments()[0];
-            for (CjsonElement cjsonElement : array) {
-                elements.add(convert(cjsonElement, (Class<?>) elementType));
+        if (resolvableType.isCollectionLike()) {
+            List<CjsonElement> elements = property.getAsCjsonArray().list();
+            if (resolvableType.getType().isArray()) {
+                Object array = Array.newInstance(resolvableType.getComponentType(), elements.size());
+                for (int i = 0; i < elements.size(); i++) {
+                    Array.set(array, i, convert(elements.get(i), resolvableType.getComponentType(), field));
+                }
+                return array;
             }
-            return elements;
-        } else if (Enum.class.isAssignableFrom(fieldType)) {
-            Enumerated enumerated = field.getAnnotation(Enumerated.class);
-            if (enumerated != null && enumerated.value() == EnumType.STRING) {
-                return Enum.valueOf(fieldType.asSubclass(Enum.class), property.getAsString());
+            Collection<Object> collection = CollectionUtils
+                    .createCollection(resolvableType.getType(), resolvableType.getComponentType(), elements.size());
+            for (CjsonElement element : elements) {
+                collection.add(convert(element, resolvableType.getComponentType(), field));
             }
-            return fieldType.getEnumConstants()[property.getAsInteger()];
-        } else if ( fieldType.isArray() && fieldType.getComponentType() == float.class) {
-            // float_vector
-            CjsonArray array = property.getAsCjsonArray();
-            int size = array.list().size();
-            float[] elements = new float[size];
-            int i = 0;
-            Iterator<CjsonElement> iterator = array.iterator();
-            while (iterator.hasNext()) {
-                elements[i++] = iterator.next().getAsFloat();
-            }
-            return elements;
+            return collection;
         } else {
-            return convert(property, field.getType());
+            return convert(property, resolvableType.getType(), field);
         }
     }
 
-    private Object convert(CjsonElement element, Class<?> targetClass) {
+    private Object convert(CjsonElement element, Class<?> targetClass, Field field) {
         if (element.isNull()) {
             return null;
         } else if (targetClass == Integer.class || targetClass == int.class) {
@@ -131,6 +134,12 @@ public class CjsonItemReader<T> implements ItemReader<T> {
             return element.getAsFloat();
         } else if (targetClass == UUID.class) {
             return element.getAsUuid();
+        } else if (Enum.class.isAssignableFrom(targetClass)) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            if (enumerated != null && enumerated.value() == EnumType.STRING) {
+                return Enum.valueOf(targetClass.asSubclass(Enum.class), element.getAsString());
+            }
+            return targetClass.getEnumConstants()[element.getAsInteger()];
         } else if (element.isObject()) {
             return readObject(element.getAsCjsonObject(), targetClass);
         } else {
