@@ -15,6 +15,10 @@
  */
 package ru.rt.restream.reindexer.convert;
 
+import ru.rt.restream.reindexer.convert.util.ConversionUtils;
+import ru.rt.restream.reindexer.convert.util.ResolvableType;
+import ru.rt.restream.reindexer.util.Pair;
+
 /**
  * An interface that can be implemented to convert field value between the Reindexer stored database type: 
  * {@link ru.rt.restream.reindexer.FieldType}, and the one used within the POJO representation.
@@ -36,4 +40,14 @@ public interface FieldConverter<X, Y> {
      * @return the Reindexer stored database type value
      */
     Y convertToDatabaseType(X field);
+
+    /**
+     * Returns a {@link Pair} of source and target {@link ResolvableType}s.
+     * By default, the source and target types are determined based on {@link X} and {@link Y} parameters,
+     * this can be overridden to provide a custom implementation of how source and target types are determined.
+     * @return the {@link Pair} of source and target {@link ResolvableType}s to use
+     */
+    default Pair<ResolvableType, ResolvableType> getConvertiblePair() {
+        return ConversionUtils.resolveConvertiblePair(getClass(), FieldConverter.class);
+    }
 }
