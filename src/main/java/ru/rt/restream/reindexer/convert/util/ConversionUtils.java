@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ConversionUtils {
 
-    private static final Map<Class<?>, Pair<ResolvableType, ResolvableType>> CONVERTIBLE_PAIR_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Pair<Class<?>, Class<?>>, Pair<ResolvableType, ResolvableType>> CONVERTIBLE_PAIR_CACHE = new ConcurrentHashMap<>();
 
     private static final Map<Pair<Class<?>, String>, ResolvableType> FIELD_TYPE_CACHE = new ConcurrentHashMap<>();
 
@@ -46,18 +46,19 @@ public final class ConversionUtils {
      */
     public static Pair<ResolvableType, ResolvableType> resolveConvertiblePair(Class<?> converterClass, Class<?> converterType) {
         Objects.requireNonNull(converterClass, "converterClass must not be null");
+        Objects.requireNonNull(converterType, "converterType must not be null");
+        Pair<Class<?>, Class<?>> key = new Pair<>(converterClass, converterType);
         // https://bugs.openjdk.java.net/browse/JDK-8161372
-        Pair<ResolvableType, ResolvableType> typePair = CONVERTIBLE_PAIR_CACHE.get(converterClass);
+        Pair<ResolvableType, ResolvableType> typePair = CONVERTIBLE_PAIR_CACHE.get(key);
         if (typePair != null) {
             return typePair;
         }
-        Objects.requireNonNull(converterType, "converterType must not be null");
         TypeVariable<? extends Class<?>>[] typeParameters = converterType.getTypeParameters();
         if (typeParameters.length < 2) {
             throw new IllegalArgumentException(
                     String.format("Converter type: %s must have 2 type arguments", converterType.getName()));
         }
-        return CONVERTIBLE_PAIR_CACHE.computeIfAbsent(converterClass, k -> {
+        return CONVERTIBLE_PAIR_CACHE.computeIfAbsent(key, k -> {
             Map<TypeVariable<?>, Type> typeArguments = TypeUtils.getTypeArguments(converterClass, converterType);
             Type sourceType = typeArguments.get(typeParameters[0]);
             ResolvableType resolvableSourceType = resolveType(sourceType);

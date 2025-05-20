@@ -160,6 +160,20 @@ public enum FieldConverterRegistryFactory implements FieldConverterRegistry {
         }
     }
 
+    /**
+     * For testing purposes only.
+     */
+    void clearRegistry() {
+        lock.writeLock().lock();
+        try {
+            converters.clear();
+            fieldConverters.clear();
+            globalConverters.clear();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     private FieldConverter<?, ?> instantiateFieldConverter(Class<?> converterClass) {
         try {
             Constructor<?> constructor = converterClass.getDeclaredConstructor();

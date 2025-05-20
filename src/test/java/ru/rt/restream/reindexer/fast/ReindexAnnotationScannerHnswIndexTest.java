@@ -117,6 +117,16 @@ public class ReindexAnnotationScannerHnswIndexTest {
     }
 
     @Test
+    public void testFloatListField_throwsException() {
+        RuntimeException thrown = assertThrows(
+                RuntimeException.class,
+                () -> scanner.parseIndexes(ItemWithFloatListField.class),
+                "Expected RuntimeException() to throw, but it didn't"
+        );
+        assertThat(thrown.getMessage(), is("Only a float array field can have vector index"));
+    }
+
+    @Test
     public void testNoHnswAnnotation_throwsException() {
         RuntimeException thrown = assertThrows(
                 RuntimeException.class,
@@ -169,6 +179,15 @@ public class ReindexAnnotationScannerHnswIndexTest {
         @Reindex(name = "hnsw_vector", type = HNSW)
         @Hnsw(metric = Metric.L2, dimension = 8)
         private String[] vector;
+    }
+
+    static class ItemWithFloatListField {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "hnsw_vector", type = HNSW)
+        @Ivf(metric = Metric.L2, dimension = 8)
+        private List<Float> vector;
     }
 
     static class ItemWithoutHnswAnnotation {

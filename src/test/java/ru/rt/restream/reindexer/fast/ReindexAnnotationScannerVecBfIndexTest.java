@@ -102,6 +102,16 @@ public class ReindexAnnotationScannerVecBfIndexTest {
     }
 
     @Test
+    public void testFloatListField_throwsException() {
+        RuntimeException thrown = assertThrows(
+                RuntimeException.class,
+                () -> scanner.parseIndexes(ItemWithFloatListField.class),
+                "Expected RuntimeException() to throw, but it didn't"
+        );
+        assertThat(thrown.getMessage(), is("Only a float array field can have vector index"));
+    }
+
+    @Test
     public void testNotFloatArrayField_throwsException() {
         RuntimeException thrown = assertThrows(
                 RuntimeException.class,
@@ -164,6 +174,15 @@ public class ReindexAnnotationScannerVecBfIndexTest {
         @Reindex(name = "vec_bf_vector", type = VEC_BF)
         @VecBf(metric = Metric.L2, dimension = 8)
         private String[] vector;
+    }
+
+    static class ItemWithFloatListField {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "vec_bf_vector", type = VEC_BF)
+        @Ivf(metric = Metric.L2, dimension = 8)
+        private List<Float> vector;
     }
 
     static class ItemWithoutVecBfAnnotation {
