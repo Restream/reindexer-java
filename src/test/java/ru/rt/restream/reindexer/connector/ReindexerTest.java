@@ -28,16 +28,22 @@ import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.Transaction;
+import ru.rt.restream.reindexer.annotations.Convert;
 import ru.rt.restream.reindexer.annotations.Enumerated;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
+import ru.rt.restream.reindexer.convert.FieldConverter;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -67,6 +73,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.IndexType.TEXT;
+import static ru.rt.restream.reindexer.Query.Condition.ALLSET;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.LE;
 import static ru.rt.restream.reindexer.Query.Condition.RANGE;
@@ -2776,45 +2783,146 @@ public abstract class ReindexerTest extends DbBaseTest {
     public void testTestItemEnumString() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumString.class);
-        db.upsert(namespaceName, new TestItemEnumString(1, "TestName", TestEnum.TEST_CONSTANT));
+        db.upsert(namespaceName, new TestItemEnumString(1, "TestName", TestEnum.TEST_CONSTANT_1,
+                Arrays.asList(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2, TestEnum.TEST_CONSTANT_3)));
         Iterator<TestItemEnumString> iterator = db.query(namespaceName, TestItemEnumString.class)
-                .where("testEnumString", EQ, TestEnum.TEST_CONSTANT.name())
+                .where("testEnumString", EQ, TestEnum.TEST_CONSTANT_1.name())
+                .where("testEnumStrings", ALLSET, TestEnum.TEST_CONSTANT_1.name(),
+                        TestEnum.TEST_CONSTANT_2.name(), TestEnum.TEST_CONSTANT_3.name())
                 .execute();
         assertThat(iterator.hasNext(), is(true));
         TestItemEnumString foundByEnumString = iterator.next();
         assertThat(foundByEnumString.id, is(1));
         assertThat(foundByEnumString.name, is("TestName"));
-        assertThat(foundByEnumString.testEnum, is(TestEnum.TEST_CONSTANT));
+        assertThat(foundByEnumString.testEnum, is(TestEnum.TEST_CONSTANT_1));
+        assertThat(foundByEnumString.testEnums, contains(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2,
+                TestEnum.TEST_CONSTANT_3));
     }
 
     @Test
     public void testTestItemEnumOrdinal() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumOrdinal.class);
-        db.upsert(namespaceName, new TestItemEnumOrdinal(1, "TestName", TestEnum.TEST_CONSTANT));
+        db.upsert(namespaceName, new TestItemEnumOrdinal(1, "TestName", TestEnum.TEST_CONSTANT_1,
+                Arrays.asList(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2, TestEnum.TEST_CONSTANT_3)));
         Iterator<TestItemEnumOrdinal> iterator = db.query(namespaceName, TestItemEnumOrdinal.class)
-                .where("testEnum", EQ, TestEnum.TEST_CONSTANT.ordinal())
+                .where("testEnumOrdinal", EQ, TestEnum.TEST_CONSTANT_1.ordinal())
+                .where("testEnumOrdinals", ALLSET, TestEnum.TEST_CONSTANT_1.ordinal(),
+                        TestEnum.TEST_CONSTANT_2.ordinal(), TestEnum.TEST_CONSTANT_3.ordinal())
                 .execute();
         assertThat(iterator.hasNext(), is(true));
         TestItemEnumOrdinal foundByEnumOrdinal = iterator.next();
         assertThat(foundByEnumOrdinal.id, is(1));
         assertThat(foundByEnumOrdinal.name, is("TestName"));
-        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT));
+        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT_1));
+        assertThat(foundByEnumOrdinal.testEnums, contains(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2,
+                TestEnum.TEST_CONSTANT_3));
     }
 
     @Test
     public void testTestItemEnumDefault() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumDefault.class);
-        db.upsert(namespaceName, new TestItemEnumDefault(1, "TestName", TestEnum.TEST_CONSTANT));
+        db.upsert(namespaceName, new TestItemEnumDefault(1, "TestName", TestEnum.TEST_CONSTANT_1,
+                Arrays.asList(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2, TestEnum.TEST_CONSTANT_3)));
         Iterator<TestItemEnumDefault> iterator = db.query(namespaceName, TestItemEnumDefault.class)
-                .where("testEnum", EQ, TestEnum.TEST_CONSTANT.ordinal())
+                .where("testEnum", EQ, TestEnum.TEST_CONSTANT_1.ordinal())
+                .where("testEnums", ALLSET, TestEnum.TEST_CONSTANT_1.ordinal(),
+                        TestEnum.TEST_CONSTANT_2.ordinal(), TestEnum.TEST_CONSTANT_3.ordinal())
                 .execute();
         assertThat(iterator.hasNext(), is(true));
         TestItemEnumDefault foundByEnumOrdinal = iterator.next();
         assertThat(foundByEnumOrdinal.id, is(1));
         assertThat(foundByEnumOrdinal.name, is("TestName"));
-        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT));
+        assertThat(foundByEnumOrdinal.testEnum, is(TestEnum.TEST_CONSTANT_1));
+        assertThat(foundByEnumOrdinal.testEnums, contains(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2,
+                TestEnum.TEST_CONSTANT_3));
+    }
+
+    @Test
+    public void testTestItemEnumSet() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemEnumSet.class);
+        db.upsert(namespaceName, new TestItemEnumSet(1, EnumSet.of(TestEnum.TEST_CONSTANT_1,
+                TestEnum.TEST_CONSTANT_2, TestEnum.TEST_CONSTANT_3)));
+        Iterator<TestItemEnumSet> iterator = db.query(namespaceName, TestItemEnumSet.class)
+                .where("testEnums", ALLSET, TestEnum.TEST_CONSTANT_1.ordinal(),
+                        TestEnum.TEST_CONSTANT_2.ordinal(), TestEnum.TEST_CONSTANT_3.ordinal())
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemEnumSet foundByEnumOrdinal = iterator.next();
+        assertThat(foundByEnumOrdinal.id, is(1));
+        assertThat(foundByEnumOrdinal.testEnums, contains(TestEnum.TEST_CONSTANT_1, TestEnum.TEST_CONSTANT_2,
+                TestEnum.TEST_CONSTANT_3));
+    }
+
+    @Test
+    public void testTestItemCustomDateConverters() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCustomDateConverters.class);
+        db.upsert(namespaceName, new TestItemCustomDateConverters(1, LocalDate.of(2020, 1, 1), LocalDateTime.of(2020, 1, 1, 12, 0, 0)));
+        Iterator<TestItemCustomDateConverters> iterator = db.query(namespaceName, TestItemCustomDateConverters.class)
+                .where("localDate", EQ, "2020-01-01")
+                .where("localDateTime", EQ, "2020-01-01T12:00")
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemCustomDateConverters foundByLocalDates = iterator.next();
+        assertThat(foundByLocalDates.id, is(1));
+        assertThat(foundByLocalDates.localDate, is(LocalDate.of(2020, 1, 1)));
+        assertThat(foundByLocalDates.localDateTime, is(LocalDateTime.of(2020, 1, 1, 12, 0, 0)));
+    }
+
+    @Test
+    public void testTestItemGlobalDateConverters() {
+        FieldConverterRegistryFactory.INSTANCE.registerGlobalConverter(new LocalDateStringFieldConverter());
+        FieldConverterRegistryFactory.INSTANCE.registerGlobalConverter(new LocalDateTimeStringFieldConverter());
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemGlobalDateConverters.class);
+        db.upsert(namespaceName, new TestItemGlobalDateConverters(1, LocalDate.of(2020, 1, 1), LocalDateTime.of(2020, 1, 1, 12, 0, 0)));
+        Iterator<TestItemGlobalDateConverters> iterator = db.query(namespaceName, TestItemGlobalDateConverters.class)
+                .where("localDate", EQ, "2020-01-01")
+                .where("localDateTime", EQ, "2020-01-01T12:00")
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemGlobalDateConverters foundByLocalDates = iterator.next();
+        assertThat(foundByLocalDates.id, is(1));
+        assertThat(foundByLocalDates.localDate, is(LocalDate.of(2020, 1, 1)));
+        assertThat(foundByLocalDates.localDateTime, is(LocalDateTime.of(2020, 1, 1, 12, 0, 0)));
+    }
+
+    @Test
+    public void testTestItemCustomObjectConverters() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCustomObjectConverters.class);
+        db.upsert(namespaceName, new TestItemCustomObjectConverters(1, new Price(100.5), "market", Arrays.asList("apple", "banana", "orange"),
+                Arrays.asList(new Price(101.5), new Price(102.6), new Price(103.7))));
+        Iterator<TestItemCustomObjectConverters> iterator = db.query(namespaceName, TestItemCustomObjectConverters.class)
+                .where("price", EQ, 100.5)
+                .where("name", EQ, "tekram")
+                .where("products", EQ, "apple,banana,orange")
+                .where("prices", ALLSET, Arrays.asList(101.5, 102.6, 103.7))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemCustomObjectConverters foundByPriceAndProducts = iterator.next();
+        assertThat(foundByPriceAndProducts.id, is(1));
+        assertThat(foundByPriceAndProducts.price, notNullValue());
+        assertThat(foundByPriceAndProducts.name, is("market"));
+        assertThat(foundByPriceAndProducts.products, contains("apple", "banana", "orange"));
+    }
+
+    @Test
+    public void testTestItemDefaultStringConverters() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemDefaultStringConverters.class);
+        db.upsert(namespaceName, new TestItemDefaultStringConverters(1, null, null));
+        Iterator<TestItemDefaultStringConverters> iterator = db.query(namespaceName, TestItemDefaultStringConverters.class)
+                .where("defaultWriting", EQ, "default")
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemDefaultStringConverters foundByDefaultWriting = iterator.next();
+        assertThat(foundByDefaultWriting.id, is(1));
+        assertThat(foundByDefaultWriting.defaultReading, is("default"));
+        assertThat(foundByDefaultWriting.defaultWriting, is("default"));
     }
 
     @Getter
@@ -2935,6 +3043,10 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Enumerated(EnumType.STRING)
         @Reindex(name = "testEnumString")
         private TestEnum testEnum;
+
+        @Enumerated(EnumType.STRING)
+        @Reindex(name = "testEnumStrings")
+        private List<TestEnum> testEnums;
     }
 
     @Getter
@@ -2951,6 +3063,10 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Enumerated(EnumType.ORDINAL)
         @Reindex(name = "testEnumOrdinal")
         private TestEnum testEnum;
+
+        @Enumerated(EnumType.ORDINAL)
+        @Reindex(name = "testEnumOrdinals")
+        private List<TestEnum> testEnums;
     }
 
     @Getter
@@ -2966,9 +3082,215 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         @Reindex(name = "testEnum")
         private TestEnum testEnum;
+
+        @Reindex(name = "testEnums")
+        private List<TestEnum> testEnums;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemEnumSet {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "testEnums")
+        private EnumSet<TestEnum> testEnums;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemCustomDateConverters {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "localDate")
+        @Convert(converterClass = LocalDateStringFieldConverter.class)
+        private LocalDate localDate;
+
+        @Reindex(name = "localDateTime")
+        @Convert(converterClass = LocalDateTimeStringFieldConverter.class)
+        private LocalDateTime localDateTime;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemGlobalDateConverters {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "localDate")
+        private LocalDate localDate;
+
+        @Reindex(name = "localDateTime")
+        private LocalDateTime localDateTime;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemCustomObjectConverters {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "price")
+        @Convert(converterClass = PriceDoubleFieldConverter.class)
+        private Price price;
+
+        @Reindex(name = "name")
+        @Convert(converterClass = ReverseStringFieldConverter.class)
+        private String name;
+
+        @Reindex(name = "products")
+        @Convert(converterClass = ListStringFieldConverter.class)
+        private List<String> products;
+
+        @Reindex(name = "prices")
+        @Convert(converterClass = ListPriceListDoubleFieldConverter.class)
+        private List<Price> prices;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemDefaultStringConverters {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "defaultReading")
+        @Convert(converterClass = DefaultReadingConverter.class)
+        private String defaultReading;
+
+        @Reindex(name = "defaultWriting")
+        @Convert(converterClass = DefaultWritingConverter.class)
+        private String defaultWriting;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Price {
+        private Double value;
+    }
+
+    public static class LocalDateStringFieldConverter implements FieldConverter<LocalDate, String> {
+
+        @Override
+        public LocalDate convertToFieldType(String localDate) {
+            return localDate != null ? LocalDate.parse(localDate) : null;
+        }
+
+        @Override
+        public String convertToDatabaseType(LocalDate localDate) {
+            return localDate != null ? localDate.toString() : null;
+        }
+    }
+
+    public static class LocalDateTimeStringFieldConverter implements FieldConverter<LocalDateTime, String> {
+
+        @Override
+        public LocalDateTime convertToFieldType(String localDateTime) {
+            return localDateTime != null ? LocalDateTime.parse(localDateTime) : null;
+        }
+
+        @Override
+        public String convertToDatabaseType(LocalDateTime localDateTime) {
+            return localDateTime != null ? localDateTime.toString() : null;
+        }
+    }
+
+    public static class PriceDoubleFieldConverter implements FieldConverter<Price, Double> {
+
+        @Override
+        public Price convertToFieldType(Double price) {
+            return new Price(price);
+        }
+
+        @Override
+        public Double convertToDatabaseType(Price price) {
+            return price != null ? price.getValue() : null;
+        }
+    }
+
+    public static class ReverseStringFieldConverter implements FieldConverter<String, String> {
+
+        @Override
+        public String convertToFieldType(String value) {
+            return reverse(value);
+        }
+
+        @Override
+        public String convertToDatabaseType(String value) {
+            return reverse(value);
+        }
+
+        private String reverse(String value) {
+            return value != null ? new StringBuilder(value).reverse().toString() : null;
+        }
+    }
+
+    public static class ListStringFieldConverter implements FieldConverter<List<String>, String> {
+
+        @Override
+        public List<String> convertToFieldType(String value) {
+            return Stream.of(value.split(",")).collect(Collectors.toList());
+        }
+
+        @Override
+        public String convertToDatabaseType(List<String> values) {
+            return String.join(",", values);
+        }
+    }
+
+    public static class DefaultReadingConverter implements FieldConverter<String, String> {
+
+        @Override
+        public String convertToFieldType(String dbData) {
+            return dbData != null ? dbData : "default";
+        }
+
+        @Override
+        public String convertToDatabaseType(String field) {
+            return field;
+        }
+    }
+
+    public static class DefaultWritingConverter implements FieldConverter<String, String> {
+
+        @Override
+        public String convertToFieldType(String dbData) {
+            return dbData;
+        }
+
+        @Override
+        public String convertToDatabaseType(String field) {
+            return field != null ? field : "default";
+        }
+    }
+
+    public static class ListPriceListDoubleFieldConverter implements FieldConverter<List<Price>, List<Double>> {
+        @Override
+        public List<Price> convertToFieldType(List<Double> prices) {
+            return prices.stream().map(Price::new).collect(Collectors.toList());
+        }
+
+        @Override
+        public List<Double> convertToDatabaseType(List<Price> prices) {
+            return prices.stream().map(Price::getValue).collect(Collectors.toList());
+        }
     }
 
     public enum TestEnum {
-        TEST_CONSTANT
+        TEST_CONSTANT_1,
+        TEST_CONSTANT_2,
+        TEST_CONSTANT_3,
     }
 }

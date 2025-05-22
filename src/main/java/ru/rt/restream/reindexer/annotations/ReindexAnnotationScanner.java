@@ -21,9 +21,14 @@ import ru.rt.restream.reindexer.FieldType;
 import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ReindexScanner;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.convert.FieldConverter;
+import ru.rt.restream.reindexer.convert.util.ConversionUtils;
+import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
+import ru.rt.restream.reindexer.convert.util.ResolvableType;
+import ru.rt.restream.reindexer.util.Pair;
 import ru.rt.restream.reindexer.vector.HnswConfig;
 import ru.rt.restream.reindexer.vector.HnswConfigs;
 import ru.rt.restream.reindexer.vector.IvfConfig;
@@ -33,11 +38,8 @@ import ru.rt.restream.reindexer.vector.VecBfConfigs;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -341,28 +343,24 @@ public class ReindexAnnotationScanner implements ReindexScanner {
     }
 
     private FieldInfo getFieldInfo(Field field) {
-        Class<?> type = field.getType();
         FieldInfo fieldInfo = new FieldInfo();
-        fieldInfo.isArray = type.isArray() || Collection.class.isAssignableFrom(type);
-        FieldType fieldType = null;
-        if (type.isArray()) {
-            Class<?> componentType = type.getComponentType();
+        FieldType fieldType;
+        FieldConverter<?, ?> converter = FieldConverterRegistryFactory.INSTANCE.getFieldConverter(field);
+        ResolvableType resolvableType;
+        if (converter != null) {
+            Pair<ResolvableType, ResolvableType> convertiblePair = converter.getConvertiblePair();
+            resolvableType = convertiblePair.getSecond();
+        } else {
+            resolvableType = ConversionUtils.resolveFieldType(field);
+        }
+        fieldInfo.isArray = resolvableType.isCollectionLike();
+        if (fieldInfo.isArray) {
+            Class<?> componentType = getFieldType(field, resolvableType.getComponentType());
             fieldType = getFieldTypeByClass(componentType);
             fieldInfo.componentType = componentType;
-            fieldInfo.isFloatVector = (fieldType == FLOAT);
-        } else if (field.getGenericType() instanceof ParameterizedType && fieldInfo.isArray) {
-            ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
-            Type typeArgument = parameterizedType.getActualTypeArguments()[0];
-            if (typeArgument instanceof Class<?>) {
-                Class<?> componentType = (Class<?>) typeArgument;
-                fieldType = getFieldTypeByClass(componentType);
-                fieldInfo.componentType = componentType;
-            }
-        } else if (Enum.class.isAssignableFrom(type)) {
-            Enumerated enumerated = field.getAnnotation(Enumerated.class);
-            fieldType = enumerated != null && enumerated.value() == EnumType.STRING ? STRING : INT;
+            fieldInfo.isFloatVector = resolvableType.getType().isArray() && fieldType == FLOAT;
         } else {
-            fieldType = getFieldTypeByClass(type);
+            fieldType = getFieldTypeByClass(getFieldType(field, resolvableType.getType()));
         }
 
         if (fieldType == null) {
@@ -371,6 +369,14 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
         fieldInfo.fieldType = fieldType;
         return fieldInfo;
+    }
+    
+    private Class<?> getFieldType(Field field, Class<?> type) {
+        if (Enum.class.isAssignableFrom(type)) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            return enumerated != null && enumerated.value() == EnumType.STRING ? String.class : Integer.class;
+        }
+        return type;
     }
 
     private FieldType getFieldTypeByClass(Class<?> type) {
