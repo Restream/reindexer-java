@@ -24,13 +24,6 @@ import java.util.List;
  */
 public interface KnnSearchParam {
     /**
-     * K - the maximum number of documents returned from the index for subsequent filtering.
-     *
-     * <p>Only required parameter for all vector index types.
-     */
-    int getK();
-
-    /**
      * Utility method for serializing KNN parameters to CJSON avoiding switch.
      */
     void serializeBy(ByteBuffer buffer);

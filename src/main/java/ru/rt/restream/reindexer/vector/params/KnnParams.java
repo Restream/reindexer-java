@@ -15,34 +15,66 @@
  */
 package ru.rt.restream.reindexer.vector.params;
 
+import lombok.NonNull;
+
 /**
  * Factories for KnnSearchParams.
  */
 public class KnnParams {
+    @Deprecated
     public static BaseKnnSearchParam base(int k) {
         checkK(k);
-        return new BaseKnnSearchParam(k);
+        return new BaseKnnSearchParam(k, null);
+    }
+
+    public static BaseKnnSearchParam base(int k, float radius) {
+        checkK(k);
+        return new BaseKnnSearchParam(k, radius);
+    }
+
+    public static BaseKnnSearchParam k(int k) {
+        checkK(k);
+        return new BaseKnnSearchParam(k, null);
+    }
+
+    public static BaseKnnSearchParam radius(float radius) {
+        return new BaseKnnSearchParam(null, radius);
     }
 
     public static IndexHnswSearchParam hnsw(int k, int ef) {
-        checkK(k);
         if (ef < k) {
             throw new IllegalArgumentException("Minimal value of 'ef' must be greater than or equal to 'k'");
         }
-        return new IndexHnswSearchParam(k, ef);
+        return new IndexHnswSearchParam(k(k), ef);
+    }
+
+    public static IndexHnswSearchParam hnsw(@NonNull BaseKnnSearchParam base, int ef) {
+        if (base.getK() != null && ef < base.getK()) {
+            throw new IllegalArgumentException("Minimal value of 'ef' must be greater than or equal to 'k'");
+        }
+        return new IndexHnswSearchParam(base, ef);
     }
 
     public static IndexBfSearchParam bf(int k) {
-        checkK(k);
-        return new IndexBfSearchParam(k);
+        return new IndexBfSearchParam(k(k));
+    }
+
+    public static IndexBfSearchParam bf(@NonNull BaseKnnSearchParam base) {
+        return new IndexBfSearchParam(base);
     }
 
     public static IndexIvfSearchParam ivf(int k, int nProbe) {
-        checkK(k);
         if (nProbe <= 0) {
             throw new IllegalArgumentException("Minimal value of 'nProbe' must be greater than 0");
         }
-        return new IndexIvfSearchParam(k, nProbe);
+        return new IndexIvfSearchParam(k(k), nProbe);
+    }
+
+    public static IndexIvfSearchParam ivf(@NonNull BaseKnnSearchParam base, int nProbe) {
+        if (nProbe <= 0) {
+            throw new IllegalArgumentException("Minimal value of 'nProbe' must be greater than 0");
+        }
+        return new IndexIvfSearchParam(base, nProbe);
     }
 
     private static void checkK(int k) {

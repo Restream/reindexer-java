@@ -97,6 +97,22 @@ public class ByteBuffer {
         buffer = new byte[initialCapacity];
     }
 
+
+    /**
+     * Encodes an integer value into unsigned 8-bit integer.
+     * Increments buffer position.
+     *
+     * @param value value to encode
+     * @return the {@link ByteBuffer} for further customizations
+     */
+    public ByteBuffer putUInt8(int value) {
+        if (value < 0 || value > 0xFF) {
+            throw new IllegalArgumentException();
+        }
+        putIntBits(value, Byte.BYTES, -1);
+        return this;
+    }
+
     /**
      * Encodes an integer value into unsigned 16-bit integer.
      * Increments buffer position.
