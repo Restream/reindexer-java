@@ -41,6 +41,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
+import static ru.rt.restream.reindexer.vector.params.KnnParams.radius;
 import static ru.rt.restream.util.ReindexerUtils.getIndexByName;
 
 /**
@@ -50,10 +51,15 @@ public abstract class FloatVectorIvfTest extends DbBaseTest {
 
     private final String namespaceName = "items";
     private Namespace<VectorItem> vectorNs;
+    private List<VectorItem> testItems;
 
     @BeforeEach
     public void setUp() {
         vectorNs = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), VectorItem.class);
+        testItems = getTestVectorItems();
+        for (VectorItem item : testItems) {
+            db.insert(namespaceName, item);
+        }
     }
 
     @Test
@@ -91,16 +97,11 @@ public abstract class FloatVectorIvfTest extends DbBaseTest {
     }
 
     @Test
-    public void testSearchWithBaseParams_isOk() {
-        List<VectorItem> testItems = getTestVectorItems();
-        for (VectorItem item : testItems) {
-            db.insert(namespaceName, item);
-        }
-
+    public void testSearchWithBaseParamK_isOk() {
         List<VectorItem> list = db.query(namespaceName, VectorItem.class)
                 .selectAllFields()
                 .whereKnn("vector", new float[]{0.1f, 0.1f, 0.1f},
-                        KnnParams.base(2))
+                        KnnParams.k(2))
                 .toList();
 
         assertThat(list.size(), is(2));
@@ -111,34 +112,106 @@ public abstract class FloatVectorIvfTest extends DbBaseTest {
     }
 
     @Test
-    public void testSearchWithIvfParams_isOk() {
-        List<VectorItem> testItems = getTestVectorItems();
-        for (VectorItem item : testItems) {
-            db.insert(namespaceName, item);
-        }
-
+    public void testSearchWithBaseParamRadius_isOk() {
         List<VectorItem> list = db.query(namespaceName, VectorItem.class)
                 .selectAllFields()
-                .whereKnn("vector", new float[]{0.23f, 0.23f, 0.0f},
-                        KnnParams.ivf(3, 3))
+                .whereKnn("vector", new float[]{0.1f, 0.1f, 0.1f},
+                        radius(0.1f))
+                .toList();
+
+        assertThat(list.size(), is(4));
+        assertThat(list.get(0).getId(), is(18));
+        assertThat(list.get(1).getId(), is(6));
+        assertThat(list.get(2).getId(), is(7));
+        assertThat(list.get(3).getId(), is(8));
+    }
+
+    @Test
+    public void testSearchWithBaseParamsKAndRadius_isOk() {
+        // by k (3 records) + by radius (4 records) = 3 records
+        List<VectorItem> list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.1f, 0.1f, 0.1f},
+                        KnnParams.base(3, 0.1f))
                 .toList();
 
         assertThat(list.size(), is(3));
+        assertThat(list.get(0).getId(), is(18));
+        assertThat(list.get(1).getId(), is(7));
+        assertThat(list.get(2).getId(), is(8));
+
+        // by k (5 records) + by radius (4 records) = 4 records
+        list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.1f, 0.1f, 0.1f},
+                        KnnParams.base(5, 0.1f))
+                .toList();
+
+        assertThat(list.size(), is(4));
+        assertThat(list.get(0).getId(), is(18));
+        assertThat(list.get(1).getId(), is(6));
+        assertThat(list.get(2).getId(), is(7));
+        assertThat(list.get(3).getId(), is(8));
+    }
+
+    @Test
+    public void testSearchWithIvfParams_isOk() {
+        // only k - 2 records
+        List<VectorItem> list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.23f, 0.23f, 0.0f},
+                        KnnParams.ivf(2, 3))
+                .toList();
+
+        assertThat(list.size(), is(2));
         assertThat(list.get(0).getId(), is(8));
         assertThat(list.get(0).getVector(), is(testItems.get(8).getVector()));
         assertThat(list.get(1).getId(), is(18));
         assertThat(list.get(1).getVector(), is(testItems.get(18).getVector()));
+
+        // only radius - 3 records
+        list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.23f, 0.23f, 0.0f},
+                        KnnParams.ivf(KnnParams.radius(0.3f), 3))
+                .toList();
+
+        assertThat(list.size(), is(3));
+        assertThat(list.get(0).getId(), is(8));
+        assertThat(list.get(1).getId(), is(18));
         assertThat(list.get(2).getId(), is(19));
-        assertThat(list.get(2).getVector(), is(testItems.get(19).getVector()));
+
+        // by k (2 records) + by radius (3 records) = 2 records
+        list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.23f, 0.23f, 0.0f},
+                        KnnParams.ivf(KnnParams.base(2, 0.3f), 3))
+                .toList();
+
+        assertThat(list.size(), is(2));
+
+        // by k (4 records) + by radius (3 records) = 3 records
+        list = db.query(namespaceName, VectorItem.class)
+                .selectAllFields()
+                .whereKnn("vector", new float[]{0.23f, 0.23f, 0.0f},
+                        KnnParams.ivf(KnnParams.base(4, 0.3f), 3))
+                .toList();
+
+        assertThat(list.size(), is(3));
+    }
+
+    @Test
+    public void testTrySearchWithIvfParamFromNullBaseParam_isException() {
+        assertThrows(NullPointerException.class,
+                () -> db.query(namespaceName, VectorItem.class)
+                        .selectAllFields()
+                        .whereKnn("vector", new float[]{0.5f, 0.0f, 0.6f},
+                                KnnParams.bf(null))
+                        .toList());
     }
 
     @Test
     public void testSearchWithIncorrectIvfParams_isException() {
-        List<VectorItem> testItems = getTestVectorItems();
-        for (VectorItem item : testItems) {
-            db.insert(namespaceName, item);
-        }
-
         assertThrows(IllegalArgumentException.class,
                 () -> db.query(namespaceName, VectorItem.class)
                         .selectAllFields()
@@ -158,11 +231,6 @@ public abstract class FloatVectorIvfTest extends DbBaseTest {
 
     @Test
     public void testSearchWithNotIvfNorBaseParams_isException() {
-        List<VectorItem> testItems = getTestVectorItems();
-        for (VectorItem item : testItems) {
-            db.insert(namespaceName, item);
-        }
-
         assertThrows(RuntimeException.class,
                 () -> db.query(namespaceName, VectorItem.class)
                         .selectAllFields()
