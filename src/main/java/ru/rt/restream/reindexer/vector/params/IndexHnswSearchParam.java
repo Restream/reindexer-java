@@ -18,10 +18,10 @@ package ru.rt.restream.reindexer.vector.params;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NonNull;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_PARAMS_VERSION;
@@ -31,9 +31,10 @@ import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_TYPE_HNSW;
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class IndexHnswSearchParam implements KnnSearchParam {
     /**
-     * The maximum number of documents returned from the index for subsequent filtering.
+     * Common parameters for KNN search.
      */
-    private final int k;
+    @NonNull
+    private final BaseKnnSearchParam base;
 
     /**
      * The size of the dynamic list for the nearest neighbors.
@@ -50,9 +51,9 @@ public class IndexHnswSearchParam implements KnnSearchParam {
     @Override
     public void serializeBy(ByteBuffer buffer) {
         buffer.putVarUInt32(KNN_QUERY_TYPE_HNSW)
-                .putVarUInt32(KNN_QUERY_PARAMS_VERSION)
-                .putVarUInt32(k)
-                .putVarInt32(ef);
+                .putVarUInt32(KNN_QUERY_PARAMS_VERSION);
+        base.serializeKAndRadius(buffer);
+        buffer.putVarInt32(ef);
     }
 
     /**
@@ -60,6 +61,9 @@ public class IndexHnswSearchParam implements KnnSearchParam {
      */
     @Override
     public List<String> toLog() {
-        return Arrays.asList("k=" + k, "ef=" + ef);
+        List<String> values = new ArrayList<>(3);
+        values.addAll(base.toLog());
+        values.add("ef=" + ef);
+        return values;
     }
 }

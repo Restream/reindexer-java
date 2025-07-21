@@ -18,10 +18,10 @@ package ru.rt.restream.reindexer.vector.params;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NonNull;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_PARAMS_VERSION;
@@ -31,9 +31,10 @@ import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_TYPE_BRUTE_FORCE
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class IndexBfSearchParam implements KnnSearchParam {
     /**
-     * The maximum number of documents returned from the index for subsequent filtering.
+     * Common parameters for KNN search.
      */
-    private final int k;
+    @NonNull
+    private final BaseKnnSearchParam base;
 
     /**
      * {@inheritDoc}
@@ -41,8 +42,8 @@ public class IndexBfSearchParam implements KnnSearchParam {
     @Override
     public void serializeBy(ByteBuffer buffer) {
         buffer.putVarUInt32(KNN_QUERY_TYPE_BRUTE_FORCE)
-                .putVarUInt32(KNN_QUERY_PARAMS_VERSION)
-                .putVarUInt32(k);
+                .putVarUInt32(KNN_QUERY_PARAMS_VERSION);
+        base.serializeKAndRadius(buffer);
     }
 
     /**
@@ -50,6 +51,6 @@ public class IndexBfSearchParam implements KnnSearchParam {
      */
     @Override
     public List<String> toLog() {
-        return Collections.singletonList("k=" + k);
+        return new ArrayList<>(base.toLog());
     }
 }
