@@ -8,6 +8,14 @@
         <version>9</version>
     </parent>
 
+    <repositories>
+        <repository>
+            <id>ossrh-staging-api</id>
+            <name>Nexus Release Repository</name>
+            <url>https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </repositories>
+
     <groupId>com.github.restream</groupId>
     <artifactId>rx-connector</artifactId>
     <version>1.29-SNAPSHOT</version>
