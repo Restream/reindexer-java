@@ -12,7 +12,7 @@
 
     <groupId>com.github.restream</groupId>
     <artifactId>rx-connector</artifactId>
-    <version>1.29-SNAPSHOT</version>
+    <version>1.29</version>
     <packaging>jar</packaging>
 
     <name>rx-connector</name>
@@ -31,7 +31,8 @@
         <url>https://github.com/restream/reindexer-java</url>
         <connection>scm:git:https://github.com/restream/reindexer-java</connection>
         <developerConnection>scm:git:https://github.com/restream/reindexer-java.git</developerConnection>
-    </scm>
+      <tag>rx-connector-1.29</tag>
+  </scm>
 
     <developers>
         <developer>
