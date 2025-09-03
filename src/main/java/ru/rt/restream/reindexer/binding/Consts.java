@@ -75,7 +75,7 @@ public final class Consts {
     public static final int QUERY_RESULT_EXPLAIN = 2;
     public static final int QUERY_RESULT_SHARDING_VERSION = 3;
     public static final int QUERY_RESULT_SHARD_ID = 4;
-    // incarnation tags are not supported int java connector
+    // incarnation tags are not supported in java connector
     public static final int QUERY_RESULT_INCARNATION_TAGS = 5;
     public static final int QUERY_RESULT_RANK_FORMAT = 6;
 
@@ -117,7 +117,7 @@ public final class Consts {
 
     public static final long BINDING_CAPABILITY_QR_IDLE_TIMEOUTS = 1;
     public static final long BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS = 1 << 1;
-    // incarnation tags are not supported int java connector
+    // incarnation tags are not supported in java connector
     public static final long BINDING_CAPABILITY_NAMESPACE_INCARNATIONS = 1 << 2;
     public static final long BINDING_CAPABILITY_COMPLEX_RANK = 1 << 3;
 

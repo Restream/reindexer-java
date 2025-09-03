@@ -29,6 +29,7 @@ import java.util.List;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_AGGREGATION;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_END;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_EXPLAIN;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_INCARNATION_TAGS;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_RANK_FORMAT;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARDING_VERSION;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARD_ID;
@@ -124,6 +125,18 @@ public class QueryResultReader {
                     break;
                 case QUERY_RESULT_SHARD_ID:
                     queryResult.setShardId((int) buffer.getVarUInt());
+                    break;
+                case QUERY_RESULT_INCARNATION_TAGS:
+                    // Read the result from the buffer, but do not use it -
+                    // incarnation tags are not supported in java connector.
+                    int shardsCnt = (int) buffer.getVarUInt();
+                    for (int i = 0; i < shardsCnt; i++) {
+                        int shardId = (int) buffer.getVarInt();
+                        int nsCnt = (int) buffer.getVarUInt();
+                        for (int j = 0; j < nsCnt; j++) {
+                            buffer.getVarInt();
+                        }
+                    }
                     break;
                 case QUERY_RESULT_RANK_FORMAT:
                     int format = (int) buffer.getVarUInt();
