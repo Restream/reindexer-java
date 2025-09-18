@@ -41,7 +41,7 @@ public abstract class DbBaseTest {
      * Initializes the Reindexer instance before all tests.
      */
     @BeforeAll
-    void initDb() {
+    protected void initDb() {
         if (this.getClass().isAnnotationPresent(CprotoTest.class)) {
             db = DbLocator.getDb(CPROTO);
         } else if (this.getClass().isAnnotationPresent(BuiltinTest.class)) {

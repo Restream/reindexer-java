@@ -60,6 +60,8 @@ public class Item {
 
         // Init a database instance and choose the binding (builtin). Configure connection pool size and connection
         // timeout. Database should be created explicitly via reindexer_tool.
+        // To connect to Reindexer with TLS, use cprotos:// protocol with default port 6535.
+        // Use ReindexerConfiguration#sslSocketFactory to provide a custom SSLSocketFactory.
         Reindexer db = ReindexerConfiguration.builder()
                 .url("cproto://localhost:6534/testdb")
                 .connectionPoolSize(1)
@@ -354,3 +356,21 @@ Depends on amount changes in transaction there are 2 possible Commit strategies:
 2. Transaction object holds Reindexer's resources, therefore application should explicitly call `tx.rollback` or `tx.commit`, otherwise resources will leak.
 3. It is safe to call `tx.rollback` after `tx.commit`.
 4. It is possible to call Query from transaction by call `tx.query().execute(); ...`. Only read-committed isolation is available. Changes made in active transaction is invisible to current and another transactions.
+
+### Development notes
+
+To run tests locally, you need to install Reindexer using a package manager for your OS.
+Cprotos protocol tests require Reindexer to be built with TLS support, and ssl certificate and key must be placed in
+src/test/resources, to generate a new valid certificate run the following commands:
+
+```bash
+cd src/test/resources
+# Generates a certificate key (not needed if you already have one).
+openssl genrsa -out builtin-server.key 2048
+# Generates a self-signed certificate using the provided key;
+# Prompts to fill certificate information e.g. CN=localhost;
+# The certificate will be valid for 10 years.
+openssl req -new -x509 -key builtin-server.key -out builtin-server.crt -days 3650
+# Import the certificate into the Java keystore and save it as a JKS file.
+keytool -importcert -alias builtin-server -file builtin-server.crt -keystore builtin-server.jks -storepass password -noprompt
+```

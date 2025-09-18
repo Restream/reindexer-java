@@ -46,6 +46,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 import static ru.rt.restream.reindexer.binding.Consts.APP_PROPERTY_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_COMPLEX_RANK;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_NAMESPACE_INCARNATIONS;
@@ -106,9 +109,18 @@ public class PhysicalConnection implements Connection {
     private final ScheduledFuture<?> writeTaskFuture;
 
     public PhysicalConnection(String host, int port, String user, String password, String database,
+                              SSLSocketFactory sslSocketFactory,
                               Duration requestTimeout, ScheduledExecutorService scheduler) {
         try {
-            clientSocket = new Socket(host, port);
+            if (sslSocketFactory != null) {
+                LOGGER.debug("rx: using SSL/TLS connection to {}:{}", host, port);
+                SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(host, port);
+                // Fail fast if SSL/TLS handshake fails.
+                sslSocket.startHandshake();
+                clientSocket = sslSocket;
+            } else {
+                clientSocket = new Socket(host, port);
+            }
             output = new DataOutputStream(clientSocket.getOutputStream());
             input = new DataInputStream(clientSocket.getInputStream());
             timeout = requestTimeout;

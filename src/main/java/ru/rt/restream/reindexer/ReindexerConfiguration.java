@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import javax.net.ssl.SSLSocketFactory;
+
 /**
  * Represents approach for bootstrapping Reindexer.
  */
@@ -53,6 +55,8 @@ public final class ReindexerConfiguration {
     private Duration serverStartupTimeout = Duration.ofMinutes(3L);
 
     private String serverConfigFile = "default-builtin-server-config.yml";
+
+    private SSLSocketFactory sslSocketFactory;
 
     private ReindexerConfiguration() {
 
@@ -162,6 +166,17 @@ public final class ReindexerConfiguration {
     }
 
     /**
+     * Configure an {@link SSLSocketFactory}.
+     *
+     * @param sslSocketFactory the {@link SSLSocketFactory} to use
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration sslSocketFactory(SSLSocketFactory sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
+        return this;
+    }
+
+    /**
      * Build and return reindexer connector instance.
      *
      * @return configured reindexer connector instance
@@ -186,10 +201,15 @@ public final class ReindexerConfiguration {
 
     private Binding getBinding(String protocol, List<URI> uris) {
         switch (protocol) {
+            case "cprotos":
+                if (sslSocketFactory == null) {
+                    sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                }
             case "cproto":
                 DataSourceConfiguration dataSourceConfig = DataSourceConfiguration.builder()
                         .urls(urls)
                         .allowUnlistedDataSource(allowUnlistedDataSource)
+                        .sslSocketFactory(sslSocketFactory)
                         .build();
                 return new Cproto(dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
             case "builtin":
@@ -197,7 +217,7 @@ public final class ReindexerConfiguration {
             case "builtinserver":
                 return new BuiltinServer(uris.get(0), serverConfigFile, serverStartupTimeout, requestTimeout);
             default:
-                throw new UnimplementedException("Protocol: '" + protocol + "' is not suppored");
+                throw new UnimplementedException("Protocol: '" + protocol + "' is not supported");
         }
     }
 
