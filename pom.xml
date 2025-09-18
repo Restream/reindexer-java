@@ -179,13 +179,12 @@
             </plugin>
 
             <plugin>
-                <groupId>com.googlecode.cmake-maven-project</groupId>
+                <groupId>io.github.cmake-maven-plugin</groupId>
                 <artifactId>cmake-maven-plugin</artifactId>
-                <version>3.19.2-b1</version>
+                <version>4.0.3-b1</version>
                 <configuration>
                     <generator>Unix Makefiles</generator>
                     <sourcePath>${cmake.source.directory}</sourcePath>
-                    <targetPath>${cmake.binary.directory}</targetPath>
                     <projectDirectory>${cmake.binary.directory}</projectDirectory>
                 </configuration>
                 <executions>

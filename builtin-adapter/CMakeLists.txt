@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 project(builtin-adapter)
 
@@ -17,3 +17,17 @@ add_library(${TARGET} SHARED BuiltinAdapter.cpp)
 include_directories(${JNI_INCLUDE_DIRS} ${REINDEXER_INCLUDE_DIRS})
 
 target_link_libraries(${TARGET} reindexer_server_library reindexer_server_resources ${REINDEXER_LIBRARIES})
+
+# Workaround for macOS to propagate a correct OpenSSL lib path to Reindexer.
+if(APPLE)
+  find_package(OpenSSL)
+  if(OpenSSL_FOUND)
+    if(NOT DEFINED OPENSSL_LIB_PATH)
+      get_filename_component(OPENSSL_LIB_PATH ${OPENSSL_CRYPTO_LIBRARY} DIRECTORY)
+    endif()
+    set_target_properties(${TARGET} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH TRUE
+      INSTALL_RPATH ${OPENSSL_LIB_PATH}
+    )
+  endif()
+endif()
