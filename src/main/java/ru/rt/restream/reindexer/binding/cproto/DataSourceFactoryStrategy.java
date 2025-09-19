@@ -43,7 +43,7 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
         public DataSource getDataSource(DataSourceConfiguration configuration) {
             List<String> urls = configuration.getUrls();
             configuration.setActive((configuration.getActive() + 1) % urls.size());
-            return new PhysicalDataSource(urls.get(configuration.getActive()));
+            return new PhysicalDataSource(urls.get(configuration.getActive()), configuration.getSslSocketFactory());
         }
     },
 
@@ -55,7 +55,7 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
         public DataSource getDataSource(DataSourceConfiguration configuration) {
             List<String> urls = configuration.getUrls();
             configuration.setActive(ThreadLocalRandom.current().nextInt(urls.size()));
-            return new PhysicalDataSource(urls.get(configuration.getActive()));
+            return new PhysicalDataSource(urls.get(configuration.getActive()), configuration.getSslSocketFactory());
         }
     },
 

@@ -20,6 +20,8 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import javax.net.ssl.SSLSocketFactory;
+
 /**
  * A {@link DataSource} that creates a {@link PhysicalConnection}.
  */
@@ -35,12 +37,27 @@ public class PhysicalDataSource implements DataSource {
 
     private final String database;
 
+    private final SSLSocketFactory sslSocketFactory;
+
     /**
      * Creates an instance.
      *
      * @param url the URL to use
+     * @deprecated Use {@link #PhysicalDataSource(String, SSLSocketFactory)}
+     * to connect to Reindexer using cprotos (SSL/TLS) protocol.
      */
+    @Deprecated
     public PhysicalDataSource(String url) {
+        this(url, null);
+    }
+
+    /**
+     * Creates an instance.
+     *
+     * @param url              the URL to use
+     * @param sslSocketFactory the {@link SSLSocketFactory} socket factory to use
+     */
+    public PhysicalDataSource(String url, SSLSocketFactory sslSocketFactory) {
         URI uri = URI.create(url);
         host = uri.getHost();
         port = uri.getPort();
@@ -58,11 +75,12 @@ public class PhysicalDataSource implements DataSource {
             password = "";
         }
         database = uri.getPath().substring(1);
+        this.sslSocketFactory = sslSocketFactory;
     }
 
     @Override
     public Connection getConnection(Duration timeout, ScheduledThreadPoolExecutor scheduler) {
-        return new PhysicalConnection(host, port, user, password, database, timeout, scheduler);
+        return new PhysicalConnection(host, port, user, password, database, sslSocketFactory, timeout, scheduler);
     }
 
     @Override

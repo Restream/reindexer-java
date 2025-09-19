@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javax.net.ssl.SSLSocketFactory;
+
 /**
  * A {@link DataSource} configuration.
  */
@@ -38,6 +40,11 @@ public class DataSourceConfiguration {
     private final boolean allowUnlistedDataSource;
 
     /**
+     * An {@link SSLSocketFactory} to connect to Reindexer using cprotos (SSL/TLS) protocol.
+     */
+    private final SSLSocketFactory sslSocketFactory;
+
+    /**
      * An index of the current active data source.
      */
     private final MutableInt active;
@@ -46,6 +53,7 @@ public class DataSourceConfiguration {
         urls = builder.urls;
         allowUnlistedDataSource = builder.allowUnlistedDataSource;
         active = builder.active;
+        sslSocketFactory = builder.sslSocketFactory;
     }
 
     public static Builder builder() {
@@ -67,6 +75,15 @@ public class DataSourceConfiguration {
 
     public boolean isAllowUnlistedDataSource() {
         return allowUnlistedDataSource;
+    }
+
+    /**
+     * Returns an {@link SSLSocketFactory} to connect to Reindexer using cprotos (SSL/TLS) protocol.
+     *
+     * @return the {@link SSLSocketFactory} to use
+     */
+    public SSLSocketFactory getSslSocketFactory() {
+        return sslSocketFactory;
     }
 
     /**
@@ -101,6 +118,11 @@ public class DataSourceConfiguration {
          * A permission to use database urls from #replicationstats which are not in the list of urls.
          */
         private boolean allowUnlistedDataSource = true;
+
+        /**
+         * An {@link SSLSocketFactory} to connect to Reindexer using cprotos (SSL/TLS) protocol.
+         */
+        private SSLSocketFactory sslSocketFactory;
 
         /**
          * An index of the current active data source.
@@ -154,6 +176,17 @@ public class DataSourceConfiguration {
          */
         public Builder allowUnlistedDataSource(boolean allowUnlistedDataSource) {
             this.allowUnlistedDataSource = allowUnlistedDataSource;
+            return this;
+        }
+
+        /**
+         * Configure an {@link SSLSocketFactory} to connect to Reindexer using cprotos (TLS) protocol.
+         *
+         * @param sslSocketFactory the {@link SSLSocketFactory} to use
+         * @return the {@link Builder} for further customizations
+         */
+        public Builder sslSocketFactory(SSLSocketFactory sslSocketFactory) {
+            this.sslSocketFactory = sslSocketFactory;
             return this;
         }
 

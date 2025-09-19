@@ -7,6 +7,8 @@ net:
   httpaddr: "0.0.0.0:9088"
   rpcaddr: "0.0.0.0:6534"
   security: false
+  ssl_cert: /tmp/reindex/builtin-server.crt
+  ssl_key: /tmp/reindex/builtin-server.key
 logger:
   serverlog: "stdout"
   corelog: "stdout"

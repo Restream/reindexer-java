@@ -139,6 +139,10 @@
                     <!-- Activate the use of TCP to transmit events to the plugin. -->
                     <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                     <groups>${tests}</groups>
+                    <systemPropertyVariables>
+                        <javax.net.ssl.trustStore>${project.basedir}/src/test/resources/builtin-server.jks</javax.net.ssl.trustStore>
+                        <javax.net.ssl.trustStorePassword>password</javax.net.ssl.trustStorePassword>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
 
@@ -175,13 +179,12 @@
             </plugin>
 
             <plugin>
-                <groupId>com.googlecode.cmake-maven-project</groupId>
+                <groupId>io.github.cmake-maven-plugin</groupId>
                 <artifactId>cmake-maven-plugin</artifactId>
-                <version>3.19.2-b1</version>
+                <version>4.0.3-b1</version>
                 <configuration>
                     <generator>Unix Makefiles</generator>
                     <sourcePath>${cmake.source.directory}</sourcePath>
-                    <targetPath>${cmake.binary.directory}</targetPath>
                     <projectDirectory>${cmake.binary.directory}</projectDirectory>
                 </configuration>
                 <executions>
