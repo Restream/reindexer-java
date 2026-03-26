@@ -79,4 +79,40 @@ public @interface Hnsw {
      */
     boolean multithreading() default false;
 
+    /**
+     * Optional quantization configuration for HNSW index.
+     *
+     * <p>When {@code quantizationConfig.quantizationType} is empty, the whole block is ignored.
+     *
+     * <p>Currently supported type: {@code scalar_quantization_8_bit}.
+     */
+    QuantizationConfig quantizationConfig() default @QuantizationConfig;
+
+    /**
+     * Nested annotation representing {@code quantization_config} block.
+     */
+    @interface QuantizationConfig {
+        /**
+         * Quantization type.
+         *
+         * <p>Currently supported: {@code scalar_quantization_8_bit}.
+         */
+        String quantizationType() default "";
+
+        /**
+         * Quantile for scalar quantization.
+         */
+        float quantile() default -1.0f;
+
+        /**
+         * Sample size for estimating quantile(s).
+         */
+        int sampleSize() default 20_000;
+
+        /**
+         * Minimal number of points in the index required to enable quantization.
+         */
+        int quantizationThreshold() default 100_000;
+    }
+
 }

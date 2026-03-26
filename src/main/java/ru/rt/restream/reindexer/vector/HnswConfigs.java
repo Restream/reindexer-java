@@ -30,6 +30,11 @@ public class HnswConfigs {
             new IllegalArgumentException("HNSW index should have 'm' parameter in range [2, 128]");
     public static final IllegalArgumentException EF_CONSTRUCTION_NOT_IN_RANGE_EX =
             new IllegalArgumentException("HNSW index should have 'efConstruction' parameter in range [4, 1024]");
+    public static final IllegalArgumentException QUANTIZATION_TYPE_NOT_SUPPORTED_EX =
+            new IllegalArgumentException("Only 'scalar_quantization_8_bit' is supported for HNSW quantization_config.");
+    public static final IllegalArgumentException QUANTILE_OUT_OF_RANGE_EX =
+            new IllegalArgumentException("Quantile for scalar quantization must be in range [0.95, 1.0].");
+    private static final float QUANTILE_UNSET = -1.0f;
 
     public static HnswConfig of(Hnsw annotation) {
         if (annotation.metric() == null) {
@@ -52,6 +57,28 @@ public class HnswConfigs {
         config.setM(annotation.m());
         config.setEfConstruction(annotation.efConstruction());
         config.setMultithreading(annotation.multithreading() ? 1 : 0);
+
+        String quantizationType = annotation.quantizationConfig().quantizationType();
+        float quantile = annotation.quantizationConfig().quantile();
+        int sampleSize = annotation.quantizationConfig().sampleSize();
+        int quantizationThreshold = annotation.quantizationConfig().quantizationThreshold();
+
+        if (quantizationType != null && !quantizationType.isEmpty()) {
+            if (!"scalar_quantization_8_bit".equals(quantizationType)) {
+                throw QUANTIZATION_TYPE_NOT_SUPPORTED_EX;
+            }
+            HnswConfig.QuantizationConfig quantizationConfig = new HnswConfig.QuantizationConfig();
+            quantizationConfig.setQuantizationType(quantizationType);
+            if (quantile != QUANTILE_UNSET) {
+                if (quantile < 0.95f || quantile > 1.0f) {
+                    throw QUANTILE_OUT_OF_RANGE_EX;
+                }
+                quantizationConfig.setQuantile(quantile);
+            }
+            quantizationConfig.setSampleSize(sampleSize);
+            quantizationConfig.setQuantizationThreshold(quantizationThreshold);
+            config.setQuantizationConfig(quantizationConfig);
+        }
         return config;
     }
 

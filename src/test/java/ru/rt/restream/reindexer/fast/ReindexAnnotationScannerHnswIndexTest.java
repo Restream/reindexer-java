@@ -62,6 +62,7 @@ public class ReindexAnnotationScannerHnswIndexTest {
         assertThat(vector.getHnswConfig().getM(), is(16));
         assertThat(vector.getHnswConfig().getEfConstruction(), is(200));
         assertThat(vector.getHnswConfig().getMultithreading(), is(0));
+        assertThat(vector.getHnswConfig().getQuantizationConfig(), nullValue());
     }
 
     @Test
@@ -84,6 +85,7 @@ public class ReindexAnnotationScannerHnswIndexTest {
         assertThat(vector.getHnswConfig().getM(), is(5));
         assertThat(vector.getHnswConfig().getEfConstruction(), is(4));
         assertThat(vector.getHnswConfig().getMultithreading(), is(1));
+        assertThat(vector.getHnswConfig().getQuantizationConfig(), nullValue());
     }
 
     @Test
@@ -154,6 +156,21 @@ public class ReindexAnnotationScannerHnswIndexTest {
         private float[] vector;
     }
 
+    @Test
+    public void testConfigScalarQuantization8Bit_isOk() {
+        List<ReindexerIndex> indexes = scanner.parseIndexes(ItemWithScalarQuantization8BitConfig.class);
+        ReindexerIndex vector = getIndexByName(indexes, "hnsw_vector");
+
+        assertThat(vector.getHnswConfig(), notNullValue());
+        assertThat(vector.getHnswConfig().getQuantizationConfig(), notNullValue());
+
+        assertThat(vector.getHnswConfig().getQuantizationConfig().getQuantizationType(),
+                is("scalar_quantization_8_bit"));
+        assertThat(vector.getHnswConfig().getQuantizationConfig().getQuantile(), is(0.987f));
+        assertThat(vector.getHnswConfig().getQuantizationConfig().getSampleSize(), is(3000));
+        assertThat(vector.getHnswConfig().getQuantizationConfig().getQuantizationThreshold(), is(5000));
+    }
+
     static class ItemWithNotHnswIndex {
         @Reindex(name = "id", isPrimaryKey = true)
         private Integer id;
@@ -199,4 +216,12 @@ public class ReindexAnnotationScannerHnswIndexTest {
         private float[] vector;
     }
 
+    static class ItemWithScalarQuantization8BitConfig {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "hnsw_vector", type = HNSW)
+        @Hnsw(metric = Metric.COSINE, dimension = 1024, quantizationConfig = @Hnsw.QuantizationConfig(quantizationType = "scalar_quantization_8_bit", quantile = 0.987f, sampleSize = 3000, quantizationThreshold = 5000))
+        private float[] vector;
+    }
 }
