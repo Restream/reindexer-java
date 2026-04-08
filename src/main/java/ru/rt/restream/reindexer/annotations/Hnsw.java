@@ -100,17 +100,17 @@ public @interface Hnsw {
         String quantizationType() default "";
 
         /**
-         * Quantile for scalar quantization.
+         * Quantile for scalar quantization. Must be in range [0.95, 1.0]
          */
         float quantile() default -1.0f;
 
         /**
-         * Sample size for estimating quantile(s).
+         * Sample size for estimating quantile(s). Must be in range [1, UINT64_MAX]
          */
         int sampleSize() default 20_000;
 
         /**
-         * Minimal number of points in the index required to enable quantization.
+         * Minimal number of points in the index required to enable quantization. Must be in range [1, UINT64_MAX]
          */
         int quantizationThreshold() default 100_000;
     }
