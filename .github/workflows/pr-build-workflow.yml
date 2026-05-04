@@ -14,17 +14,10 @@ jobs:
         with:
           java-version: 1.11
       - name: Install Reindexer
-        # TODO: Temporarily build reindexer from sources until https://github.com/Restream/reindexer/issues/92 is released.
-        # run: |
-        #   sudo curl https://repo.reindexer.io/RX-KEY.GPG -o /etc/apt/trusted.gpg.d/reindexer.asc
-        #   echo 'deb https://repo.reindexer.io/ubuntu-noble /' | sudo tee -a /etc/apt/sources.list
-        #   sudo apt-get update
-        #   sudo apt-get install -y reindexer-dev libopenblas-pthread-dev
         run: |
-          curl -L https://github.com/Restream/reindexer/raw/master/dependencies.sh | sudo bash -s
-          git clone https://github.com/Restream/reindexer
-          cmake reindexer -Breindexer/build
-          cmake --build reindexer/build -- -j 4
-          sudo cmake --install reindexer/build
+          sudo curl https://repo.reindexer.io/RX-KEY.GPG -o /etc/apt/trusted.gpg.d/reindexer.asc
+          echo 'deb https://repo.reindexer.io/ubuntu-noble /' | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y reindexer-dev libopenblas-pthread-dev
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
