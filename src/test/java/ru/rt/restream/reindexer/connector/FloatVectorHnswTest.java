@@ -30,14 +30,21 @@ import ru.rt.restream.reindexer.annotations.Metric;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
+import ru.rt.restream.reindexer.util.Pair;
+import ru.rt.restream.reindexer.vector.params.IndexHnswSearchParam;
 import ru.rt.restream.reindexer.vector.params.KnnParams;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
@@ -242,6 +249,90 @@ public abstract class FloatVectorHnswTest extends DbBaseTest {
                         .toList());
     }
 
+    @Test
+    public void testStreamingKnnHnsw_isOk() {
+        final int maxElements = 500;
+        final int limit = 10;
+        final int offset = 5;
+        final String streamingNamespace = "items_streaming_knn";
+
+        db.openNamespace(streamingNamespace, NamespaceOptions.defaultOptions(), StreamingKnnItem.class);
+        for (int id = 0; id < maxElements; id++) {
+            db.insert(streamingNamespace, new StreamingKnnItem(id, id % 2 == 0, randVect(128)));
+        }
+
+        float[] queryVector = randVect(128);
+        IndexHnswSearchParam streamParams = KnnParams.hnsw(KnnParams.base(), 1);
+        IndexHnswSearchParam refParams = KnnParams.hnsw(KnnParams.k(maxElements), maxElements * 2);
+
+        Pair<List<StreamingKnnItem>, float[]> refResult = db.query(streamingNamespace, StreamingKnnItem.class)
+                .where("filter_bool", EQ, true)
+                .whereKnn("vec", queryVector, refParams)
+                .withRank()
+                .executeAllWithRank();
+        List<StreamingKnnItem> refItems = refResult.getFirst();
+        float[] refRanks = refResult.getSecond();
+
+        assertThat(refItems.isEmpty(), is(false));
+
+        Map<Integer, Float> refRankById = new HashMap<>(refItems.size());
+        for (int i = 0; i < refItems.size(); i++) {
+            refRankById.put(refItems.get(i).getId(), refRanks[i]);
+            if (i > 0) {
+                assertThat(refRanks[i], greaterThanOrEqualTo(refRanks[i - 1]));
+            }
+        }
+
+        Pair<List<StreamingKnnItem>, float[]> streamResult = db.query(streamingNamespace, StreamingKnnItem.class)
+                .where("filter_bool", EQ, true)
+                .whereKnn("vec", queryVector, streamParams)
+                .limit(limit)
+                .withRank()
+                .executeAllWithRank();
+        List<StreamingKnnItem> streamItems = streamResult.getFirst();
+        float[] streamRanks = streamResult.getSecond();
+
+        assertThat(streamItems.size(), lessThanOrEqualTo(limit));
+        assertThat(streamItems.size(), is(Math.min(refItems.size(), limit)));
+
+        for (int i = 0; i < streamItems.size(); i++) {
+            StreamingKnnItem item = streamItems.get(i);
+            assertThat(refRankById.containsKey(item.getId()), is(true));
+            assertThat(streamRanks[i], is(refRankById.get(item.getId())));
+            if (i > 0) {
+                assertThat(streamRanks[i], greaterThanOrEqualTo(streamRanks[i - 1]));
+            }
+        }
+
+        Pair<List<StreamingKnnItem>, float[]> streamOffsetResult = db.query(streamingNamespace, StreamingKnnItem.class)
+                .where("filter_bool", EQ, true)
+                .whereKnn("vec", queryVector, streamParams)
+                .offset(offset)
+                .limit(limit)
+                .withRank()
+                .executeAllWithRank();
+        List<StreamingKnnItem> streamOffsetItems = streamOffsetResult.getFirst();
+        float[] streamOffsetRanks = streamOffsetResult.getSecond();
+
+        assertThat(streamOffsetItems.size(), lessThanOrEqualTo(limit));
+        for (int i = 0; i < streamOffsetItems.size(); i++) {
+            StreamingKnnItem item = streamOffsetItems.get(i);
+            assertThat(refRankById.containsKey(item.getId()), is(true));
+            assertThat(streamOffsetRanks[i], is(refRankById.get(item.getId())));
+            if (i > 0) {
+                assertThat(streamOffsetRanks[i], greaterThanOrEqualTo(streamOffsetRanks[i - 1]));
+            }
+        }
+    }
+
+    private static float[] randVect(int dimension) {
+        float[] vector = new float[dimension];
+        for (int i = 0; i < dimension; i++) {
+            vector[i] = ThreadLocalRandom.current().nextFloat();
+        }
+        return vector;
+    }
+
     private static List<VectorItem> getTestVectorItems() {
         return Arrays.asList(
                 new VectorItem(0, new float[]{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}),
@@ -266,6 +357,22 @@ public abstract class FloatVectorHnswTest extends DbBaseTest {
                 new VectorItem(17, new float[]{0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.9f, 0.9f}),
                 new VectorItem(18, new float[]{0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.9f})
         );
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StreamingKnnItem {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "filter_bool")
+        private boolean filterBool;
+
+        @Reindex(name = "vec")
+        @Hnsw(metric = Metric.L2, dimension = 128, startSize = 500, m = 16, efConstruction = 200)
+        private float[] vec;
     }
 
     @Getter

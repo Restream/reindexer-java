@@ -52,7 +52,7 @@ public class IndexHnswSearchParam implements KnnSearchParam {
     public void serializeBy(ByteBuffer buffer) {
         buffer.putVarUInt32(KNN_QUERY_TYPE_HNSW)
                 .putVarUInt32(KNN_QUERY_PARAMS_VERSION);
-        base.serializeKAndRadius(buffer);
+        base.serializeKAndRadius(buffer, true);
         buffer.putVarInt32(ef);
     }
 
