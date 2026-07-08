@@ -285,7 +285,7 @@ public class BuiltinAdapter {
      * @param timeout  the execution timeout
      * @param query    the SQL-query string
      * @param asJson   'true' if response should be serialized in JSON format, defaults to CJSON
-     * @param versions the versions
+     * @param versions the tagsmatcher versions
      * @return the {@link ReindexerResponse} to use
      */
     public native ReindexerResponse select(long rx, long ctxId, long timeout, String query, boolean asJson,
@@ -319,9 +319,10 @@ public class BuiltinAdapter {
      * @param ctxId   the context id
      * @param timeout the execution timeout
      * @param data    the query payload (i.e. predicates, joins etc)
+     * @param versions the tagsmatcher versions
      * @return the {@link ReindexerResponse} to use
      */
-    public native ReindexerResponse updateQuery(long rx, long ctxId, long timeout, byte[] data);
+    public native ReindexerResponse updateQuery(long rx, long ctxId, long timeout, byte[] data, long[] versions);
 
     /**
      * Executes update query in the transaction.

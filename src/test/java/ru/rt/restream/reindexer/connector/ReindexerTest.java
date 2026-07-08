@@ -22,11 +22,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import ru.rt.restream.reindexer.EnumType;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
+import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.ResultIterator;
+import ru.rt.restream.reindexer.TimeUnit;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Convert;
 import ru.rt.restream.reindexer.annotations.Enumerated;
@@ -35,10 +40,14 @@ import ru.rt.restream.reindexer.annotations.Serial;
 import ru.rt.restream.reindexer.convert.FieldConverter;
 import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.db.DbBaseTest;
+import ru.rt.restream.reindexer.expression.Expression;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -76,6 +85,7 @@ import static ru.rt.restream.reindexer.IndexType.TEXT;
 import static ru.rt.restream.reindexer.Query.Condition.ALLSET;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.LE;
+import static ru.rt.restream.reindexer.Query.Condition.LT;
 import static ru.rt.restream.reindexer.Query.Condition.RANGE;
 import static ru.rt.restream.reindexer.Query.Condition.SET;
 
@@ -1094,6 +1104,27 @@ public abstract class ReindexerTest extends DbBaseTest {
         TestItem updatedItem = iterator.next();
 
         assertThat(updatedItem.integers.isEmpty(), is(true));
+    }
+
+    @Test
+    public void testUpdateItemFieldToExpression() {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemCreatedAt.class, "createdAt", new LocalDateTimeUnitFieldConverter(TimeUnit.SECONDS));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCreatedAt.class);
+        LocalDateTime now = LocalDateTime.now();
+        TestItemCreatedAt testItem = new TestItemCreatedAt();
+        testItem.id = 1;
+        testItem.createdAt = now;
+        db.upsert(namespaceName, testItem);
+        db.query(namespaceName, TestItemCreatedAt.class)
+                .where("id", EQ, 1)
+                .setExpression("createdAt", Expression.string("now() - 1 * 24 * 60 * 60"))
+                .update();
+        TestItemCreatedAt found = db.query(namespaceName, TestItemCreatedAt.class)
+                .where("id", EQ, 1)
+                .getOne();
+        assertThat(found.id, is(1));
+        assertThat(found.createdAt.toLocalDate(), is(now.toLocalDate().minusDays(1)));
     }
 
     @Test
@@ -2925,6 +2956,161 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(foundByDefaultWriting.defaultWriting, is("default"));
     }
 
+    @Test
+    public void testQueryWhereNowExpressionDefaultsToSeconds() {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemCreatedAt.class, "createdAt", new LocalDateTimeUnitFieldConverter(TimeUnit.SECONDS));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCreatedAt.class);
+        LocalDateTime createdAt = LocalDateTime.now().minusHours(1);
+        db.upsert(namespaceName, new TestItemCreatedAt(1, createdAt));
+        ResultIterator<TestItemCreatedAt> iterator = db.query(namespaceName, TestItemCreatedAt.class)
+                .where(Expression.field("createdAt"), LT, Expression.now())
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemCreatedAt found = iterator.next();
+        assertThat(found.id, is(1));
+        assertThat(found.createdAt.truncatedTo(ChronoUnit.SECONDS), is(createdAt.truncatedTo(ChronoUnit.SECONDS)));
+    }
+
+    @Test
+    public void testQueryWhereNowExpressionUsesTimeUnitName() {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemCreatedAt.class, "createdAt", new LocalDateTimeUnitFieldConverter(TimeUnit.MILLIS));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCreatedAt.class);
+        LocalDateTime createdAt = LocalDateTime.now().minusHours(1);
+        db.upsert(namespaceName, new TestItemCreatedAt(1, createdAt));
+        ResultIterator<TestItemCreatedAt> iterator = db.query(namespaceName, TestItemCreatedAt.class)
+                .where(Expression.field("createdAt"), LT, Expression.now("msec"))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemCreatedAt found = iterator.next();
+        assertThat(found.id, is(1));
+        assertThat(found.createdAt.truncatedTo(ChronoUnit.SECONDS), is(createdAt.truncatedTo(ChronoUnit.SECONDS)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("nowExpressionArguments")
+    public void testQueryWhereFieldToNowExpression(LocalDateTime createdAt, Query.Condition condition, TimeUnit timeUnit) {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemCreatedAt.class, "createdAt", new LocalDateTimeUnitFieldConverter(timeUnit));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemCreatedAt.class);
+        db.upsert(namespaceName, new TestItemCreatedAt(1, createdAt));
+        ResultIterator<TestItemCreatedAt> iterator = db.query(namespaceName, TestItemCreatedAt.class)
+                .where(Expression.field("createdAt"), condition, Expression.now(timeUnit))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItemCreatedAt found = iterator.next();
+        assertThat(found.id, is(1));
+        assertThat(found.createdAt.truncatedTo(ChronoUnit.SECONDS), is(createdAt.truncatedTo(ChronoUnit.SECONDS)));
+    }
+
+    private static Stream<Arguments> nowExpressionArguments() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime past = now.minusHours(1);
+        LocalDateTime future = now.plusHours(1);
+        // Skip EQ tests (e.g., created_at = now()) to avoid flaky results due to I/O latency.
+        return Stream.of(
+                Arguments.of(past, Query.Condition.LT, TimeUnit.NANOS),
+                Arguments.of(past, Query.Condition.LT, TimeUnit.MICROS),
+                Arguments.of(past, Query.Condition.LT, TimeUnit.MILLIS),
+                Arguments.of(past, Query.Condition.LT, TimeUnit.SECONDS),
+                Arguments.of(past, Query.Condition.LE, TimeUnit.NANOS),
+                Arguments.of(past, Query.Condition.LE, TimeUnit.MICROS),
+                Arguments.of(past, Query.Condition.LE, TimeUnit.MILLIS),
+                Arguments.of(past, Query.Condition.LE, TimeUnit.SECONDS),
+                Arguments.of(future, Query.Condition.GT, TimeUnit.NANOS),
+                Arguments.of(future, Query.Condition.GT, TimeUnit.MICROS),
+                Arguments.of(future, Query.Condition.GT, TimeUnit.MILLIS),
+                Arguments.of(future, Query.Condition.GT, TimeUnit.SECONDS),
+                Arguments.of(future, Query.Condition.GE, TimeUnit.NANOS),
+                Arguments.of(future, Query.Condition.GE, TimeUnit.MICROS),
+                Arguments.of(future, Query.Condition.GE, TimeUnit.MILLIS),
+                Arguments.of(future, Query.Condition.GE, TimeUnit.SECONDS)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("literalExpressionArguments")
+    public void testQueryWhereFieldToLiteralExpression(Integer id, Query.Condition condition, Object[] values) {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem item = new TestItem();
+        item.id = id;
+        db.upsert(namespaceName, item);
+        ResultIterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where(Expression.field("id"), condition, Expression.values(values))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItem found = iterator.next();
+        assertThat(found.id, is(id));
+    }
+
+    private static Stream<Arguments> literalExpressionArguments() {
+        return Stream.of(
+                Arguments.of(1, Query.Condition.EQ, new Object[]{1}),
+                Arguments.of(1, Query.Condition.LT, new Object[]{2}),
+                Arguments.of(1, Query.Condition.LE, new Object[]{2}),
+                Arguments.of(1, Query.Condition.LE, new Object[]{1}),
+                Arguments.of(1, Query.Condition.GT, new Object[]{0}),
+                Arguments.of(1, Query.Condition.GE, new Object[]{0}),
+                Arguments.of(1, Query.Condition.GE, new Object[]{1}),
+                Arguments.of(1, Query.Condition.RANGE, new Object[]{0, 2}),
+                Arguments.of(1, Query.Condition.SET, new Object[]{0, 1, 2})
+        );
+    }
+
+    @Test
+    public void testQueryWhereFieldToFieldExpression() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem item = new TestItem();
+        item.id = 1;
+        item.name = "Test";
+        item.value = "Test";
+        db.upsert(namespaceName, item);
+        ResultIterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where(Expression.field("name"), EQ, Expression.field("value"))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItem found = iterator.next();
+        assertThat(found.id, is(1));
+        assertThat(found.name, is("Test"));
+        assertThat(found.value, is("Test"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("flatArrayLengthExpressionArguments")
+    public void testQueryWhereFlatArrayLengthToLiteralExpression(List<Integer> integers, Query.Condition condition, Object[] values) {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        TestItem item = new TestItem();
+        item.id = 1;
+        item.integers = integers;
+        db.upsert(namespaceName, item);
+        ResultIterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+                .where(Expression.flatArrayLength("integers"), condition, Expression.values(values))
+                .execute();
+        assertThat(iterator.hasNext(), is(true));
+        TestItem found = iterator.next();
+        assertThat(found.id, is(1));
+        assertThat(found.integers, is(integers));
+    }
+
+    private static Stream<Arguments> flatArrayLengthExpressionArguments() {
+        List<Integer> integers = Arrays.asList(1, 2, 3);
+        return Stream.of(
+                Arguments.of(integers, Query.Condition.EQ, new Object[]{3}),
+                Arguments.of(integers, Query.Condition.LT, new Object[]{4}),
+                Arguments.of(integers, Query.Condition.LE, new Object[]{4}),
+                Arguments.of(integers, Query.Condition.LE, new Object[]{3}),
+                Arguments.of(integers, Query.Condition.GT, new Object[]{2}),
+                Arguments.of(integers, Query.Condition.GE, new Object[]{2}),
+                Arguments.of(integers, Query.Condition.GE, new Object[]{3}),
+                Arguments.of(integers, Query.Condition.RANGE, new Object[]{1, 4}),
+                Arguments.of(integers, Query.Condition.SET, new Object[]{1, 2, 3, 4})
+        );
+    }
+
     @Getter
     @Setter
     public static class SerialIdTestItem {
@@ -3177,6 +3363,18 @@ public abstract class ReindexerTest extends DbBaseTest {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class TestItemCreatedAt {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "createdAt")
+        private LocalDateTime createdAt;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Price {
         private Double value;
     }
@@ -3192,6 +3390,64 @@ public abstract class ReindexerTest extends DbBaseTest {
         public String convertToDatabaseType(LocalDate localDate) {
             return localDate != null ? localDate.toString() : null;
         }
+    }
+
+    public static class LocalDateTimeUnitFieldConverter implements FieldConverter<LocalDateTime, Long> {
+
+        private final TimeUnit timeUnit;
+
+        public LocalDateTimeUnitFieldConverter(TimeUnit timeUnit) {
+            this.timeUnit = timeUnit;
+        }
+
+        @Override
+        public LocalDateTime convertToFieldType(Long ldt) {
+            return ldt != null ? fromEpoch(ldt) : null;
+        }
+
+        @Override
+        public Long convertToDatabaseType(LocalDateTime ldt) {
+            return ldt != null ? toEpoch(ldt) : null;
+        }
+
+        private LocalDateTime fromEpoch(long value) {
+            Instant instant = toInstant(value);
+            return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        }
+
+        private Instant toInstant(long value) {
+            switch (timeUnit) {
+                case NANOS:
+                    return Instant.ofEpochSecond(value / 1_000_000_000L, value % 1_000_000_000L);
+                case MICROS:
+                    return Instant.ofEpochSecond(value / 1_000_000L, value % 1_000_000L);
+                case MILLIS:
+                    return Instant.ofEpochMilli(value);
+                case SECONDS:
+                    return Instant.ofEpochSecond(value);
+                default:
+                    throw new IllegalArgumentException("Unsupported TimeUnit: " + timeUnit);
+            }
+        }
+
+        private long toEpoch(LocalDateTime ldt) {
+            Instant instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+            long seconds = instant.getEpochSecond();
+            int nanos = instant.getNano();
+            switch (timeUnit) {
+                case NANOS:
+                    return seconds * 1_000_000_000L + nanos;
+                case MICROS:
+                    return seconds * 1_000_000L + nanos / 1000;
+                case MILLIS:
+                    return instant.toEpochMilli();
+                case SECONDS:
+                    return seconds;
+                default:
+                    throw new IllegalArgumentException("Unsupported TimeUnit: " + timeUnit);
+            }
+        }
+
     }
 
     public static class LocalDateTimeStringFieldConverter implements FieldConverter<LocalDateTime, String> {

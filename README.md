@@ -305,6 +305,72 @@ InnerJoins can be used as a condition in Where clause:
 ```
 Note that usually Or operator implements short-circuiting for Where conditions: if the previous condition is true the next one is not evaluated. But in case of InnerJoin it works differently: in query1 (from the example above) both InnerJoin conditions are evaluated despite the result of WhereInt. Limit(0) as part of InnerJoin (query3 from the example above) does not join any data - it works like a filter only to verify conditions.
 
+### Query Expressions
+
+#### Functions
+Reindexer provides built-in functions that can be used within `WHERE` clauses to enable advanced filtering capabilities beyond simple field comparisons.
+
+##### flat_array_len(field_name)
+The `flat_array_len` function returns the length or cardinality of a specified field, making it particularly useful for filtering based on array sizes or field presence.
+The `flat_array_len` function can be used in both `SELECT` and `UPDATE` queries.
+
+Behavior by Field Type:
+- Array Fields: returns the number of elements in the array
+- Scalar Fields (integers, strings, etc.): always returns 1
+- Object Fields: always returns 1
+- Nested Array Elements: returns the count of occurrences when the field is nested within arrays
+
+Examples:
+
+```java
+// Find social media posts with between 10 and 50 comments
+// and at least 3 attached media files.
+List<Post> posts = db.query("posts", Post.class)
+        .where(Expression.flatArrayLength("comments"), RANGE, Expression.values(10, 50))
+        .where(Expression.flatArrayLength("media"), GE, Expression.values(3))
+        .toList();
+
+// Update field 'size' with flat_array_len function.
+db.query("posts", Post.class)
+        .where("id", EQ, 1)
+        .setExpression("size", Expression.string("flat_array_len(comments)"))
+        .update();
+```
+
+Notes:
+- `flat_array_len` function operates efficiently on indexed fields
+- Returns 0 if the specified field does not exist in a document
+- Supports the following comparison operators: (`=`, `>`, `>=`, `<`, `<=`, `Range`, `Set`)
+- Can be used in both `SELECT` and `UPDATE` queries
+
+##### now(unit)
+The `now()` function returns the current system timestamp, making it particularly useful for time-based filtering and data synchronization.
+This function can be used in both `SELECT` and `UPDATE` queries.
+
+Arguments:
+- `sec`  - returns timestamp in seconds (default if no argument is provided)
+- `msec` - returns timestamp in milliseconds
+- `usec` - returns timestamp in microseconds
+- `nsec` - returns timestamp in nanoseconds
+
+```java
+// Find events that occurred in the past.
+List<Event> events = db.query("events", Event.class)
+        .where(Expression.field("timestamp"), LE, Expression.now(TimeUnit.SECONDS))
+        .toList();
+
+db.query("items", Item.class)
+        .where("id", EQ, 42)
+        .setExpression("updated_at", Expression.string("now(usec)"))
+        .update();
+```
+
+Notes:
+- The returned timestamp represents seconds (or subunits) since the Unix epoch (January 1, 1970)
+- Time resolution depends on the specified unit - use `nsec` for maximum precision
+- All instances of `now()` within a single query share the same value, which is computed at the start of the query execution
+- Useful for implementing TTL (Time-To-Live) functionality and audit logging
+
 ### Transactions and batch update
 
 Reindexer supports transactions. Transaction are performs atomic namespace update. There are synchronous and 

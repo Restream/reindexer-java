@@ -173,8 +173,9 @@ public interface Binding {
      * Invoke update query.
      *
      * @param queryData encoded query data (selected indexes, predicates, etc)
+     * @param ptVersions payload type state tokens
      */
-    void updateQuery(byte[] queryData);
+    void updateQuery(byte[] queryData, long[] ptVersions);
 
     /**
      * Starts a transaction for the given namespace name.

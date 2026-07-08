@@ -282,9 +282,13 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
                                                                                                    jlong rx,
                                                                                                    jlong ctxId,
                                                                                                    jlong timeout,
-                                                                                                   jbyteArray data) {
+                                                                                                   jbyteArray data,
+                                                                                                   jlongArray versions) {
+    auto ptVersions = reinterpret_cast<int32_t *>(env->GetLongArrayElements(versions, nullptr));
+    int ptVersionsCount = env->GetArrayLength(versions);
     reindexer_buffer bufferData = rx_buffer(env, data);
-    jobject res = j_res(env, reindexer_update_query(rx, bufferData, rx_ctx(ctxId, timeout)));
+    jobject res = j_res(env, reindexer_update_query(rx, bufferData, ptVersions, ptVersionsCount, rx_ctx(ctxId, timeout)));
+    env->ReleaseLongArrayElements(versions, reinterpret_cast<jlong *>(ptVersions), 0);
     env->ReleaseByteArrayElements(data, reinterpret_cast<jbyte *>(bufferData.data), 0);
     return res;
 }

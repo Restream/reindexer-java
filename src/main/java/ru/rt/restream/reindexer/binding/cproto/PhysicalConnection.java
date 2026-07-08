@@ -288,22 +288,7 @@ public class PhysicalConnection implements Connection {
         ByteBuffer buffer = new ByteBuffer();
         buffer.putVarUInt32(args.length);
         for (Object arg : args) {
-            if (arg instanceof Boolean) {
-                buffer.putVarUInt32(Consts.VALUE_BOOL)
-                        .putVarUInt32((Boolean) arg ? 1L : 0L);
-            } else if (arg instanceof Short) {
-                buffer.putVarUInt32(Consts.VALUE_INT)
-                        .putVarInt64(((Short) arg));
-            } else if (arg instanceof Integer) {
-                buffer.putVarUInt32(Consts.VALUE_INT)
-                        .putVarInt64(((Integer) arg));
-            } else if (arg instanceof Long) {
-                buffer.putVarUInt32(Consts.VALUE_INT_64)
-                        .putVarInt64((Long) arg);
-            } else if (arg instanceof String) {
-                buffer.putVarUInt32(Consts.VALUE_STRING)
-                        .putVString((String) arg);
-            } else if (arg instanceof byte[]) {
+            if (arg instanceof byte[]) {
                 buffer.putVarUInt32(Consts.VALUE_STRING)
                         .putVBytes(((byte[]) arg));
             } else if (arg instanceof long[]) {
@@ -316,7 +301,7 @@ public class PhysicalConnection implements Connection {
                 }
                 buffer.putVBytes(arrayBuffer.bytes());
             } else {
-                throw new IllegalArgumentException("Unsupported data type " + arg.getClass());
+                buffer.putValue(arg);
             }
         }
 

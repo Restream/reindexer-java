@@ -172,8 +172,8 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
-    public void updateQuery(byte[] queryData) {
-        builtin.updateQuery(queryData);
+    public void updateQuery(byte[] queryData, long[] ptVersions) {
+        builtin.updateQuery(queryData, ptVersions);
     }
 
     @Override

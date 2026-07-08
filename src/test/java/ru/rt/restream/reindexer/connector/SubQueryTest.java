@@ -26,11 +26,13 @@ import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.db.DbBaseTest;
+import ru.rt.restream.reindexer.expression.Expression;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.GE;
@@ -226,6 +228,99 @@ public abstract class SubQueryTest extends DbBaseTest {
         assertThat(bannerNotExistsIterator.hasNext(), is(false));
     }
 
+    @Test
+    public void testWhereFieldToSubQueryExpression() {
+        Namespace<Person> personsNs = db.openNamespace("persons", NamespaceOptions.defaultOptions(), Person.class);
+        for (int i = 0; i < 20; i++) {
+            int age = 9 + (i % 8) * 10;
+            String name = "Person" + i + "Age" + age;
+            personsNs.insert(new Person(i, name, age));
+        }
+        // select * from persons p
+        // where p.age = (select max(age) from person)
+        Query<Person> maxAgeSubQuery = personsNs.query().aggregateMax("age");
+        Query<Person> eldestPersonsQuery = personsNs.query()
+                .where(Expression.field("age"), EQ, Expression.subQuery(maxAgeSubQuery));
+        ResultIterator<Person> iterator = eldestPersonsQuery.execute();
+        List<Person> actualEldestPersons = new ArrayList<>();
+        while (iterator.hasNext()) {
+            actualEldestPersons.add(iterator.next());
+        }
+        assertThat(actualEldestPersons.size(), is(2));
+    }
+
+    @Test
+    public void testWhereSubQueryToLiteralExpression() {
+        Namespace<Banner> bannersNs = db.openNamespace("banners", NamespaceOptions.defaultOptions(), Banner.class);
+        Namespace<Purchase> purchasesNs = db.openNamespace("purchases", NamespaceOptions.defaultOptions(), Purchase.class);
+        bannersNs.insert(new Banner(1, "Banner"));
+        int purchaseId = 0;
+        // 24 persons, everyone has from 0 to 3 purchases, for a total of 36 purchases.
+        for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < i % 4; j++) {
+                int price = (j + 1) * 10;
+                purchasesNs.insert(new Purchase(purchaseId++, i, price, "Asset" + j));
+            }
+        }
+        int personId = 14;
+        int sumPrices = 30; // 10 + 20
+        // select * from banners b
+        // where b.id = 1 and (select sum(p.price) from purchases p where p.person_id = 14) = 30
+        Query<Purchase> subQuery = purchasesNs.query()
+                .where("person_id", EQ, personId)
+                .aggregateSum("price");
+        Query<Banner> bannerExistsOnEqQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(Expression.subQuery(subQuery), EQ, Expression.values(sumPrices));
+        ResultIterator<Banner> bannerExistsOnEqIterator = bannerExistsOnEqQuery.execute();
+        assertThat(bannerExistsOnEqIterator.hasNext(), is(true));
+        // select * from banners b
+        // where b.id = 1 and (select sum(p.price) from purchases p where p.person_id = 14) >= 30
+        Query<Banner> bannerExistsQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(Expression.subQuery(subQuery), GE, Expression.values(sumPrices));
+        ResultIterator<Banner> bannerExistsIterator = bannerExistsQuery.execute();
+        assertThat(bannerExistsIterator.hasNext(), is(true));
+        // select * from banners b
+        // where b.id = 1 and (select sum(p.price) from purchases p where p.person_id = 14) < 30
+        Query<Banner> bannerNotExistsQuery = bannersNs.query()
+                .where("id", EQ, 1)
+                .where(Expression.subQuery(subQuery), LT, Expression.values(sumPrices));
+        ResultIterator<Banner> bannerNotExistsIterator = bannerNotExistsQuery.execute();
+        assertThat(bannerNotExistsIterator.hasNext(), is(false));
+    }
+
+    @Test
+    public void testWhereFlatArrayLengthToSubQueryExpression() {
+        Namespace<Person> personsNs = db.openNamespace("persons", NamespaceOptions.defaultOptions(), Person.class);
+        Namespace<Purchase> purchasesNs = db.openNamespace("purchases", NamespaceOptions.defaultOptions(), Purchase.class);
+        Namespace<PersonPurchases> personPurchasesNs = db.openNamespace("person_purchases", NamespaceOptions.defaultOptions(), PersonPurchases.class);
+        int personId = 0;
+        Person person = new Person(personId, "John Doe", 21);
+        personsNs.insert(person);
+        int purchaseSize = 5;
+        List<Integer> purchaseIds = new ArrayList<>(purchaseSize);
+        for (int i = 0; i < purchaseSize; i++) {
+            Purchase purchase = new Purchase(i + 1, personId, (i + 1) * 10, "Asset" + i);
+            purchasesNs.insert(purchase);
+            purchaseIds.add(purchase.id);
+        }
+        personPurchasesNs.insert(new PersonPurchases(0, personId, purchaseIds));
+        // select * from person_purchases pp
+        // where flat_array_len(pp.purchase_ids) = (select id from purchases where person_id = 0 order by 'id' desc limit 1)
+        Query<Purchase> latestPurchaseSubQuery = purchasesNs.query()
+                .select("id")
+                .where("person_id", EQ, personId)
+                .limit(1)
+                .sort("id", true);
+        Query<PersonPurchases> personPurchasesQuery = personPurchasesNs.query()
+                .where(Expression.flatArrayLength("purchase_ids"), EQ, Expression.subQuery(latestPurchaseSubQuery));
+        ResultIterator<PersonPurchases> iterator = personPurchasesQuery.execute();
+        assertThat(iterator.hasNext(), is(true));
+        PersonPurchases personPurchases = iterator.next();
+        assertThat(personPurchases.purchaseIds, hasSize(5));
+    }
+
     @Setter
     @Getter
     @NoArgsConstructor
@@ -239,6 +334,22 @@ public abstract class SubQueryTest extends DbBaseTest {
 
         @Reindex(name = "age")
         private int age;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PersonPurchases {
+
+        @Reindex(name = "id", isPrimaryKey = true)
+        private int id;
+
+        @Reindex(name = "person_id")
+        private int personId;
+
+        @Reindex(name = "purchase_ids")
+        private List<Integer> purchaseIds;
     }
 
     @Setter

@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer;
 
 import org.apache.commons.lang3.StringUtils;
+import ru.rt.restream.reindexer.expression.Expression;
 import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
@@ -59,7 +60,7 @@ class QueryLogBuilder {
 
     private static class QueryEntry {
         private Operation operation;
-        private String field;
+        private Object field;
         private Condition condition;
         private String secondField;
         private int joinIndex = -1;
@@ -291,6 +292,20 @@ class QueryLogBuilder {
         queryEntry.field = field;
         queryEntry.condition = getCondition(conditionCode);
         queryEntry.values.addAll(Arrays.asList(values));
+        if (!whereStack.isEmpty()) {
+            QueryEntry parent = whereStack.getLast();
+            parent.children.add(queryEntry);
+        } else {
+            whereEntries.add(queryEntry);
+        }
+    }
+
+    void where(int operationCode, Expression left, int conditionCode, Expression right) {
+        QueryEntry queryEntry = new QueryEntry();
+        queryEntry.operation = getOperation(operationCode);
+        queryEntry.field = left;
+        queryEntry.condition = getCondition(conditionCode);
+        queryEntry.values.add(right);
         if (!whereStack.isEmpty()) {
             QueryEntry parent = whereStack.getLast();
             parent.children.add(queryEntry);

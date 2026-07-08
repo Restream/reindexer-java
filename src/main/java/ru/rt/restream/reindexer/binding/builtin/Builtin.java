@@ -169,8 +169,8 @@ public class Builtin implements Binding {
     }
 
     @Override
-    public void updateQuery(byte[] queryData) {
-        ReindexerResponse response = adapter.updateQuery(rx, next.getAndIncrement(), timeout.toMillis(), queryData);
+    public void updateQuery(byte[] queryData, long[] ptVersions) {
+        ReindexerResponse response = adapter.updateQuery(rx, next.getAndIncrement(), timeout.toMillis(), queryData, ptVersions);
         checkResponse(response);
     }
 

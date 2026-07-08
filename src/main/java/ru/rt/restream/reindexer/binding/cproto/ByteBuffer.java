@@ -15,8 +15,12 @@
  */
 package ru.rt.restream.reindexer.binding.cproto;
 
+import ru.rt.restream.reindexer.binding.Consts;
+
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -275,6 +279,55 @@ public class ByteBuffer {
         putVarUInt32(length);
         writeBytes(value);
         return this;
+    }
+
+    /**
+     * Encodes an object value. Inserts array or collection length and
+     * encodes each element in the backed byte array recursively
+     * using the variable-length encoding from
+     * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
+     * Google Protocol Buffers</a>. It uses zigzag encoding to efficiently
+     * encode signed values.
+     * Increments buffer position.
+     *
+     * @param value the object value to encode
+     */
+    public void putValue(Object value) {
+        if (value == null) {
+            putVarUInt32(Consts.VALUE_NULL);
+        } else if (value instanceof Boolean) {
+            putVarUInt32(Consts.VALUE_BOOL).putVarUInt32((Boolean) value ? 1L : 0L);
+        } else if (value instanceof Short) {
+            putVarUInt32(Consts.VALUE_INT).putVarInt64(((Short) value));
+        } else if (value instanceof Integer) {
+            putVarUInt32(Consts.VALUE_INT).putVarInt64(((Integer) value));
+        } else if (value instanceof Long) {
+            putVarUInt32(Consts.VALUE_INT_64).putVarInt64((Long) value);
+        } else if (value instanceof Float) {
+            putVarUInt32(Consts.VALUE_DOUBLE).putFloat(((Float) value));
+        } else if (value instanceof Double) {
+            putVarUInt32(Consts.VALUE_DOUBLE).putDouble((Double) value);
+        } else if (value instanceof Character) {
+            putVarUInt32(Consts.VALUE_STRING).putVString(value.toString());
+        } else if (value instanceof UUID) {
+            putVarUInt32(Consts.VALUE_UUID).putUuid((UUID) value);
+        } else if (value instanceof String) {
+            putVarUInt32(Consts.VALUE_STRING).putVString((String) value);
+        } else if (value instanceof Collection<?>) {
+            putVarUInt32(Consts.VALUE_TUPLE);
+            Collection<?> values = (Collection<?>) value;
+            putVarUInt32(values.size());
+            values.forEach(this::putValue);
+        } else if (value.getClass().isArray()) {
+            putVarUInt32(Consts.VALUE_TUPLE);
+            int length = Array.getLength(value);
+            putVarUInt32(length);
+            for (int i = 0; i < length; i++) {
+                putValue(Array.get(value, i));
+            }
+        } else {
+            throw new IllegalArgumentException("Unsupported data type " + value.getClass());
+        }
     }
 
     /**

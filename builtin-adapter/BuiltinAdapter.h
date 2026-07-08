@@ -91,7 +91,8 @@ JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinA
 
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_updateQuery(JNIEnv *, jobject,
                                                                                                    jlong, jlong, jlong,
-                                                                                                   jbyteArray);
+                                                                                                   jbyteArray,
+                                                                                                   jlongArray);
 
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_updateQueryTx(JNIEnv *, jobject,
                                                                                                      jlong, jlong,

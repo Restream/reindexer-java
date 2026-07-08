@@ -20,12 +20,14 @@ import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.annotations.Hnsw;
 import ru.rt.restream.reindexer.annotations.Ivf;
 import ru.rt.restream.reindexer.annotations.VecBf;
-import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.expression.WhereExpression;
+import ru.rt.restream.reindexer.expression.Expression;
+import ru.rt.restream.reindexer.expression.SetExpression;
 import ru.rt.restream.reindexer.util.JsonSerializer;
 import ru.rt.restream.reindexer.util.Pair;
 import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
@@ -36,10 +38,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.UUID;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -56,8 +58,6 @@ import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.MERGE;
 import static ru.rt.restream.reindexer.binding.Consts.MODE_ACCURATE_TOTAL;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
-import static ru.rt.restream.reindexer.binding.Consts.VALUE_BOOL;
-import static ru.rt.restream.reindexer.binding.Consts.VALUE_NULL;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_STRING;
 
 /**
@@ -112,6 +112,7 @@ public class Query<T> {
     private static final int QUERY_FIELD_SUB_QUERY_CONDITION = 30;
     private static final int QUERY_LOCAL = 31;
     private static final int QUERY_KNN_CONDITION = 32;
+    private static final int QUERY_EXPRESSION_CONDITION = 36;
 
     /**
      * Condition types.
@@ -403,7 +404,7 @@ public class Query<T> {
 
         buffer.putVarUInt32(values.length);
         for (Object key : values) {
-            putValue(key);
+            buffer.putValue(key);
         }
 
         return this;
@@ -444,7 +445,7 @@ public class Query<T> {
 
         buffer.putVarUInt32(values.length);
         for (Object key : values) {
-            putValue(key);
+            buffer.putValue(key);
         }
 
         return this;
@@ -468,6 +469,51 @@ public class Query<T> {
 
         this.nextOperation = OP_AND;
         this.queryCount++;
+
+        return this;
+    }
+
+    /**
+     * Where predicate between {@code left} and {@code right} expressions using {@code condition}.
+     * Supported combinations:
+     * <ul>
+     *     <li>{@link Expression#field(String) field} condition {@link Expression#values(Object...) values}</li>
+     *     <li>{@link Expression#field(String) field} condition {@link Expression#now(TimeUnit) now(unit)}</li>
+     *     <li>{@link Expression#field(String) field} condition {@link Expression#flatArrayLength(String) flat_array_len(field)}</li>
+     *     <li>{@link Expression#field(String) field} condition {@link Expression#subQuery(Query) subquery}</li>
+     *     <li>{@link Expression#field(String) field} condition {@link Expression#field(String) field}</li>
+     *     <li>{@link Expression#flatArrayLength(String) flat_array_len(field)} condition {@link Expression#values(Object...) values}</li>
+     *     <li>{@link Expression#flatArrayLength(String) flat_array_len(field)} condition {@link Expression#subQuery(Query) subquery}</li>
+     *     <li>{@link Expression#subQuery(Query) subquery} condition {@link Expression#values(Object...) values}</li>
+     *     <li>{@link Expression#subQuery(Query) subquery} condition {@link Expression#now(TimeUnit) now(unit)}</li>
+     *     <li>{@link Expression#subQuery(Query) subquery} condition {@link Expression#flatArrayLength(String) flat_array_len(field)}</li>
+     * </ul>
+     * Example: {@code where(Expression.field("created_at"), Condition.LE, Expression.now())}.
+     * <p>
+     *
+     * @param left      the left operand {@link Expression} to use
+     * @param condition the {@link Condition} to use
+     * @param right     the right operand {@link Expression} to use
+     * @return the {@link Query} for further customizations
+     * @see Expression for factory methods to build different types of expressions
+     */
+    public Query<T> where(WhereExpression left, Condition condition, WhereExpression right) {
+        Objects.requireNonNull(left, "left expression cannot be null");
+        Objects.requireNonNull(right, "right expression cannot be null");
+
+        logBuilder.where(nextOperation, left, condition.code, right);
+
+        buffer.putVarUInt32(QUERY_EXPRESSION_CONDITION);
+
+        left.serializeWhere(buffer);
+
+        buffer.putVarUInt32(nextOperation);
+        buffer.putVarUInt32(condition.code);
+
+        right.serializeWhere(buffer);
+
+        nextOperation = OP_AND;
+        queryCount++;
 
         return this;
     }
@@ -785,7 +831,7 @@ public class Query<T> {
 
         buffer.putVarUInt32(values.length);
         for (Object value : values) {
-            putValue(value);
+            buffer.putValue(value);
         }
 
         return this;
@@ -801,55 +847,6 @@ public class Query<T> {
     public Query<T> fetchCount(int fetchCount) {
         this.fetchCount = fetchCount;
         return this;
-    }
-
-    private void putValue(Object value) {
-        if (value == null) {
-            buffer.putVarUInt32(VALUE_NULL);
-        } else if (value instanceof Boolean) {
-            buffer.putVarUInt32(VALUE_BOOL);
-            if ((Boolean) value) {
-                buffer.putVarUInt32(1);
-            } else {
-                buffer.putVarUInt32(0);
-            }
-        } else if (value instanceof Integer) {
-            buffer.putVarUInt32(Consts.VALUE_INT)
-                    .putVarInt64((Integer) value);
-        } else if (value instanceof String) {
-            buffer.putVarUInt32(Consts.VALUE_STRING)
-                    .putVString((String) value);
-        } else if (value instanceof Long) {
-            buffer.putVarUInt32(Consts.VALUE_INT_64)
-                    .putVarInt64((Long) value);
-        } else if (value instanceof Byte) {
-            buffer.putVarUInt32(Consts.VALUE_INT)
-                    .putVarInt64((Byte) value);
-        } else if (value instanceof Short) {
-            buffer.putVarUInt32(Consts.VALUE_INT)
-                    .putVarInt64((Short) value);
-        } else if (value instanceof Double) {
-            buffer.putVarUInt32(Consts.VALUE_DOUBLE)
-                    .putDouble((Double) value);
-        } else if (value instanceof Float) {
-            Float floatValue = (Float) value;
-            buffer.putVarUInt32(Consts.VALUE_DOUBLE)
-                    .putDouble(floatValue.doubleValue());
-        } else if (value instanceof Character) {
-            Character character = (Character) value;
-            buffer.putVarUInt32(Consts.VALUE_STRING)
-                    .putVString(character.toString());
-        } else if (value instanceof UUID) {
-            buffer.putVarUInt32(Consts.VALUE_UUID)
-                    .putUuid((UUID) value);
-        } else if (value instanceof Object[]) {
-            buffer.putVarUInt32(Consts.VALUE_TUPLE);
-            Object[] objects = (Object[]) value;
-            buffer.putVarUInt32(objects.length);
-            for (Object object : objects) {
-                putValue(object);
-            }
-        }
     }
 
     /**
@@ -1074,8 +1071,7 @@ public class Query<T> {
 
         return namespaces.stream()
                 .map(ReindexerNamespace::getPayloadType)
-                .map(pt -> pt == null ? 0 : pt.getStateToken())
-                .mapToLong(Integer::longValue)
+                .mapToLong(pt -> pt == null ? 0 : (pt.getVersion() ^ pt.getStateToken()))
                 .toArray();
     }
 
@@ -1122,7 +1118,7 @@ public class Query<T> {
             buffer.putVarUInt32(values.size());
             for (Object v : values) {
                 buffer.putVarUInt32(0);
-                putValue(v);
+                buffer.putValue(v);
             }
         } else if (value != null && value.getClass().isArray()) {
             Object[] values = (Object[]) value;
@@ -1137,15 +1133,39 @@ public class Query<T> {
             buffer.putVarUInt32(values.length);
             for (Object v : values) {
                 buffer.putVarUInt32(0);
-                putValue(v);
+                buffer.putValue(v);
             }
         } else {
             buffer.putVarUInt32(cmd);
             buffer.putVString(fieldName);
             buffer.putVarUInt32(1);
             buffer.putVarUInt32(0);
-            putValue(value);
+            buffer.putValue(value);
         }
+
+        return this;
+    }
+
+    /**
+     * Updates indexed field by {@link SetExpression}.
+     * <p>
+     * Example: {@code setExpression("created_at", Expression.string("now() - 1 * 24 * 60 * 60"))}.
+     * <p>
+     *
+     * @param fieldName  the field name to use
+     * @param expression the expression to use
+     * @return the {@link Query} for further customizations
+     * @see Expression for factory methods to build different types of expressions
+     */
+    public Query<T> setExpression(String fieldName, SetExpression expression) {
+        Objects.requireNonNull(expression, "expression cannot be null");
+
+        logBuilder.set(fieldName, expression);
+
+        buffer.putVarUInt32(QUERY_UPDATE_FIELD);
+        buffer.putVString(fieldName);
+
+        expression.serializeSet(buffer);
 
         return this;
     }
@@ -1245,7 +1265,11 @@ public class Query<T> {
         if (transactionContext != null) {
             transactionContext.updateQuery(buffer.bytes());
         } else {
-            reindexer.getBinding().updateQuery(buffer.bytes());
+            // There are no support for inner joins for update-queries in Java binding,
+            // so we are using single pt version
+            PayloadType pt = namespace.getPayloadType();
+            long tmVersion = pt == null ? 0 : (pt.getVersion() ^ pt.getStateToken());
+            reindexer.getBinding().updateQuery(buffer.bytes(), new long[]{tmVersion});
         }
     }
 
@@ -1284,6 +1308,25 @@ public class Query<T> {
      */
     String getSql() {
         return logBuilder.getSql();
+    }
+
+    /**
+     * Returns all used bytes from the {@link ByteBuffer}.
+     *
+     * @return all used bytes from the {@code ByteBuffer}
+     */
+    public byte[] bytes() {
+        return buffer.bytes();
+    }
+
+    /**
+     * Returns the string representation of the query.
+     *
+     * @return the string representation of the query
+     */
+    @Override
+    public String toString() {
+        return getSql();
     }
 
 }

@@ -165,8 +165,9 @@ public class Cproto implements Binding {
     }
 
     @Override
-    public void updateQuery(byte[] queryData) {
-        rpcCallNoResults(UPDATE_QUERY, queryData);
+    public void updateQuery(byte[] queryData, long[] ptVersions) {
+        int flags = Consts.RESULTS_PURE | Consts.RESULTS_WITH_PAYLOAD_TYPES;
+        rpcCallNoResults(UPDATE_QUERY, queryData, flags, ptVersions);
     }
 
     @Override
