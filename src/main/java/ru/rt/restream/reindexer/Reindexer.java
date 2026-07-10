@@ -251,7 +251,7 @@ public class Reindexer implements AutoCloseable {
         }
         ReindexerNamespace<T> namespace = getNamespace(namespaceName, itemClass);
         PayloadType pt = namespace.getPayloadType();
-        long[] ptVersions = pt == null ? new long[]{0} : new long[]{pt.getVersion()};
+        long[] ptVersions = pt == null ? new long[]{0} : new long[]{pt.getVersion() ^ pt.getStateToken()};
         RequestContext ctx = binding.select(query, false, Integer.MAX_VALUE, ptVersions);
         QueryResult queryResult = ctx.getQueryResult();
         for (PayloadType payloadType : queryResult.getPayloadTypes()) {
