@@ -122,4 +122,9 @@ public class QueryResult {
      */
     private long rankFormat;
 
+    /**
+     * Query serialization format version used for this result.
+     */
+    private int queryFormatVersion = Consts.QUERY_FORMAT_V1;
+
 }

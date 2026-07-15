@@ -46,6 +46,8 @@ public class CprotoRequestContext implements RequestContext {
 
     private final boolean asJson;
 
+    private final int queryFormatVersion;
+
     private QueryResult queryResult;
 
     private int requestId = -1;
@@ -57,10 +59,12 @@ public class CprotoRequestContext implements RequestContext {
      * @param connection  the connection in which the request was made
      * @param asJson     'true' if response should be serialized in JSON format, defaults to CJSON
      */
-    public CprotoRequestContext(ReindexerResponse rpcResponse, Connection connection, boolean asJson) {
-        this.queryResult = getQueryResult(rpcResponse);
+    public CprotoRequestContext(ReindexerResponse rpcResponse, Connection connection, boolean asJson,
+                                int queryFormatVersion) {
         this.connection = connection;
         this.asJson = asJson;
+        this.queryFormatVersion = queryFormatVersion;
+        this.queryResult = getQueryResult(rpcResponse);
     }
 
     @Override
@@ -101,7 +105,7 @@ public class CprotoRequestContext implements RequestContext {
         if (responseArguments.length > 1) {
             requestId = (int) responseArguments[1];
         }
-        return reader.read(rawQueryResult);
+        return reader.read(rawQueryResult, queryFormatVersion);
     }
 
 }

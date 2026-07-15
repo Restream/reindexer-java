@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V2;
 import static ru.rt.restream.reindexer.binding.Consts.REINDEXER_VERSION;
 
 /**
@@ -205,6 +206,11 @@ public class Builtin implements Binding {
         if (response.hasError()) {
             throw ReindexerExceptionFactory.fromResponse(response);
         }
+    }
+
+    @Override
+    public int queryFormatVersion() {
+        return QUERY_FORMAT_V2;
     }
 
     @Override

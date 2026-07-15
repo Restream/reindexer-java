@@ -142,7 +142,7 @@ public class Cproto implements Binding {
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT_SQL, query, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection, asJson);
+        return new CprotoRequestContext(rpcResponse, connection, asJson, connection.queryFormatVersion());
     }
 
     /**
@@ -156,7 +156,7 @@ public class Cproto implements Binding {
         Connection connection = pool.getConnection();
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection, asJson);
+        return new CprotoRequestContext(rpcResponse, connection, asJson, connection.queryFormatVersion());
     }
 
     @Override
@@ -189,6 +189,11 @@ public class Cproto implements Binding {
         Connection connection = pool.getConnection();
         ReindexerResponse response = ConnectionUtils.rpcCall(connection, GET_META, namespace, key);
         return new String((byte[]) response.getArguments()[0], StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public int queryFormatVersion() {
+        return pool.queryFormatVersion();
     }
 
     /**
