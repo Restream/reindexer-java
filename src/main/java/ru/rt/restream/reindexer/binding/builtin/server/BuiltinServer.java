@@ -192,6 +192,11 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
+    public int queryFormatVersion() {
+        return builtin.queryFormatVersion();
+    }
+
+    @Override
     public void close() {
         ReindexerResponse response = adapter.stopServer(svc);
         if (response.hasError()) {

@@ -787,6 +787,57 @@ public abstract class JoinTest extends DbBaseTest {
     }
 
     @Test
+    public void testMultipleJoinsSameFieldAccumulateResults() {
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        item.name = "item";
+        item.actorsIds = Arrays.asList(10, 30);
+        db.upsert("items_with_join", item);
+
+        Actor first = new Actor();
+        first.id = 10;
+        first.name = "first";
+        first.visible = true;
+        db.upsert("actors", first);
+
+        Actor second = new Actor();
+        second.id = 30;
+        second.name = "second";
+        second.visible = true;
+        db.upsert("actors", second);
+
+        Actor unmatched = new Actor();
+        unmatched.id = 20;
+        unmatched.name = "unmatched";
+        unmatched.visible = true;
+        db.upsert("actors", unmatched);
+
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 10)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 30)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 20)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .execute();
+
+        assertThat(items.hasNext(), is(true));
+        ItemWithJoin result = items.next();
+        assertThat(result.joinedActors.size(), is(2));
+        assertThat(result.joinedActors.get(0).id, is(10));
+        assertThat(result.joinedActors.get(0).name, is("first"));
+        assertThat(result.joinedActors.get(1).id, is(30));
+        assertThat(result.joinedActors.get(1).name, is("second"));
+    }
+
+    @Test
     public void testJoinInWherePartWithBrackets() {
         db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
         db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);

@@ -51,6 +51,15 @@ public interface Connection extends AutoCloseable {
     boolean hasError();
 
     /**
+     * Returns negotiated query serialization format version.
+     *
+     * @return query serialization format version
+     */
+    default int queryFormatVersion() {
+        return ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V1;
+    }
+
+    /**
      * Closes the connection.
      */
     @Override

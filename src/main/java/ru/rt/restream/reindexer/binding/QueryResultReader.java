@@ -33,6 +33,7 @@ import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_INCARNATION_T
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_RANK_FORMAT;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARDING_VERSION;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_RESULT_SHARD_ID;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V2;
 import static ru.rt.restream.reindexer.binding.Consts.RANK_FORMAT_SINGLE_FLOAT;
 import static ru.rt.restream.reindexer.binding.Consts.RESULTS_FORMAT_MASK;
 import static ru.rt.restream.reindexer.binding.Consts.RESULTS_JSON;
@@ -59,8 +60,27 @@ public class QueryResultReader {
      * @return the {@link QueryResult} to use
      */
     public QueryResult read(byte[] rawQueryResult) {
+        return read(rawQueryResult, Consts.QUERY_FORMAT_V1);
+    }
+
+    /**
+     * Reads a {@link QueryResult} from the raw byte array.
+     *
+     * @param rawQueryResult the raw byte array
+     * @param queryFormatVersion query serialization format version
+     * @return the {@link QueryResult} to use
+     */
+    public QueryResult read(byte[] rawQueryResult, int queryFormatVersion) {
         ByteBuffer buffer = new ByteBuffer(rawQueryResult).rewind();
+        if (queryFormatVersion == QUERY_FORMAT_V2) {
+            long format = buffer.getVarUInt();
+            if (format != QUERY_FORMAT_V2) {
+                String errorMessage = String.format("QueryResults format version='%d' is not supported", format);
+                throw new RuntimeException(errorMessage);
+            }
+        }
         QueryResult queryResult = getQueryResultWithFlags(buffer.getVarUInt());
+        queryResult.setQueryFormatVersion(queryFormatVersion);
         queryResult.setTotalCount(buffer.getVarUInt());
         queryResult.setQCount(buffer.getVarUInt());
         queryResult.setCount(buffer.getVarUInt());
