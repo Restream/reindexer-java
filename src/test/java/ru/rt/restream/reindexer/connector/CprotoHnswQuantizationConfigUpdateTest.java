@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ru.rt.restream.reindexer.exceptions;
+package ru.rt.restream.reindexer.connector;
 
-/**
- * Thrown if some feature currently is not implemented.
- */
-public class UnimplementedException extends ReindexerException {
+import ru.rt.restream.category.CprotoTest;
 
-    /**
-     * Constructs new exception.
-     *
-     * @param message error message
-     */
-    public UnimplementedException(String message) {
-        super(message);
-    }
-
+@CprotoTest
+public class CprotoHnswQuantizationConfigUpdateTest extends HnswQuantizationConfigUpdateTest {
 }
+
