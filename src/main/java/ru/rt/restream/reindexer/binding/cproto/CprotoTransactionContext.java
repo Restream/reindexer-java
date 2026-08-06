@@ -103,7 +103,7 @@ public class CprotoTransactionContext implements TransactionContext {
                 : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, SELECT, queryData, flags,
                 fetchCount > 0 ? fetchCount : Integer.MAX_VALUE, ptVersions);
-        return new CprotoRequestContext(rpcResponse, connection, asJson);
+        return new CprotoRequestContext(rpcResponse, connection, asJson, connection.queryFormatVersion());
     }
 
     @Override
