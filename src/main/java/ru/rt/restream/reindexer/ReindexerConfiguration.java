@@ -15,6 +15,7 @@
  */
 package ru.rt.restream.reindexer;
 
+import io.micrometer.observation.ObservationRegistry;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.builtin.Builtin;
 import ru.rt.restream.reindexer.binding.builtin.server.BuiltinServer;
@@ -57,6 +58,8 @@ public final class ReindexerConfiguration {
     private String serverConfigFile = "default-builtin-server-config.yml";
 
     private SSLSocketFactory sslSocketFactory;
+
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     private ReindexerConfiguration() {
 
@@ -177,6 +180,18 @@ public final class ReindexerConfiguration {
     }
 
     /**
+     * Configure an {@link ObservationRegistry} to record connector's metrics and traces.
+     * Defaults to {@link ObservationRegistry#NOOP}.
+     *
+     * @param observationRegistry the {@link ObservationRegistry} to use
+     * @return the {@link ReindexerConfiguration} for further customizations
+     */
+    public ReindexerConfiguration observationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = Objects.requireNonNull(observationRegistry, "observationRegistry cannot be null");
+        return this;
+    }
+
+    /**
      * Build and return reindexer connector instance.
      *
      * @return configured reindexer connector instance
@@ -210,6 +225,7 @@ public final class ReindexerConfiguration {
                         .urls(urls)
                         .allowUnlistedDataSource(allowUnlistedDataSource)
                         .sslSocketFactory(sslSocketFactory)
+                        .observationRegistry(observationRegistry)
                         .build();
                 return new Cproto(dataSourceFactory, dataSourceConfig, connectionPoolSize, requestTimeout);
             case "builtin":
