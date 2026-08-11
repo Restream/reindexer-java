@@ -60,6 +60,15 @@ public interface Connection extends AutoCloseable {
     }
 
     /**
+     * Returns true if connected Reindexer server supports nested join queries.
+     *
+     * @return true if connected Reindexer server supports nested join queries
+     */
+    default boolean supportsNestedJoinQueries() {
+        return false;
+    }
+
+    /**
      * Closes the connection.
      */
     @Override

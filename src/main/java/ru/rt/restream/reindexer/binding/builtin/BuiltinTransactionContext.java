@@ -46,6 +46,8 @@ public class BuiltinTransactionContext implements TransactionContext {
 
     private final Duration timeout;
 
+    private final int queryFormatVersion;
+
     /**
      * Creates an instance.
      *
@@ -56,12 +58,13 @@ public class BuiltinTransactionContext implements TransactionContext {
      * @param timeout       the execution timeout
      */
     public BuiltinTransactionContext(BuiltinAdapter adapter, long rx, long transactionId,
-                                     Supplier<Long> next, Duration timeout) {
+                                     Supplier<Long> next, Duration timeout, int queryFormatVersion) {
         this.adapter = adapter;
         this.rx = rx;
         this.transactionId = transactionId;
         this.next = next;
         this.timeout = timeout;
+        this.queryFormatVersion = queryFormatVersion;
     }
 
     @Override
@@ -91,7 +94,7 @@ public class BuiltinTransactionContext implements TransactionContext {
     public RequestContext selectQuery(byte[] queryData, int fetchCount, long[] ptVersions, boolean asJson) {
         ReindexerResponse response = adapter.selectQuery(rx, next.get(), timeout.toMillis(), queryData, ptVersions, asJson);
         checkResponse(response);
-        return new BuiltinRequestContext(response);
+        return new BuiltinRequestContext(response, queryFormatVersion);
     }
 
     @Override

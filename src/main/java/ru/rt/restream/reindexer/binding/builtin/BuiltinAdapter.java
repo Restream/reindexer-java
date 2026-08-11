@@ -73,6 +73,13 @@ public class BuiltinAdapter {
     public native long init();
 
     /**
+     * Returns native Reindexer library version.
+     *
+     * @return the native Reindexer library version
+     */
+    public native String version();
+
+    /**
      * Destroys Reindexer instance.
      *
      * @param rx the Reindexer instance pointer
@@ -135,9 +142,10 @@ public class BuiltinAdapter {
      * @param rx      the Reindexer instance pointer
      * @param path    the Reindexer's database path
      * @param version the Reindexer's version
+     * @param queryFormatVersion the query serialization format version
      * @return the {@link ReindexerResponse} to use
      */
-    public native ReindexerResponse connect(long rx, String path, String version);
+    public native ReindexerResponse connect(long rx, String path, String version, int queryFormatVersion);
 
     /**
      * Opens a namespace.

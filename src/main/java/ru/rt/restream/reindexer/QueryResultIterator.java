@@ -193,10 +193,19 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             for (int i = 0; i < itemsCount; i++) {
                 subItems.add(readItem(joinedNamespace, joinedItemReader, joinQuery));
             }
-            subItemsMap.computeIfAbsent(queryContext.getJoinFields().get(joinedField), field -> new ArrayList<>())
-                    .addAll(subItems);
+
+            String joinField = queryContext.getJoinFields().get(joinedField);
+            List<Object> fieldSubItems = subItemsMap.get(joinField);
+            if (fieldSubItems == null) {
+                fieldSubItems = new ArrayList<>();
+                subItemsMap.put(joinField, fieldSubItems);
+            }
+            fieldSubItems.addAll(subItems);
         }
-        subItemsMap.forEach((key, value) -> writeJoinResult(item, key, value));
+
+        for (Map.Entry<String, List<Object>> entry : subItemsMap.entrySet()) {
+            writeJoinResult(item, entry.getKey(), entry.getValue());
+        }
     }
 
     private void readJoinedItemsV1(Object item, int nsId) {

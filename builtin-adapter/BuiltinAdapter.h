@@ -24,10 +24,13 @@ extern "C" {
 
 JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_init(JNIEnv *, jobject);
 
+JNIEXPORT jstring JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_version(JNIEnv *, jobject);
+
 JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_destroy(JNIEnv *, jobject, jlong);
 
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_connect(JNIEnv *, jobject, jlong,
-                                                                                               jstring, jstring);
+                                                                                               jstring, jstring,
+                                                                                               jint);
 
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_openNamespace(JNIEnv *, jobject,
                                                                                                      jlong, jlong,

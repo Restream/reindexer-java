@@ -91,6 +91,10 @@ JNIEXPORT jlong JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAda
     return init_reindexer();
 }
 
+JNIEXPORT jstring JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_version(JNIEnv *env, jobject) {
+    return env->NewStringUTF(reindexer_version());
+}
+
 JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_destroy(JNIEnv *, jobject,
                                                                                             jlong rx) {
     destroy_reindexer(rx);
@@ -98,13 +102,16 @@ JNIEXPORT void JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdap
 
 JNIEXPORT jobject JNICALL Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_connect(JNIEnv *env, jobject,
                                                                                                jlong rx, jstring path,
-                                                                                               jstring version) {
+                                                                                               jstring version,
+                                                                                               jint queryFormatVersion) {
     reindexer_string dsn = rx_string(env, path);
     reindexer_string vers = rx_string(env, version);
+    int64_t capabilities = kBindingCapabilityResultsWithShardIDs | kBindingCapabilityComplexRank;
+    if (queryFormatVersion == QueryFormatV2) {
+        capabilities |= kBindingCapabilityQueryFormatV2;
+    }
     reindexer_error error = reindexer_connect(rx, dsn, ConnectOpts(), vers, BindingCapabilities(
-        kBindingCapabilityResultsWithShardIDs
-        | kBindingCapabilityComplexRank
-        | kBindingCapabilityQueryFormatV2));
+        capabilities));
     env->ReleaseStringUTFChars(path, reinterpret_cast<const char *>(dsn.p));
     env->ReleaseStringUTFChars(version, reinterpret_cast<const char *>(vers.p));
     return j_res(env, error);

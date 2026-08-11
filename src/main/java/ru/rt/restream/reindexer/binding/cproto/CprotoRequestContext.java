@@ -79,7 +79,10 @@ public class CprotoRequestContext implements RequestContext {
                 : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
         ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, FETCH_RESULTS, requestId, flags, offset, fetchCount);
-        queryResult = getQueryResult(rpcResponse);
+        int fetchQueryFormatVersion = connection.supportsNestedJoinQueries()
+                ? queryFormatVersion
+                : Consts.QUERY_FORMAT_V1;
+        queryResult = getQueryResult(rpcResponse, fetchQueryFormatVersion);
     }
 
     /**
@@ -97,6 +100,10 @@ public class CprotoRequestContext implements RequestContext {
     }
 
     private QueryResult getQueryResult(ReindexerResponse rpcResponse) {
+        return getQueryResult(rpcResponse, queryFormatVersion);
+    }
+
+    private QueryResult getQueryResult(ReindexerResponse rpcResponse, int queryFormatVersion) {
         byte[] rawQueryResult = new byte[0];
         Object[] responseArguments = rpcResponse.getArguments();
         if (responseArguments.length > 0) {

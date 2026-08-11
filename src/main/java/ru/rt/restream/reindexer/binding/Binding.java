@@ -215,6 +215,15 @@ public interface Binding {
     }
 
     /**
+     * Returns true if connected Reindexer server supports nested join queries.
+     *
+     * @return true if connected Reindexer server supports nested join queries
+     */
+    default boolean supportsNestedJoinQueries() {
+        return false;
+    }
+
+    /**
      * Closes binding to Reindexer instance.
      */
     void close();

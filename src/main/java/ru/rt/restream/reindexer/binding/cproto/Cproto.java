@@ -196,6 +196,11 @@ public class Cproto implements Binding {
         return pool.queryFormatVersion();
     }
 
+    @Override
+    public boolean supportsNestedJoinQueries() {
+        return pool.supportsNestedJoinQueries();
+    }
+
     /**
      * Closes the connection pool.
      */

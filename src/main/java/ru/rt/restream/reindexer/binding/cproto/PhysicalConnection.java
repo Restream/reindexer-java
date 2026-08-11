@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -85,6 +86,12 @@ public class PhysicalConnection implements Connection {
 
     static final int CPROTO_VERSION_MASK = 0x3FF;
 
+    private static final int NESTED_JOIN_QUERIES_MIN_MAJOR = 5;
+
+    private static final int NESTED_JOIN_QUERIES_MIN_MINOR = 16;
+
+    private static final int NESTED_JOIN_QUERIES_MIN_PATCH = 0;
+
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     private final Condition notEmptyBuffer = lock.writeLock().newCondition();
@@ -95,64 +102,82 @@ public class PhysicalConnection implements Connection {
 
     private Exception error;
 
-    private final Socket clientSocket;
+    private Socket clientSocket;
 
-    private final DataOutputStream output;
+    private DataOutputStream output;
 
-    private final DataInputStream input;
+    private DataInputStream input;
 
-    private final Duration timeout;
+    private Duration timeout;
 
-    private final ScheduledExecutorService scheduler;
+    private ScheduledExecutorService scheduler;
 
     private final BlockingQueue<Integer> sequences = new ArrayBlockingQueue<>(QUEUE_SIZE);
 
     private final List<RpcRequest> requests = new ArrayList<>(QUEUE_SIZE);
 
-    private final ScheduledFuture<?> readTaskFuture;
+    private ScheduledFuture<?> readTaskFuture;
 
-    private final ScheduledFuture<?> writeTaskFuture;
+    private ScheduledFuture<?> writeTaskFuture;
 
     private volatile int queryFormatVersion = QUERY_FORMAT_V1;
+
+    private volatile boolean supportsNestedJoinQueries = false;
 
     public PhysicalConnection(String host, int port, String user, String password, String database,
                               SSLSocketFactory sslSocketFactory,
                               Duration requestTimeout, ScheduledExecutorService scheduler) {
         try {
-            if (sslSocketFactory != null) {
-                LOGGER.debug("rx: using SSL/TLS connection to {}:{}", host, port);
-                SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(host, port);
-                // Fail fast if SSL/TLS handshake fails.
-                sslSocket.startHandshake();
-                clientSocket = sslSocket;
-            } else {
-                clientSocket = new Socket(host, port);
-            }
-            output = new DataOutputStream(clientSocket.getOutputStream());
-            input = new DataInputStream(clientSocket.getInputStream());
             timeout = requestTimeout;
             this.scheduler = scheduler;
             for (int i = 0; i < QUEUE_SIZE; i++) {
                 requests.add(new RpcRequest());
                 sequences.add(i);
             }
-            readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
-            writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
-            ReindexerResponse response = ConnectionUtils.rpcCall(this, Binding.LOGIN, user, password, database,
-                    false, // create DB if missing
-                    false, // checkClusterID
-                    -1,    // expectedClusterID
-                    REINDEXER_VERSION,
-                    getAppName(),
-                    BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS
-                            | BINDING_CAPABILITY_COMPLEX_RANK
-                            | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS
-                            | BINDING_CAPABILITY_QUERY_FORMAT_V2);
+            openSocket(host, port, sslSocketFactory);
+            ReindexerResponse response = login(user, password, database, true);
             updateQueryFormatVersion(response);
         } catch (Exception e) {
             onError(e);
             throw new NetworkException(e);
         }
+    }
+
+    private void openSocket(String host, int port, SSLSocketFactory sslSocketFactory) throws IOException {
+        if (sslSocketFactory != null) {
+            LOGGER.debug("rx: using SSL/TLS connection to {}:{}", host, port);
+            SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(host, port);
+            // Fail fast if SSL/TLS handshake fails.
+            sslSocket.startHandshake();
+            clientSocket = sslSocket;
+        } else {
+            clientSocket = new Socket(host, port);
+        }
+        output = new DataOutputStream(clientSocket.getOutputStream());
+        input = new DataInputStream(clientSocket.getInputStream());
+        readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
+        writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
+    }
+
+    private ReindexerResponse login(String user, String password, String database, boolean queryFormatV2) {
+        return ConnectionUtils.rpcCall(this, Binding.LOGIN, user, password, database,
+                false, // create DB if missing
+                false, // checkClusterID
+                -1,    // expectedClusterID
+                REINDEXER_VERSION,
+                getAppName(),
+                getBindingCapabilities(queryFormatV2));
+    }
+
+    private long getBindingCapabilities(boolean queryFormatV2) {
+        if (!queryFormatV2) {
+            return 0L;
+        }
+        long capabilities = BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS
+                | BINDING_CAPABILITY_COMPLEX_RANK
+                | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS
+                | BINDING_CAPABILITY_QUERY_FORMAT_V2;
+        return capabilities;
     }
 
     private void updateQueryFormatVersion(ReindexerResponse response) {
@@ -162,7 +187,36 @@ public class PhysicalConnection implements Connection {
             queryFormatVersion = (capabilities & BINDING_CAPABILITY_QUERY_FORMAT_V2) != 0
                     ? QUERY_FORMAT_V2
                     : QUERY_FORMAT_V1;
+            supportsNestedJoinQueries = queryFormatVersion == QUERY_FORMAT_V2
+                    && isNestedJoinQueriesSupportedByServer(arguments[0]);
         }
+    }
+
+    private boolean isNestedJoinQueriesSupportedByServer(Object serverVersionArgument) {
+        if (!(serverVersionArgument instanceof byte[])) {
+            return false;
+        }
+        String serverVersion = new String((byte[]) serverVersionArgument, StandardCharsets.UTF_8);
+        int[] version = parseVersion(serverVersion);
+        if (version[0] != NESTED_JOIN_QUERIES_MIN_MAJOR) {
+            return version[0] > NESTED_JOIN_QUERIES_MIN_MAJOR;
+        }
+        if (version[1] != NESTED_JOIN_QUERIES_MIN_MINOR) {
+            return version[1] > NESTED_JOIN_QUERIES_MIN_MINOR;
+        }
+        return version[2] >= NESTED_JOIN_QUERIES_MIN_PATCH;
+    }
+
+    private int[] parseVersion(String version) {
+        String normalized = version.startsWith("v") ? version.substring(1) : version;
+        String[] parts = normalized.split("\\D+");
+        int[] result = new int[3];
+        for (int i = 0; i < result.length && i < parts.length; i++) {
+            if (!parts[i].isEmpty()) {
+                result[i] = Integer.parseInt(parts[i]);
+            }
+        }
+        return result;
     }
 
     private Object getAppName() {
@@ -359,6 +413,11 @@ public class PhysicalConnection implements Connection {
         return queryFormatVersion;
     }
 
+    @Override
+    public boolean supportsNestedJoinQueries() {
+        return supportsNestedJoinQueries;
+    }
+
     private Exception getCurrentError() {
         lock.readLock().lock();
         try {
@@ -412,6 +471,10 @@ public class PhysicalConnection implements Connection {
 
     @Override
     public void close() {
+        disconnect();
+    }
+
+    private void disconnect() {
         if (readTaskFuture != null) {
             readTaskFuture.cancel(true);
         }

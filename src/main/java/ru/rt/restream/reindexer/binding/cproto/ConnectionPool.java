@@ -149,6 +149,10 @@ public class ConnectionPool {
         return getConnection().queryFormatVersion();
     }
 
+    public boolean supportsNestedJoinQueries() {
+        return getConnection().supportsNestedJoinQueries();
+    }
+
     private DataSource getDataSource(int connectionPoolSize) {
         Instant connectionDeadline = Instant.now().plus(timeout);
         for (; ; ) {

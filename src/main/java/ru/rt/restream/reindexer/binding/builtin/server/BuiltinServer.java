@@ -197,6 +197,11 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
+    public boolean supportsNestedJoinQueries() {
+        return builtin.supportsNestedJoinQueries();
+    }
+
+    @Override
     public void close() {
         ReindexerResponse response = adapter.stopServer(svc);
         if (response.hasError()) {

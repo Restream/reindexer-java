@@ -75,8 +75,7 @@ public class QueryResultReader {
         if (queryFormatVersion == QUERY_FORMAT_V2) {
             long format = buffer.getVarUInt();
             if (format != QUERY_FORMAT_V2) {
-                String errorMessage = String.format("QueryResults format version='%d' is not supported", format);
-                throw new RuntimeException(errorMessage);
+                buffer.rewind();
             }
         }
         QueryResult queryResult = getQueryResultWithFlags(buffer.getVarUInt());

@@ -45,6 +45,12 @@ public class Builtin implements Binding {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Builtin.class);
 
+    private static final int NESTED_JOIN_QUERIES_MIN_MAJOR = 5;
+
+    private static final int NESTED_JOIN_QUERIES_MIN_MINOR = 16;
+
+    private static final int NESTED_JOIN_QUERIES_MIN_PATCH = 0;
+
     private final AtomicLong next = new AtomicLong(0L);
 
     private final Gson gson = new GsonBuilder()
@@ -57,6 +63,10 @@ public class Builtin implements Binding {
 
     private final Duration timeout;
 
+    private final boolean supportsNestedJoinQueries;
+
+    private final int queryFormatVersion;
+
     /**
      * Creates an instance.
      *
@@ -67,9 +77,11 @@ public class Builtin implements Binding {
         adapter = new BuiltinAdapter();
         timeout = requestTimeout;
         rx = adapter.init();
+        queryFormatVersion = QUERY_FORMAT_V2;
+        supportsNestedJoinQueries = isNestedJoinQueriesSupported(adapter.version());
         String path = uri.getPath();
         try {
-            ReindexerResponse response = adapter.connect(rx, path, REINDEXER_VERSION);
+            ReindexerResponse response = adapter.connect(rx, path, REINDEXER_VERSION, queryFormatVersion);
             checkResponse(response);
         } catch (Exception e) {
             LOGGER.error("rx: connect error", e);
@@ -89,6 +101,8 @@ public class Builtin implements Binding {
         this.adapter = adapter;
         this.rx = rx;
         this.timeout = timeout;
+        queryFormatVersion = QUERY_FORMAT_V2;
+        supportsNestedJoinQueries = isNestedJoinQueriesSupported(adapter.version());
     }
 
     @Override
@@ -152,7 +166,7 @@ public class Builtin implements Binding {
         ReindexerResponse response = adapter.select(rx, next.getAndIncrement(), timeout.toMillis(), query, asJson,
                 ptVersions);
         checkResponse(response);
-        return new BuiltinRequestContext(response);
+        return new BuiltinRequestContext(response, queryFormatVersion);
     }
 
     @Override
@@ -160,7 +174,7 @@ public class Builtin implements Binding {
         ReindexerResponse response = adapter.selectQuery(rx, next.getAndIncrement(), timeout.toMillis(), queryData,
                 ptVersions, asJson);
         checkResponse(response);
-        return new BuiltinRequestContext(response);
+        return new BuiltinRequestContext(response, queryFormatVersion);
     }
 
     @Override
@@ -187,7 +201,7 @@ public class Builtin implements Binding {
                 txId = (long) arg;
             }
         }
-        return new BuiltinTransactionContext(adapter, rx, txId, next::getAndIncrement, timeout);
+        return new BuiltinTransactionContext(adapter, rx, txId, next::getAndIncrement, timeout, queryFormatVersion);
     }
 
     @Override
@@ -210,7 +224,35 @@ public class Builtin implements Binding {
 
     @Override
     public int queryFormatVersion() {
-        return QUERY_FORMAT_V2;
+        return queryFormatVersion;
+    }
+
+    @Override
+    public boolean supportsNestedJoinQueries() {
+        return supportsNestedJoinQueries;
+    }
+
+    private boolean isNestedJoinQueriesSupported(String version) {
+        int[] parsedVersion = parseVersion(version);
+        if (parsedVersion[0] != NESTED_JOIN_QUERIES_MIN_MAJOR) {
+            return parsedVersion[0] > NESTED_JOIN_QUERIES_MIN_MAJOR;
+        }
+        if (parsedVersion[1] != NESTED_JOIN_QUERIES_MIN_MINOR) {
+            return parsedVersion[1] > NESTED_JOIN_QUERIES_MIN_MINOR;
+        }
+        return parsedVersion[2] >= NESTED_JOIN_QUERIES_MIN_PATCH;
+    }
+
+    private int[] parseVersion(String version) {
+        String normalized = version.startsWith("v") ? version.substring(1) : version;
+        String[] parts = normalized.split("\\D+");
+        int[] result = new int[3];
+        for (int i = 0; i < result.length && i < parts.length; i++) {
+            if (!parts[i].isEmpty()) {
+                result[i] = Integer.parseInt(parts[i]);
+            }
+        }
+        return result;
     }
 
     @Override

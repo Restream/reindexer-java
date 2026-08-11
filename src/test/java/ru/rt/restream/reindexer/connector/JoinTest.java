@@ -28,16 +28,22 @@ import ru.rt.restream.reindexer.QueryResultJsonIterator;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static ru.rt.restream.reindexer.Query.Condition.EQ;
 import static ru.rt.restream.reindexer.Query.Condition.RANGE;
 import static ru.rt.restream.reindexer.Query.Condition.SET;
@@ -838,6 +844,304 @@ public abstract class JoinTest extends DbBaseTest {
     }
 
     @Test
+    public void testNestedJoin() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+        db.openNamespace("roles", NamespaceOptions.defaultOptions(), Role.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        item.name = "item";
+        item.actorsIds = Collections.singletonList(10);
+        db.upsert("items_with_join", item);
+
+        Actor actor = new Actor();
+        actor.id = 10;
+        actor.name = "actor";
+        actor.visible = true;
+        db.upsert("actors", actor);
+
+        Role role = new Role();
+        role.id = 100;
+        role.name = "actor";
+        db.upsert("roles", role);
+
+        Query<Actor> actorQuery = db.query("actors", Actor.class)
+                .innerJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .innerJoin(actorQuery, "joinedActors")
+                .on("actorsIds", SET, "id")
+                .execute();
+
+        assertThat(items.hasNext(), is(true));
+        ItemWithJoin result = items.next();
+        assertThat(result.joinedActors.size(), is(1));
+        Actor joinedActor = result.joinedActors.get(0);
+        assertThat(joinedActor.id, is(10));
+        assertThat(joinedActor.name, is("actor"));
+        assertThat(joinedActor.joinedRoles.size(), is(1));
+        assertThat(joinedActor.joinedRoles.get(0).id, is(100));
+        assertThat(joinedActor.joinedRoles.get(0).name, is("actor"));
+    }
+
+    @Test
+    public void testNestedJoinWithLeftAndInnerCombinations() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+        db.openNamespace("roles", NamespaceOptions.defaultOptions(), Role.class);
+
+        ItemWithJoin itemWithRole = new ItemWithJoin();
+        itemWithRole.id = 1;
+        itemWithRole.actorsIds = Collections.singletonList(10);
+        db.upsert("items_with_join", itemWithRole);
+
+        ItemWithJoin itemWithoutRole = new ItemWithJoin();
+        itemWithoutRole.id = 2;
+        itemWithoutRole.actorsIds = Collections.singletonList(20);
+        db.upsert("items_with_join", itemWithoutRole);
+
+        Actor actorWithRole = new Actor();
+        actorWithRole.id = 10;
+        actorWithRole.name = "actor-with-role";
+        db.upsert("actors", actorWithRole);
+
+        Actor actorWithoutRole = new Actor();
+        actorWithoutRole.id = 20;
+        actorWithoutRole.name = "actor-without-role";
+        db.upsert("actors", actorWithoutRole);
+
+        Role role = new Role();
+        role.id = 100;
+        role.name = "actor-with-role";
+        db.upsert("roles", role);
+
+        Query<Actor> actorWithInnerRoleQuery = db.query("actors", Actor.class)
+                .innerJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+
+        List<ItemWithJoin> leftWithInnerNestedItems = db.query("items_with_join", ItemWithJoin.class)
+                .sort("id", false)
+                .leftJoin(actorWithInnerRoleQuery, "joinedActors")
+                .on("actorsIds", SET, "id")
+                .toList();
+
+        assertThat(leftWithInnerNestedItems.size(), is(2));
+        assertThat(leftWithInnerNestedItems.get(0).joinedActors.size(), is(1));
+        assertThat(leftWithInnerNestedItems.get(0).joinedActors.get(0).joinedRoles.size(), is(1));
+        assertThat(leftWithInnerNestedItems.get(1).joinedActors.size(), is(0));
+
+        Query<Actor> actorWithLeftRoleQuery = db.query("actors", Actor.class)
+                .leftJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+
+        List<ItemWithJoin> innerWithLeftNestedItems = db.query("items_with_join", ItemWithJoin.class)
+                .sort("id", false)
+                .innerJoin(actorWithLeftRoleQuery, "joinedActors")
+                .on("actorsIds", SET, "id")
+                .toList();
+
+        assertThat(innerWithLeftNestedItems.size(), is(2));
+        assertThat(innerWithLeftNestedItems.get(0).joinedActors.size(), is(1));
+        assertThat(innerWithLeftNestedItems.get(0).joinedActors.get(0).joinedRoles.size(), is(1));
+        assertThat(innerWithLeftNestedItems.get(1).joinedActors.size(), is(1));
+        assertThat(innerWithLeftNestedItems.get(1).joinedActors.get(0).joinedRoles.size(), is(0));
+    }
+
+    @Test
+    public void testMergeWithNestedJoins() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+        db.openNamespace("roles", NamespaceOptions.defaultOptions(), Role.class);
+
+        ItemWithJoin firstItem = new ItemWithJoin();
+        firstItem.id = 1;
+        firstItem.actorsIds = Collections.singletonList(10);
+        db.upsert("items_with_join", firstItem);
+
+        ItemWithJoin secondItem = new ItemWithJoin();
+        secondItem.id = 2;
+        secondItem.actorsIds = Collections.singletonList(20);
+        db.upsert("items_with_join", secondItem);
+
+        Actor firstActor = new Actor();
+        firstActor.id = 10;
+        firstActor.name = "first";
+        db.upsert("actors", firstActor);
+
+        Actor secondActor = new Actor();
+        secondActor.id = 20;
+        secondActor.name = "second";
+        db.upsert("actors", secondActor);
+
+        Role firstRole = new Role();
+        firstRole.id = 100;
+        firstRole.name = "first";
+        db.upsert("roles", firstRole);
+
+        Role secondRole = new Role();
+        secondRole.id = 200;
+        secondRole.name = "second";
+        db.upsert("roles", secondRole);
+
+        Query<Actor> firstActorQuery = db.query("actors", Actor.class)
+                .innerJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+        Query<Actor> secondActorQuery = db.query("actors", Actor.class)
+                .innerJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+
+        List<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .innerJoin(firstActorQuery, "joinedActors")
+                .on("actorsIds", SET, "id")
+                .merge(db.query("items_with_join", ItemWithJoin.class)
+                        .where("id", EQ, 2)
+                        .innerJoin(secondActorQuery, "joinedActors")
+                        .on("actorsIds", SET, "id"))
+                .toList();
+
+        Map<Integer, ItemWithJoin> itemsById = new HashMap<>();
+        for (ItemWithJoin item : items) {
+            itemsById.put(item.id, item);
+        }
+
+        assertThat(itemsById.size(), is(2));
+        assertThat(itemsById.get(1).joinedActors.get(0).joinedRoles.get(0).name, is("first"));
+        assertThat(itemsById.get(2).joinedActors.get(0).joinedRoles.get(0).name, is("second"));
+    }
+
+    @Test
+    public void testNestedJoinWithDepthTwo() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+        db.openNamespace("roles", NamespaceOptions.defaultOptions(), Role.class);
+        db.openNamespace("permissions", NamespaceOptions.defaultOptions(), Permission.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        item.actorsIds = Collections.singletonList(10);
+        db.upsert("items_with_join", item);
+
+        Actor actor = new Actor();
+        actor.id = 10;
+        actor.name = "actor";
+        db.upsert("actors", actor);
+
+        Role role = new Role();
+        role.id = 100;
+        role.name = "actor";
+        db.upsert("roles", role);
+
+        Permission permission = new Permission();
+        permission.id = 1000;
+        permission.name = "actor";
+        db.upsert("permissions", permission);
+
+        Query<Role> roleQuery = db.query("roles", Role.class)
+                .innerJoin(db.query("permissions", Permission.class), "joinedPermissions")
+                .on("name", EQ, "name");
+        Query<Actor> actorQuery = db.query("actors", Actor.class)
+                .innerJoin(roleQuery, "joinedRoles")
+                .on("name", EQ, "name");
+
+        ItemWithJoin result = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .innerJoin(actorQuery, "joinedActors")
+                .on("actorsIds", SET, "id")
+                .getOne();
+
+        Actor joinedActor = result.joinedActors.get(0);
+        Role joinedRole = joinedActor.joinedRoles.get(0);
+        assertThat(joinedRole.id, is(100));
+        assertThat(joinedRole.joinedPermissions.size(), is(1));
+        assertThat(joinedRole.joinedPermissions.get(0).id, is(1000));
+    }
+
+    @Test
+    public void testCannotQuerySelectJoinWithMerge() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        item.actorsIds = Collections.singletonList(10);
+        db.upsert("items_with_join", item);
+
+        Actor actor = new Actor();
+        actor.id = 10;
+        actor.name = "actor";
+        db.upsert("actors", actor);
+
+        Query<Actor> actorQuery = db.query("actors", Actor.class)
+                .merge(db.query("actors", Actor.class));
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> readAll(db.query("items_with_join", ItemWithJoin.class)
+                        .innerJoin(actorQuery, "joinedActors")
+                        .on("actorsIds", SET, "id")
+                        .execute()));
+
+        assertThat(exception.getMessage(), containsString("MERGEs nested into the JOINs are not supported"));
+    }
+
+    @Test
+    public void testCannotQuerySelectSubqueryWithJoin() {
+        assumeQueryFormatV2();
+
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+        db.openNamespace("roles", NamespaceOptions.defaultOptions(), Role.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        db.upsert("items_with_join", item);
+
+        Actor actor = new Actor();
+        actor.id = 1;
+        actor.name = "actor";
+        db.upsert("actors", actor);
+
+        Query<Actor> subQuery = db.query("actors", Actor.class)
+                .select("id")
+                .innerJoin(db.query("roles", Role.class), "joinedRoles")
+                .on("name", EQ, "name");
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> readAll(db.query("items_with_join", ItemWithJoin.class)
+                        .where("id", SET, subQuery)
+                        .execute()));
+
+        assertThat(exception.getMessage(), containsString("Join cannot be in subquery"));
+    }
+
+    private void assumeQueryFormatV2() {
+        assumeTrue(db.getBinding().queryFormatVersion() == Consts.QUERY_FORMAT_V2
+                        && db.getBinding().supportsNestedJoinQueries(),
+                "Nested joins require QueryFormatV2 and server-side nested join support");
+    }
+
+    private void readAll(ResultIterator<?> iterator) {
+        try (ResultIterator<?> closeableIterator = iterator) {
+            while (closeableIterator.hasNext()) {
+                closeableIterator.next();
+            }
+        }
+    }
+
+    @Test
     public void testJoinInWherePartWithBrackets() {
         db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
         db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
@@ -1038,6 +1342,32 @@ public abstract class JoinTest extends DbBaseTest {
 
         @Reindex(name = "is_visible")
         private boolean visible;
+
+        @Transient
+        private List<Role> joinedRoles;
+    }
+
+    @Setter
+    @Getter
+    public static class Role {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
+
+        @Transient
+        private List<Permission> joinedPermissions;
+    }
+
+    @Setter
+    @Getter
+    public static class Permission {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
     }
 
     @Setter
