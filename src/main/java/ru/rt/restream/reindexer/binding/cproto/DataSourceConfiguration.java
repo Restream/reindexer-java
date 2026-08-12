@@ -16,6 +16,7 @@
 
 package ru.rt.restream.reindexer.binding.cproto;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayList;
@@ -45,6 +46,11 @@ public class DataSourceConfiguration {
     private final SSLSocketFactory sslSocketFactory;
 
     /**
+     * An {@link ObservationRegistry} to record connector's metrics and traces.
+     */
+    private final ObservationRegistry observationRegistry;
+
+    /**
      * An index of the current active data source.
      */
     private final MutableInt active;
@@ -54,6 +60,7 @@ public class DataSourceConfiguration {
         allowUnlistedDataSource = builder.allowUnlistedDataSource;
         active = builder.active;
         sslSocketFactory = builder.sslSocketFactory;
+        observationRegistry = builder.observationRegistry;
     }
 
     public static Builder builder() {
@@ -84,6 +91,16 @@ public class DataSourceConfiguration {
      */
     public SSLSocketFactory getSslSocketFactory() {
         return sslSocketFactory;
+    }
+
+    /**
+     * Returns an {@link ObservationRegistry} to record connector's metrics and traces.
+     * Defaults to {@link ObservationRegistry#NOOP}.
+     *
+     * @return the {@link ObservationRegistry} to use
+     */
+    public ObservationRegistry getObservationRegistry() {
+        return observationRegistry;
     }
 
     /**
@@ -123,6 +140,11 @@ public class DataSourceConfiguration {
          * An {@link SSLSocketFactory} to connect to Reindexer using cprotos (SSL/TLS) protocol.
          */
         private SSLSocketFactory sslSocketFactory;
+
+        /**
+         * An {@link ObservationRegistry} to record connector's metrics and traces.
+         */
+        private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
         /**
          * An index of the current active data source.
@@ -187,6 +209,18 @@ public class DataSourceConfiguration {
          */
         public Builder sslSocketFactory(SSLSocketFactory sslSocketFactory) {
             this.sslSocketFactory = sslSocketFactory;
+            return this;
+        }
+
+        /**
+         * Configure an {@link ObservationRegistry} to record connector's metrics and traces.
+         * Defaults to {@link ObservationRegistry#NOOP}.
+         *
+         * @param observationRegistry the {@link ObservationRegistry} to use
+         * @return the {@link Builder} for further customizations
+         */
+        public Builder observationRegistry(ObservationRegistry observationRegistry) {
+            this.observationRegistry = Objects.requireNonNull(observationRegistry, "observationRegistry cannot be null");
             return this;
         }
 

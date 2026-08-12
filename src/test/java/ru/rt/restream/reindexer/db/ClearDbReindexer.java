@@ -34,7 +34,7 @@ public class ClearDbReindexer extends Reindexer {
      * Removes all registered namespaces.
      * TODO: to do refactoring after implementation of Reindexer.enumNamespaces
      */
-    void clear() {
+    public void clear() {
         Binding binding = getBinding();
         namespaceMap.values().stream()
                 .map(ReindexerNamespace::getName)

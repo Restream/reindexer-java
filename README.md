@@ -423,6 +423,62 @@ Depends on amount changes in transaction there are 2 possible Commit strategies:
 3. It is safe to call `tx.rollback` after `tx.commit`.
 4. It is possible to call Query from transaction by call `tx.query().execute(); ...`. Only read-committed isolation is available. Changes made in active transaction is invisible to current and another transactions.
 
+### Observability support
+For metrics and traces, reindexer-java uses [Micrometer Observation](https://docs.micrometer.io/micrometer/reference/observation).
+To enable observation, you need to provide an `ObservationRegistry` to the `ReindexerConfiguration`.
+
+The following example shows how to configure observation for reindexer-java using Prometheus:
+
+Add `micrometer-registry-prometheus` dependency to the `pom.xml`:
+```xml
+<dependency>
+	<groupId>io.micrometer</groupId>
+	<artifactId>micrometer-registry-prometheus</artifactId>
+    <version>${micrometer.version}</version>
+</dependency>
+```
+
+Provide an `ObservationRegistry` implementation to the `ReindexerConfiguration`:
+```java
+// 1. Initialize Prometheus Meter Registry:
+PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+
+// 2. Initialize Observation Registry:
+ObservationRegistry observationRegistry = ObservationRegistry.create();
+
+// 3. Bridge them together using DefaultMeterObservationHandler:
+observationRegistry.observationConfig()
+        .observationHandler(new DefaultMeterObservationHandler(prometheusRegistry));
+
+// 4. Provide an ObservationRegistry to ReindexerConfiguration:
+Reindexer db = ReindexerConfiguration.builder()
+        .url("cproto://localhost:6534/testdb")
+        .connectionPoolSize(8)
+        .requestTimeout(Duration.ofSeconds(30L))
+        .observationRegistry(observationRegistry)
+        .getReindexer();
+```
+
+#### Collected metrics and traces
+All Reindexer RPC commands executed by reindexer-java are instrumented with Micrometer.
+
+The following low cardinality key values are added to observations:
+- `db.system.name` - the name of the database system, always `reindexer`
+- `db.command.name` - the name of the RPC command being executed, e.g., `selectQuery`
+- `db.namespace` - the database name e.g., `test_db`
+- `db.collection.name` - the collection name that the RPC command is executed on e.g., `items`
+- `network.transport` - the protocol used for the RPC command e.g., `cproto`, `cprotos`
+- `server.address` - the host of the Reindexer node that the RPC command is sent to e.g., `localhost`
+- `server.port` - the port of the Reindexer node that the RPC command is sent to e.g., `6534`
+- `code.execution_type` - the code execution type e.g., `SYNC`, `ASYNC`
+- `db.response.status_code` - the Reindexer response status code
+
+Additionally, the following high-cardinality key values are added to traces:
+- `thread.id` - ID of the thread executing the RPC command
+- `thread.name` - name of the thread executing the RPC command
+- `db.reindexer.tx_id` - ID of the Reindexer transaction associated with the RPC command, when applicable
+- `db.reindexer.rq_id` - ID of the Reindexer request associated with the RPC command
+
 ### Development notes
 
 To run tests locally, you need to install Reindexer using a package manager for your OS.

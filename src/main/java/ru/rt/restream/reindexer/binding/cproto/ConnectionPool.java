@@ -26,7 +26,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -97,7 +99,7 @@ public class ConnectionPool {
                           int connectionPoolSize, Duration requestTimeout) {
         this.dataSourceFactory = dataSourceFactory;
         this.dataSourceConfiguration = dataSourceConfiguration;
-        scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1);
+        scheduler = new ScheduledThreadPoolExecutor(connectionPoolSize * 2 + 1, new ConnectionThreadFactory());
         scheduler.setRemoveOnCancelPolicy(true);
         connections = new ArrayList<>(connectionPoolSize);
         timeout = requestTimeout;
@@ -218,6 +220,34 @@ public class ConnectionPool {
                     LOGGER.error("rx: connection-{} ping error", i, e);
                 }
             }
+        }
+
+    }
+
+    /**
+     * A {@link ThreadFactory} that creates threads with a rx specific prefix.
+     */
+    static final class ConnectionThreadFactory implements ThreadFactory {
+
+        static final String POOL_NAME_PREFIX = "rx-pool-";
+
+        private static final AtomicInteger poolNumber = new AtomicInteger(1);
+
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+        private final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
+
+        private final String namePrefix;
+
+        private ConnectionThreadFactory() {
+            namePrefix = POOL_NAME_PREFIX + poolNumber.getAndIncrement() + "-thread-";
+        }
+
+        @Override
+        public Thread newThread(Runnable runnable) {
+            Thread thread = defaultFactory.newThread(runnable);
+            thread.setName(namePrefix + threadNumber.getAndIncrement());
+            return thread;
         }
 
     }
