@@ -22,8 +22,6 @@ import ru.rt.restream.reindexer.binding.QueryResultReader;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.util.NativeUtils;
 
-import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V2;
-
 /**
  * A request context which is holds a {@link QueryResult},
  * the {@link #fetchResults(int, int)} method is NOOP since Builtin does not support it.
@@ -54,7 +52,7 @@ public class BuiltinRequestContext implements RequestContext {
             }
         }
         QueryResultReader reader = new QueryResultReader();
-        queryResult = reader.read(rawQueryResult, QUERY_FORMAT_V2);
+        queryResult = reader.read(rawQueryResult);
         queryResult.setResultsPtr(resultsPtr);
     }
 

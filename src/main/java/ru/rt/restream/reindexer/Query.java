@@ -199,6 +199,8 @@ public class Query<T> {
 
     private final List<String> joinFields = new ArrayList<>();
 
+    private Query<?> lastJoinQuery;
+
     private final List<Query<?>> mergeQueries = new ArrayList<>();
 
     private final List<ReindexerNamespace<?>> namespaces = new ArrayList<>();
@@ -296,6 +298,11 @@ public class Query<T> {
     }
 
     private <J> Query<T> join(Query<J> joinQuery, String field, int joinType) {
+        if (root != null) {
+            @SuppressWarnings("unchecked")
+            Query<T> rootQuery = (Query<T>) root;
+            return rootQuery.join(joinQuery, field, joinType);
+        }
         logBuilder.join(joinQuery.logBuilder, joinType);
         if (joinQuery.root != null) {
             throw new IllegalStateException("query.join call on already joined query. You should create new Query");
@@ -311,6 +318,7 @@ public class Query<T> {
         joinQuery.root = this;
         joinQueries.add(joinQuery);
         joinFields.add(field);
+        lastJoinQuery = joinQuery;
         return this;
     }
 
@@ -323,12 +331,13 @@ public class Query<T> {
      * @return the {@link Query} for further customizations
      */
     public Query<T> on(String joinField, Condition condition, String joinIndex) {
-        logBuilder.on(nextOperation, joinField, condition.code, joinIndex);
-        buffer.putVarUInt32(QUERY_JOIN_ON);
-        buffer.putVarUInt32(nextOperation);
-        buffer.putVarUInt32(condition.code);
-        buffer.putVString(joinField);
-        buffer.putVString(joinIndex);
+        Query<?> target = lastJoinQuery != null ? lastJoinQuery : this;
+        target.logBuilder.on(nextOperation, joinField, condition.code, joinIndex);
+        target.buffer.putVarUInt32(QUERY_JOIN_ON);
+        target.buffer.putVarUInt32(nextOperation);
+        target.buffer.putVarUInt32(condition.code);
+        target.buffer.putVString(joinField);
+        target.buffer.putVString(joinIndex);
         nextOperation = OP_AND;
         return this;
     }
@@ -1317,27 +1326,23 @@ public class Query<T> {
     }
 
     private byte[] toSubQueryBytes(int formatVersion) {
-        byte[] queryBytes = getQueryBytes(formatVersion);
-        if (formatVersion == QUERY_FORMAT_V2 || hasNestedJoins()) {
-            ByteBuffer copy = new ByteBuffer(queryBytes);
-            copy.putVarUInt32(QUERY_END);
-            copy.putVarUInt32(0);
-            copy.putVarUInt32(0);
-            return copy.bytes();
+        if (formatVersion == QUERY_FORMAT_V2) {
+            return serializeQuery(formatVersion);
         }
-        return queryBytes;
+        if (!joinQueries.isEmpty() || !mergeQueries.isEmpty()) {
+            throw new IllegalStateException("Join and merge queries in subquery are not supported by QueryFormatV1");
+        }
+        return getQueryBytes(formatVersion);
     }
 
     private byte[] toExecutableBytes() {
         int formatVersion = reindexer.getBinding().queryFormatVersion();
+        if (formatVersion == QUERY_FORMAT_V2) {
+            return serializeQuery(formatVersion);
+        }
         ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
         queryBuffer.putVarUInt32(QUERY_END);
-        if (formatVersion == QUERY_FORMAT_V2) {
-            appendJoinQueries(queryBuffer, new ArrayList<>(), formatVersion);
-            appendMergeQueries(queryBuffer, new ArrayList<>(), formatVersion);
-        } else {
-            appendJoinQueriesV1(queryBuffer, false);
-        }
+        appendJoinQueriesV1(queryBuffer, false);
         return queryBuffer.bytes();
     }
 
@@ -1367,6 +1372,14 @@ public class Query<T> {
         }
     }
 
+    private byte[] serializeQuery(int formatVersion) {
+        ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
+        queryBuffer.putVarUInt32(QUERY_END);
+        appendJoinQueries(queryBuffer, new ArrayList<>(), formatVersion);
+        appendMergeQueries(queryBuffer, new ArrayList<>(), formatVersion);
+        return queryBuffer.bytes();
+    }
+
     private void appendQuery(ByteBuffer target, Query<?> query, int queryJoinType,
                              List<ReindexerNamespace<?>> targetNamespaces, int formatVersion) {
         if (queryJoinType != MERGE) {
@@ -1382,7 +1395,7 @@ public class Query<T> {
     }
 
     private void appendJoinQueriesV1(ByteBuffer target, boolean appendNamespaces) {
-        if (hasNestedJoins()) {
+        if (hasNestedQueries()) {
             throw new IllegalStateException("Nested joins are not supported by QueryFormatV1");
         }
         for (Query<?> joinQuery : joinQueries) {
@@ -1410,14 +1423,14 @@ public class Query<T> {
         }
     }
 
-    private boolean hasNestedJoins() {
+    private boolean hasNestedQueries() {
         for (Query<?> joinQuery : joinQueries) {
-            if (!joinQuery.joinQueries.isEmpty() || joinQuery.hasNestedJoins()) {
+            if (!joinQuery.joinQueries.isEmpty() || !joinQuery.mergeQueries.isEmpty() || joinQuery.hasNestedQueries()) {
                 return true;
             }
         }
         for (Query<?> mergeQuery : mergeQueries) {
-            if (mergeQuery.hasNestedJoins()) {
+            if (!mergeQuery.mergeQueries.isEmpty() || mergeQuery.hasNestedQueries()) {
                 return true;
             }
         }

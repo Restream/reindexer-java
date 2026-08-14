@@ -53,6 +53,7 @@ import static ru.rt.restream.reindexer.binding.Consts.APP_PROPERTY_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_COMPLEX_RANK;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_NAMESPACE_INCARNATIONS;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_QUERY_FORMAT_V2;
+import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_QR_IDLE_TIMEOUTS;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS;
 import static ru.rt.restream.reindexer.binding.Consts.DEF_APP_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V1;
@@ -144,7 +145,8 @@ public class PhysicalConnection implements Connection {
                     -1,    // expectedClusterID
                     REINDEXER_VERSION,
                     getAppName(),
-                    BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS
+                    BINDING_CAPABILITY_QR_IDLE_TIMEOUTS
+                            | BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS
                             | BINDING_CAPABILITY_COMPLEX_RANK
                             | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS
                             | BINDING_CAPABILITY_QUERY_FORMAT_V2);
