@@ -113,7 +113,7 @@ public class PhysicalConnection implements Connection {
 
     private final ScheduledFuture<?> writeTaskFuture;
 
-    private volatile int queryFormatVersion = QUERY_FORMAT_V1;
+    private final int queryFormatVersion;
 
     public PhysicalConnection(String host, int port, String user, String password, String database,
                               SSLSocketFactory sslSocketFactory,
@@ -148,21 +148,22 @@ public class PhysicalConnection implements Connection {
                             | BINDING_CAPABILITY_COMPLEX_RANK
                             | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS
                             | BINDING_CAPABILITY_QUERY_FORMAT_V2);
-            updateQueryFormatVersion(response);
+            queryFormatVersion = queryFormatVersionFrom(response);
         } catch (Exception e) {
             onError(e);
             throw new NetworkException(e);
         }
     }
 
-    private void updateQueryFormatVersion(ReindexerResponse response) {
+    private static int queryFormatVersionFrom(ReindexerResponse response) {
         Object[] arguments = response.getArguments();
         if (arguments.length > 2 && arguments[2] instanceof Long) {
             long capabilities = (Long) arguments[2];
-            queryFormatVersion = (capabilities & BINDING_CAPABILITY_QUERY_FORMAT_V2) != 0
+            return (capabilities & BINDING_CAPABILITY_QUERY_FORMAT_V2) != 0
                     ? QUERY_FORMAT_V2
                     : QUERY_FORMAT_V1;
         }
+        return QUERY_FORMAT_V1;
     }
 
     private Object getAppName() {

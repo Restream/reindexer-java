@@ -27,11 +27,16 @@ import ru.rt.restream.reindexer.binding.cproto.ItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
 import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.convert.util.ConversionUtils;
+import ru.rt.restream.reindexer.convert.util.ResolvableType;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
+import ru.rt.restream.reindexer.util.CollectionUtils;
 import ru.rt.restream.reindexer.util.NativeUtils;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,6 +186,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         Map<String, List<Object>> subItemsMap = new HashMap<>();
         for (int joinedField = 0; joinedField < joinedFields; joinedField++) {
             int itemsCount = (int) buffer.getVarUInt();
+            // TODO: consider supporting mapping of joined items for execSql
             if (queryContext == null) {
                 skipJoinedItems(itemsCount);
                 continue;
@@ -291,8 +297,20 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         }
 
         if (field != null) {
-            if (field.getType() == List.class) {
-                BeanPropertyUtils.setProperty(item, fieldName, subItems);
+            ResolvableType resolvableType = ConversionUtils.resolveFieldType(field);
+            if (resolvableType.isCollectionLike()) {
+                if (resolvableType.getType().isArray()) {
+                    Object array = Array.newInstance(resolvableType.getComponentType(), subItems.size());
+                    for (int i = 0; i < subItems.size(); i++) {
+                        Array.set(array, i, subItems.get(i));
+                    }
+                    BeanPropertyUtils.setProperty(item, fieldName, array);
+                } else {
+                    Collection<Object> collection = CollectionUtils
+                            .createCollection(resolvableType.getType(), resolvableType.getComponentType(), subItems.size());
+                    collection.addAll(subItems);
+                    BeanPropertyUtils.setProperty(item, fieldName, collection);
+                }
             } else {
                 if (subItems.size() > 1) {
                     throw new RuntimeException("Multiple join result found: " + fieldName);
