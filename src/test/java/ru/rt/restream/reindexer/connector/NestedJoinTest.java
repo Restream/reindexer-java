@@ -24,7 +24,6 @@ import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Transient;
 import ru.rt.restream.reindexer.db.DbBaseTest;
-import ru.rt.restream.reindexer.exceptions.ReindexerException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -196,7 +195,7 @@ public abstract class NestedJoinTest extends DbBaseTest {
                 .innerJoin(db.query(LOCATIONS_NS, Location.class)
                         .on("locationId", EQ, "id"), "locations");
 
-        ReindexerException exception = assertThrows(ReindexerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> db.query(BOOKS_NS, Book.class)
                         .where("authorId", SET, subQuery)
                         .execute());
@@ -213,7 +212,7 @@ public abstract class NestedJoinTest extends DbBaseTest {
                 .select("id")
                 .merge(db.query(AUTHORS_NS, Author.class).select("id"));
 
-        ReindexerException exception = assertThrows(ReindexerException.class,
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> db.query(BOOKS_NS, Book.class)
                         .where("authorId", SET, subQuery)
                         .execute());

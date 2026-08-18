@@ -1336,15 +1336,18 @@ public class Query<T> {
     }
 
     private byte[] toSubQueryBytes(int formatVersion) {
+        if (!joinQueries.isEmpty()) {
+            throw new IllegalStateException("Join cannot be in subquery");
+        }
+        if (!mergeQueries.isEmpty()) {
+            throw new IllegalStateException("Merge cannot be in subquery");
+        }
         if (formatVersion == QUERY_FORMAT_V2) {
             ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
             queryBuffer.putVarUInt32(QUERY_END);
-            appendJoinQueries(queryBuffer, new ArrayList<>(), formatVersion);
-            appendMergeQueries(queryBuffer, new ArrayList<>(), formatVersion);
+            queryBuffer.putVarUInt32(0);
+            queryBuffer.putVarUInt32(0);
             return queryBuffer.bytes();
-        }
-        if (!joinQueries.isEmpty() || !mergeQueries.isEmpty()) {
-            throw new IllegalStateException("Join and merge queries in subquery are not supported by QueryFormatV1");
         }
         return getQueryBytes(formatVersion);
     }
