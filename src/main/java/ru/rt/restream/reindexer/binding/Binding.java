@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,6 +82,16 @@ public interface Binding {
     int RESULTS_WITH_RAW = 0x200;
 
     int RESULTS_NEED_OUTPUT_RANK = 0x400;
+
+    int ADD_TX_ITEM = 26;
+
+    int UPDATE_QUERY_TX = 31;
+
+    int DELETE_QUERY_TX = 30;
+
+    int COMMIT_TX = 27;
+
+    int ROLLBACK_TX = 28;
 
     /**
      * Open or create a new namespace and indexes based on passed definition.

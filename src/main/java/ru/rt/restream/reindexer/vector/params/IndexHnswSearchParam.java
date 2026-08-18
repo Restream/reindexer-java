@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public class IndexHnswSearchParam implements KnnSearchParam {
     public void serializeBy(ByteBuffer buffer) {
         buffer.putVarUInt32(KNN_QUERY_TYPE_HNSW)
                 .putVarUInt32(KNN_QUERY_PARAMS_VERSION);
-        base.serializeKAndRadius(buffer);
+        base.serializeKAndRadius(buffer, true);
         buffer.putVarInt32(ef);
     }
 

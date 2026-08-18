@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package ru.rt.restream.reindexer.binding.cproto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
+import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
@@ -26,7 +27,6 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import java.util.concurrent.CompletableFuture;
 
 import static ru.rt.restream.reindexer.binding.Binding.SELECT;
-import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 
 /**
  * A transaction context which establish a connection to the Reindexer instance via RPC.
@@ -34,16 +34,6 @@ import static ru.rt.restream.reindexer.binding.Consts.FORMAT_C_JSON;
 public class CprotoTransactionContext implements TransactionContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CprotoTransactionContext.class);
-
-    private static final int ADD_TX_ITEM = 26;
-
-    private static final int UPDATE_QUERY_TX = 31;
-
-    private static final int DELETE_QUERY_TX = 30;
-
-    private static final int COMMIT_TX = 27;
-
-    private static final int ROLLBACK_TX = 28;
 
     private final long transactionId;
 
@@ -63,14 +53,14 @@ public class CprotoTransactionContext implements TransactionContext {
     @Override
     public void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
-        ConnectionUtils.rpcCallNoResults(connection, ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken,
+        ConnectionUtils.rpcCallNoResults(connection, Binding.ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken,
                 transactionId);
     }
 
     @Override
     public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
-        return connection.rpcCallAsync(ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, transactionId);
+        return connection.rpcCallAsync(Binding.ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, transactionId);
     }
 
     private byte[] packPrecepts(String[] precepts) {
@@ -88,12 +78,12 @@ public class CprotoTransactionContext implements TransactionContext {
 
     @Override
     public void updateQuery(byte[] queryData) {
-        ConnectionUtils.rpcCallNoResults(connection, UPDATE_QUERY_TX, queryData, transactionId);
+        ConnectionUtils.rpcCallNoResults(connection, Binding.UPDATE_QUERY_TX, queryData, transactionId);
     }
 
     @Override
     public void deleteQuery(byte[] queryData) {
-        ConnectionUtils.rpcCallNoResults(connection, DELETE_QUERY_TX, queryData, transactionId);
+        ConnectionUtils.rpcCallNoResults(connection, Binding.DELETE_QUERY_TX, queryData, transactionId);
     }
 
     @Override
@@ -109,7 +99,7 @@ public class CprotoTransactionContext implements TransactionContext {
     @Override
     public void commit() {
         try {
-            ConnectionUtils.rpcCallNoResults(connection, COMMIT_TX, transactionId);
+            ConnectionUtils.rpcCallNoResults(connection, Binding.COMMIT_TX, transactionId);
         } catch (Exception e) {
             LOGGER.error("rx: commit error", e);
         }
@@ -118,7 +108,7 @@ public class CprotoTransactionContext implements TransactionContext {
     @Override
     public void rollback() {
         try {
-            ConnectionUtils.rpcCallNoResults(connection, ROLLBACK_TX, transactionId);
+            ConnectionUtils.rpcCallNoResults(connection, Binding.ROLLBACK_TX, transactionId);
         } catch (Exception e) {
             LOGGER.error("rx: rollback error", e);
         }

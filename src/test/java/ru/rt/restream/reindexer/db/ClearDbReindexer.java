@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ public class ClearDbReindexer extends Reindexer {
      * Removes all registered namespaces.
      * TODO: to do refactoring after implementation of Reindexer.enumNamespaces
      */
-    void clear() {
+    public void clear() {
         Binding binding = getBinding();
         namespaceMap.values().stream()
                 .map(ReindexerNamespace::getName)

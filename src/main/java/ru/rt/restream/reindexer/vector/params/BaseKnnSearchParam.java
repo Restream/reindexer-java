@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import static ru.rt.restream.reindexer.binding.Consts.KNN_QUERY_TYPE_BASE;
  * Common parameters for all types of KNN indices.
  *
  * <p>If all parameters are specified, the filtering will be performed in such a way that all conditions are met.
- * At least one of these parameters must be specified.
+ * At least one of these parameters must be specified, except for HNSW streaming search where both may be omitted.
  */
 @Getter
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
@@ -58,11 +58,15 @@ public class BaseKnnSearchParam implements KnnSearchParam {
     public void serializeBy(ByteBuffer buffer) {
         buffer.putVarUInt32(KNN_QUERY_TYPE_BASE)
                 .putVarUInt32(KNN_QUERY_PARAMS_VERSION);
-        serializeKAndRadius(buffer);
+        serializeKAndRadius(buffer, false);
     }
 
     void serializeKAndRadius(ByteBuffer buffer) {
-        checkValues();
+        serializeKAndRadius(buffer, false);
+    }
+
+    void serializeKAndRadius(ByteBuffer buffer, boolean allowEmpty) {
+        checkValues(allowEmpty);
         int mask = 0;
         if (k != null) {
             mask |= KNN_SERIALIZE_WITH_K;
@@ -79,8 +83,8 @@ public class BaseKnnSearchParam implements KnnSearchParam {
         }
     }
 
-    private void checkValues() {
-        if (k == null && radius == null) {
+    private void checkValues(boolean allowEmpty) {
+        if (k == null && radius == null && !allowEmpty) {
             throw new IllegalArgumentException("Both params (k and radius) cannot be null");
         }
         if (k != null && k <= 0) {

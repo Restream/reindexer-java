@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,10 @@ import lombok.NonNull;
  * Factories for KnnSearchParams.
  */
 public class KnnParams {
+    public static BaseKnnSearchParam base() {
+        return new BaseKnnSearchParam(null, null);
+    }
+
     @Deprecated
     public static BaseKnnSearchParam base(int k) {
         checkK(k);
@@ -49,8 +53,12 @@ public class KnnParams {
     }
 
     public static IndexHnswSearchParam hnsw(@NonNull BaseKnnSearchParam base, int ef) {
-        if (base.getK() != null && ef < base.getK()) {
-            throw new IllegalArgumentException("Minimal value of 'ef' must be greater than or equal to 'k'");
+        if (base.getK() != null) {
+            if (ef < base.getK()) {
+                throw new IllegalArgumentException("Minimal value of 'ef' must be greater than or equal to 'k'");
+            }
+        } else if (ef <= 0) {
+            throw new IllegalArgumentException("Minimal value of 'ef' must be greater than 0");
         }
         return new IndexHnswSearchParam(base, ef);
     }
