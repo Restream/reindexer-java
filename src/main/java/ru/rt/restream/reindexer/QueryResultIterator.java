@@ -294,31 +294,30 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         if (field == null || !field.isAnnotationPresent(Transient.class)) {
             String msg = String.format("Join results omitted: no transient field '%s' found", fieldName);
             LOGGER.debug(msg);
+            return;
         }
 
-        if (field != null) {
-            ResolvableType resolvableType = ConversionUtils.resolveFieldType(field);
-            if (resolvableType.isCollectionLike()) {
-                if (resolvableType.getType().isArray()) {
-                    Object array = Array.newInstance(resolvableType.getComponentType(), subItems.size());
-                    for (int i = 0; i < subItems.size(); i++) {
-                        Array.set(array, i, subItems.get(i));
-                    }
-                    BeanPropertyUtils.setProperty(item, fieldName, array);
-                } else {
-                    Collection<Object> collection = CollectionUtils
-                            .createCollection(resolvableType.getType(), resolvableType.getComponentType(), subItems.size());
-                    collection.addAll(subItems);
-                    BeanPropertyUtils.setProperty(item, fieldName, collection);
+        ResolvableType resolvableType = ConversionUtils.resolveFieldType(field);
+        if (resolvableType.isCollectionLike()) {
+            if (resolvableType.getType().isArray()) {
+                Object array = Array.newInstance(resolvableType.getComponentType(), subItems.size());
+                for (int i = 0; i < subItems.size(); i++) {
+                    Array.set(array, i, subItems.get(i));
                 }
+                BeanPropertyUtils.setProperty(item, fieldName, array);
             } else {
-                if (subItems.size() > 1) {
-                    throw new RuntimeException("Multiple join result found: " + fieldName);
-                } else if (subItems.size() == 0) {
-                    BeanPropertyUtils.setProperty(item, fieldName, null);
-                } else {
-                    BeanPropertyUtils.setProperty(item, fieldName, subItems.get(0));
-                }
+                Collection<Object> collection = CollectionUtils
+                        .createCollection(resolvableType.getType(), resolvableType.getComponentType(), subItems.size());
+                collection.addAll(subItems);
+                BeanPropertyUtils.setProperty(item, fieldName, collection);
+            }
+        } else {
+            if (subItems.size() > 1) {
+                throw new RuntimeException("Multiple join result found: " + fieldName);
+            } else if (subItems.size() == 0) {
+                BeanPropertyUtils.setProperty(item, fieldName, null);
+            } else {
+                BeanPropertyUtils.setProperty(item, fieldName, subItems.get(0));
             }
         }
     }
