@@ -94,12 +94,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             if (queryResult.isJson()) {
                 throw new UnsupportedOperationException("Query result in json format is not supported");
             } else {
-                CtagMatcher ctagMatcher = new CtagMatcher();
-                PayloadType payloadType = namespace.getPayloadType();
-                if (payloadType != null) {
-                    ctagMatcher.read(payloadType);
-                }
-                itemReader = new CjsonItemReader<>(itemClass, ctagMatcher);
+                itemReader = newItemReader(itemClass, namespace);
             }
         }
     }
@@ -128,22 +123,15 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             fetchResults();
         }
 
-        T item = itemClass.cast(readItem(namespace, itemReader, query));
+        T item = itemClass.cast(readItem(itemReader, query));
         position++;
         return item;
-
     }
 
-    private <S> S readItem(ReindexerNamespace<?> expectedNamespace, ItemReader<S> reader, Query<?> queryContext) {
+    private <S> S readItem(ItemReader<S> reader, Query<?> queryContext) {
         ItemParams params = readItemParams();
         Query<?> itemQueryContext = getItemQueryContext(queryContext, params.nsId);
-
-        ReindexerNamespace<?> itemNamespace = expectedNamespace;
-        if (query != null && params.nsId < query.getNamespaces().size()) {
-            itemNamespace = query.getNamespaces().get(params.nsId);
-        }
-
-        S item = readItemData(params, reader, itemNamespace);
+        S item = readItemData(params, reader);
         readJoinedItems(item, itemQueryContext, params.nsId);
         return item;
     }
@@ -161,7 +149,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         return defaultQueryContext;
     }
 
-    private <S> S readItemData(ItemParams params, ItemReader<S> reader, ReindexerNamespace<?> itemNamespace) {
+    private <S> S readItemData(ItemParams params, ItemReader<S> reader) {
         if (params.cptr != 0) {
             ByteBuffer nativeBuffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), params.cptr,
                     params.nsId);
@@ -194,10 +182,10 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
 
             Query<?> joinQuery = queryContext.getJoinQueries().get(joinedField);
             ReindexerNamespace<?> joinedNamespace = joinQuery.getNamespace();
-            CjsonItemReader<?> joinedItemReader = newItemReader(joinedNamespace);
+            CjsonItemReader<?> joinedItemReader = newItemReader(joinedNamespace.getItemClass(), joinedNamespace);
             List<Object> subItems = new ArrayList<>(itemsCount);
             for (int i = 0; i < itemsCount; i++) {
-                subItems.add(readItem(joinedNamespace, joinedItemReader, joinQuery));
+                subItems.add(readItem(joinedItemReader, joinQuery));
             }
             subItemsMap.computeIfAbsent(queryContext.getJoinFields().get(joinedField), field -> new ArrayList<>())
                     .addAll(subItems);
@@ -219,11 +207,11 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         for (int nsIndex = 0; nsIndex < joinedFields; nsIndex++) {
             int itemsCount = (int) buffer.getVarUInt();
             ReindexerNamespace<?> joinedNamespace = query.getNamespaces().get(nsIndex + namespaceIndexOffset);
-            CjsonItemReader<?> joinedItemReader = newItemReader(joinedNamespace);
+            CjsonItemReader<?> joinedItemReader = newItemReader(joinedNamespace.getItemClass(), joinedNamespace);
             List<Object> subItems = new ArrayList<>(itemsCount);
             for (int j = 0; j < itemsCount; j++) {
                 ItemParams subItemParams = readItemParams();
-                subItems.add(readItemData(subItemParams, joinedItemReader, joinedNamespace));
+                subItems.add(readItemData(subItemParams, joinedItemReader));
             }
 
             String joinField = query.getJoinFields().get(nsIndex);
@@ -281,11 +269,13 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         return offset;
     }
 
-    private CjsonItemReader<?> newItemReader(ReindexerNamespace<?> itemNamespace) {
-        PayloadType payloadType = itemNamespace.getPayloadType();
+    private <S> CjsonItemReader<S> newItemReader(Class<S> itemClass, ReindexerNamespace<?> itemNamespace) {
         CtagMatcher ctagMatcher = new CtagMatcher();
-        ctagMatcher.read(payloadType);
-        return new CjsonItemReader<>(itemNamespace.getItemClass(), ctagMatcher);
+        PayloadType payloadType = itemNamespace.getPayloadType();
+        if (payloadType != null) {
+            ctagMatcher.read(payloadType);
+        }
+        return new CjsonItemReader<>(itemClass, ctagMatcher);
     }
 
     private void writeJoinResult(Object item, String fieldName, List<Object> subItems) {
