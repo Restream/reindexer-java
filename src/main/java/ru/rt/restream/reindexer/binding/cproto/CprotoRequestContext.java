@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
+import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.QueryResultReader;
@@ -31,10 +32,6 @@ import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 public class CprotoRequestContext implements RequestContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CprotoRequestContext.class);
-
-    private static final int FETCH_RESULTS = 50;
-
-    private static final int CLOSE_RESULTS = 51;
 
     private final QueryResultReader reader = new QueryResultReader();
 
@@ -78,7 +75,7 @@ public class CprotoRequestContext implements RequestContext {
                 ? Consts.RESULTS_JSON
                 : Consts.RESULTS_C_JSON | Consts.RESULTS_WITH_PAYLOAD_TYPES;
         int fetchCount = limit <= 0 ? Integer.MAX_VALUE : limit;
-        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, FETCH_RESULTS, requestId, flags, offset, fetchCount);
+        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, Binding.FETCH_RESULTS, requestId, flags, offset, fetchCount);
         queryResult = getQueryResult(rpcResponse);
     }
 
@@ -88,7 +85,7 @@ public class CprotoRequestContext implements RequestContext {
     @Override
     public void closeResults() {
         if (requestId != -1) {
-            ReindexerResponse rpcResponse = connection.rpcCall(CLOSE_RESULTS, requestId);
+            ReindexerResponse rpcResponse = connection.rpcCall(Binding.CLOSE_RESULTS, requestId);
             if (rpcResponse.hasError()) {
                 LOGGER.error("rx: query close error {}", rpcResponse.getErrorMessage());
             }

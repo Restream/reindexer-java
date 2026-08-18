@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,4 +63,47 @@ public class HnswConfig implements IndexConfig {
      * Enable multithreading insert mode.
      */
     private int multithreading;
+
+    /**
+     * Optional quantization configuration for HNSW index.
+     *
+     * <p>
+     * When this value is {@code null} the {@code quantization_config} block is not
+     * serialized.
+     */
+    private QuantizationConfig quantizationConfig;
+
+    @Setter
+    @Getter
+    @EqualsAndHashCode
+    @NoArgsConstructor(access = AccessLevel.PACKAGE)
+    public static class QuantizationConfig {
+        /**
+         * Quantization type.
+         *
+         * <p>
+         * Currently supported: {@code scalar_quantization_8_bit}.
+         */
+        private String quantizationType;
+
+        /**
+         * Quantile for scalar quantization.
+         *
+         * <p>
+         * If this field is {@code null}, quantile is expected to be computed
+         * automatically
+         * by Reindexer.
+         */
+        private Float quantile;
+
+        /**
+         * Sample size for estimating quantile(s).
+         */
+        private int sampleSize;
+
+        /**
+         * Minimal number of samples/points required to enable quantization.
+         */
+        private int quantizationThreshold;
+    }
 }

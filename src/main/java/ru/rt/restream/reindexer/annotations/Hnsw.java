@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,5 +78,41 @@ public @interface Hnsw {
      * @return true, if multithreading mode enabled (uses more memory and CPU, but inserting into index is faster).
      */
     boolean multithreading() default false;
+
+    /**
+     * Optional quantization configuration for HNSW index.
+     *
+     * <p>When {@code quantizationConfig.quantizationType} is empty, the whole block is ignored.
+     *
+     * <p>Currently supported type: {@code scalar_quantization_8_bit}.
+     */
+    QuantizationConfig quantizationConfig() default @QuantizationConfig;
+
+    /**
+     * Nested annotation representing {@code quantization_config} block.
+     */
+    @interface QuantizationConfig {
+        /**
+         * Quantization type.
+         *
+         * <p>Currently supported: {@code scalar_quantization_8_bit}.
+         */
+        String quantizationType() default "";
+
+        /**
+         * Quantile for scalar quantization. Must be in range [0.95, 1.0]
+         */
+        float quantile() default -1.0f;
+
+        /**
+         * Sample size for estimating quantile(s). Must be in range [1, UINT64_MAX]
+         */
+        int sampleSize() default 20_000;
+
+        /**
+         * Minimal number of points in the index required to enable quantization. Must be in range [1, UINT64_MAX]
+         */
+        int quantizationThreshold() default 100_000;
+    }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -282,28 +282,16 @@ public class Reindexer implements AutoCloseable {
         return new Query<>(this, namespace, null);
     }
 
-    /**
-     * ONLY FOR TEST PURPOSES!
-     */
-    @Deprecated
     public void addIndex(String namespaceName, ReindexerIndex index) {
         IndexDefinition indexDefinition = IndexDefinition.fromIndex(index);
         binding.addIndex(namespaceName, indexDefinition);
     }
 
-    /**
-     * ONLY FOR TEST PURPOSES!
-     */
-    @Deprecated
     public void updateIndex(String namespaceName, ReindexerIndex index) {
         IndexDefinition indexDefinition = IndexDefinition.fromIndex(index);
         binding.updateIndex(namespaceName, indexDefinition);
     }
 
-    /**
-     * ONLY FOR TEST PURPOSES!
-     */
-    @Deprecated
     public void dropIndex(String namespaceName, String indexName) {
         binding.dropIndex(namespaceName, indexName);
     }

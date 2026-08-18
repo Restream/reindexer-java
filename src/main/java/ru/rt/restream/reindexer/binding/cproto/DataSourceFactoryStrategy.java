@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
         public DataSource getDataSource(DataSourceConfiguration configuration) {
             List<String> urls = configuration.getUrls();
             configuration.setActive((configuration.getActive() + 1) % urls.size());
-            return new PhysicalDataSource(urls.get(configuration.getActive()), configuration.getSslSocketFactory());
+            return super.getDataSource(configuration);
         }
     },
 
@@ -55,7 +55,7 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
         public DataSource getDataSource(DataSourceConfiguration configuration) {
             List<String> urls = configuration.getUrls();
             configuration.setActive(ThreadLocalRandom.current().nextInt(urls.size()));
-            return new PhysicalDataSource(urls.get(configuration.getActive()), configuration.getSslSocketFactory());
+            return super.getDataSource(configuration);
         }
     },
 
@@ -131,6 +131,16 @@ public enum DataSourceFactoryStrategy implements DataSourceFactory {
             return RANDOM.getDataSource(configuration.toBuilder().urls(urls).build());
         }
     };
+
+    @Override
+    public DataSource getDataSource(DataSourceConfiguration configuration) {
+        String url = configuration.getUrls().get(configuration.getActive());
+        PhysicalDataSource dataSource = new PhysicalDataSource(url, configuration.getSslSocketFactory());
+        if (configuration.getObservationRegistry().isNoop()) {
+            return dataSource;
+        }
+        return new ObservationDataSource(dataSource, url, configuration.getObservationRegistry());
+    }
 
     /**
      * Get a list of online {@link Nodes.Node} of Reindexer cluster.

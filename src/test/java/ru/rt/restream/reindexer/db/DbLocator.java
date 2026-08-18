@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Restream
+ * Copyright 2020-present Restream
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package ru.rt.restream.reindexer.db;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.io.FileUtils;
 import ru.rt.restream.category.CprotoTest;
 import ru.rt.restream.reindexer.Reindexer;
@@ -75,9 +76,13 @@ public class DbLocator {
     private static boolean serverStarted = false;
 
     public static ClearDbReindexer getDb(Type type) {
+        return getDb(type, ObservationRegistry.NOOP);
+    }
+
+    public static ClearDbReindexer getDb(Type type, ObservationRegistry observationRegistry) {
         ClearDbReindexer db = instancesForUse.get(type);
         if (db == null) {
-            db = addDbInstance(type);
+            db = addDbInstance(type, observationRegistry);
         }
         return db;
     }
@@ -98,7 +103,7 @@ public class DbLocator {
         serverStarted = false;
     }
 
-    private static ClearDbReindexer addDbInstance(Type type) {
+    private static ClearDbReindexer addDbInstance(Type type, ObservationRegistry observationRegistry) {
         switch (type) {
             case BUILTIN:
                 ClearDbReindexer builtinDb = new ClearDbReindexer(ReindexerConfiguration.builder()
@@ -107,11 +112,13 @@ public class DbLocator {
                 instancesForUse.put(Type.BUILTIN, builtinDb);
                 instancesForClose.put(builtinDb, BUILTIN_DB_PATH);
                 return builtinDb;
+            case OBSERVATION:
             case CPROTOS:
             case CPROTO:
                 ReindexerConfiguration cprotoConfig = ReindexerConfiguration.builder()
                         .connectionPoolSize(4)
                         .sslSocketFactory(getSslSocketFactory(type))
+                        .observationRegistry(observationRegistry)
                         .requestTimeout(Duration.ofSeconds(30L));
 
                 List<String> urls = getCprotoDbUrlsFromProperty();
@@ -123,7 +130,7 @@ public class DbLocator {
                 urls.forEach(cprotoConfig::url);
 
                 ClearDbReindexer cprotoDb = new ClearDbReindexer(cprotoConfig.getReindexer().getBinding());
-                instancesForUse.put(Type.CPROTO, cprotoDb);
+                instancesForUse.put(type, cprotoDb);
                 instancesForClose.put(cprotoDb, null);
                 return cprotoDb;
             default:
@@ -204,6 +211,7 @@ public class DbLocator {
 
     public enum Type {
         BUILTIN,
+        OBSERVATION,
         CPROTOS,
         CPROTO
     }
