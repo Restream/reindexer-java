@@ -213,14 +213,11 @@ public class Query<T> {
 
     private Query<?> root;
 
-    private final int queryFormatVersion;
-
     Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
         logBuilder.namespace(namespace.getName());
         this.reindexer = reindexer;
         this.namespace = namespace;
         this.transactionContext = transactionContext;
-        this.queryFormatVersion = reindexer.getBinding().queryFormatVersion();
         buffer.putUInt8(0);
         buffer.putVString(namespace.getName());
     }
@@ -249,7 +246,9 @@ public class Query<T> {
     }
 
     /**
-     * Inner joins 2 queries, alias for innerJoin.
+     * Inner joins 2 queries, alias for {@link #innerJoin(Query, String)}.
+     * <p>
+     * Nested joins are supported the same way as in {@link #innerJoin(Query, String)}.
      *
      * @param <J>       type of joined items
      * @param joinQuery query to join
@@ -264,6 +263,20 @@ public class Query<T> {
 
     /**
      * Inner joins 2 queries.
+     * <p>
+     * {@code joinQuery} may itself contain nested inner/left joins; attach those joins to the subquery
+     * before passing it here. Nested joins require QueryFormatV2 (always used by builtin; negotiated for
+     * cproto). With QueryFormatV1 {@link #execute()} throws {@link IllegalStateException}.
+     * <p>
+     * Call {@link #on(String, Condition, String)} on the join subquery, not on this query:
+     * <pre>{@code
+     * Query<Location> locations = db.query("locations", Location.class)
+     *         .on("locationId", EQ, "id");
+     * Query<Author> authors = db.query("authors", Author.class)
+     *         .innerJoin(locations, "locations")
+     *         .on("authorId", EQ, "id");
+     * db.query("books", Book.class).innerJoin(authors, "authors").toList();
+     * }</pre>
      *
      * @param <J>       type of joined items
      * @param joinQuery query to join
@@ -283,6 +296,8 @@ public class Query<T> {
 
     /**
      * Left joins 2 queries.
+     * <p>
+     * Nested joins are supported the same way as in {@link #innerJoin(Query, String)}.
      *
      * @param <J>       type of joined items
      * @param joinQuery query to join
@@ -316,10 +331,13 @@ public class Query<T> {
 
     /**
      * Specify the join condition.
+     * <p>
+     * Call this on the join subquery (the right side), before or after attaching it with
+     * {@link #innerJoin(Query, String)} / {@link #leftJoin(Query, String)}.
      *
-     * @param joinField the join field of the right side of the join
+     * @param joinField the join field of the left side of the join
      * @param condition the joining condition. {@link Condition}
-     * @param joinIndex the join index of the left side of join
+     * @param joinIndex the join index of the right side of the join
      * @return the {@link Query} for further customizations
      */
     public Query<T> on(String joinField, Condition condition, String joinIndex) {
@@ -1050,6 +1068,7 @@ public class Query<T> {
         }
 
         int formatVersion = reindexer.getBinding().queryFormatVersion();
+        ensureNoMergeNestedInJoin();
         ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
         queryBuffer.putVarUInt32(QUERY_END);
         if (formatVersion == QUERY_FORMAT_V2) {
@@ -1313,23 +1332,29 @@ public class Query<T> {
     }
 
     public byte[] bytes() {
-        return toSubQueryBytes(queryFormatVersion);
+        return toSubQueryBytes(reindexer.getBinding().queryFormatVersion());
     }
 
     private byte[] toSubQueryBytes(int formatVersion) {
-        byte[] queryBytes = getQueryBytes(formatVersion);
-        if (formatVersion == QUERY_FORMAT_V2 || hasNestedJoins()) {
-            ByteBuffer copy = new ByteBuffer(queryBytes);
-            copy.putVarUInt32(QUERY_END);
-            copy.putVarUInt32(0);
-            copy.putVarUInt32(0);
-            return copy.bytes();
+        if (!joinQueries.isEmpty()) {
+            throw new IllegalStateException("Join cannot be in subquery");
         }
-        return queryBytes;
+        if (!mergeQueries.isEmpty()) {
+            throw new IllegalStateException("Merge cannot be in subquery");
+        }
+        if (formatVersion == QUERY_FORMAT_V2) {
+            ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
+            queryBuffer.putVarUInt32(QUERY_END);
+            queryBuffer.putVarUInt32(0);
+            queryBuffer.putVarUInt32(0);
+            return queryBuffer.bytes();
+        }
+        return getQueryBytes(formatVersion);
     }
 
     private byte[] toExecutableBytes() {
         int formatVersion = reindexer.getBinding().queryFormatVersion();
+        ensureNoMergeNestedInJoin();
         ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
         queryBuffer.putVarUInt32(QUERY_END);
         if (formatVersion == QUERY_FORMAT_V2) {
@@ -1418,6 +1443,26 @@ public class Query<T> {
         }
         for (Query<?> mergeQuery : mergeQueries) {
             if (mergeQuery.hasNestedJoins()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void ensureNoMergeNestedInJoin() {
+        if (hasMergeNestedInJoin()) {
+            throw new IllegalStateException("MERGEs nested into the JOINs are not supported");
+        }
+    }
+
+    private boolean hasMergeNestedInJoin() {
+        for (Query<?> joinQuery : joinQueries) {
+            if (!joinQuery.mergeQueries.isEmpty() || joinQuery.hasMergeNestedInJoin()) {
+                return true;
+            }
+        }
+        for (Query<?> mergeQuery : mergeQueries) {
+            if (mergeQuery.hasMergeNestedInJoin()) {
                 return true;
             }
         }
