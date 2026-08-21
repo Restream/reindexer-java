@@ -216,6 +216,15 @@ public interface Binding {
     String getMeta(String namespaceName, String key);
 
     /**
+     * Returns negotiated query serialization format version.
+     *
+     * @return query serialization format version
+     */
+    default int queryFormatVersion() {
+        return Consts.QUERY_FORMAT_V1;
+    }
+
+    /**
      * Closes binding to Reindexer instance.
      */
     void close();

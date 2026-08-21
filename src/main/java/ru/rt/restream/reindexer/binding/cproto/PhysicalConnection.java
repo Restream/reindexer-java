@@ -52,8 +52,11 @@ import javax.net.ssl.SSLSocketFactory;
 import static ru.rt.restream.reindexer.binding.Consts.APP_PROPERTY_NAME;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_COMPLEX_RANK;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_NAMESPACE_INCARNATIONS;
+import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_QUERY_FORMAT_V2;
 import static ru.rt.restream.reindexer.binding.Consts.BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS;
 import static ru.rt.restream.reindexer.binding.Consts.DEF_APP_NAME;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V1;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V2;
 import static ru.rt.restream.reindexer.binding.Consts.REINDEXER_VERSION;
 
 /**
@@ -72,7 +75,9 @@ public class PhysicalConnection implements Connection {
 
     static final long CPROTO_MAGIC = 0xEEDD1132L;
 
-    static final int CPROTO_VERSION = 0x104;
+    static final int CPROTO_VERSION = 0x105;
+
+    static final int CPROTO_MIN_COMPAT_VERSION = 0x101;
 
     static final int CPROTO_HDR_LEN = 16;
 
@@ -108,6 +113,8 @@ public class PhysicalConnection implements Connection {
 
     private final ScheduledFuture<?> writeTaskFuture;
 
+    private final int queryFormatVersion;
+
     public PhysicalConnection(String host, int port, String user, String password, String database,
                               SSLSocketFactory sslSocketFactory,
                               Duration requestTimeout, ScheduledExecutorService scheduler) {
@@ -131,7 +138,7 @@ public class PhysicalConnection implements Connection {
             }
             readTaskFuture = scheduler.scheduleWithFixedDelay(new ReadTask(), 0, 100, TimeUnit.MICROSECONDS);
             writeTaskFuture = scheduler.scheduleWithFixedDelay(new WriteTask(), 0, 100, TimeUnit.MICROSECONDS);
-            ConnectionUtils.rpcCallNoResults(this, Binding.LOGIN, user, password, database,
+            ReindexerResponse response = ConnectionUtils.rpcCall(this, Binding.LOGIN, user, password, database,
                     false, // create DB if missing
                     false, // checkClusterID
                     -1,    // expectedClusterID
@@ -139,11 +146,24 @@ public class PhysicalConnection implements Connection {
                     getAppName(),
                     BINDING_CAPABILITY_RESULTS_WITH_SHARD_IDS
                             | BINDING_CAPABILITY_COMPLEX_RANK
-                            | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS);
+                            | BINDING_CAPABILITY_NAMESPACE_INCARNATIONS
+                            | BINDING_CAPABILITY_QUERY_FORMAT_V2);
+            queryFormatVersion = queryFormatVersionFrom(response);
         } catch (Exception e) {
             onError(e);
             throw new NetworkException(e);
         }
+    }
+
+    private static int queryFormatVersionFrom(ReindexerResponse response) {
+        Object[] arguments = response.getArguments();
+        if (arguments.length > 2 && arguments[2] instanceof Long) {
+            long capabilities = (Long) arguments[2];
+            return (capabilities & BINDING_CAPABILITY_QUERY_FORMAT_V2) != 0
+                    ? QUERY_FORMAT_V2
+                    : QUERY_FORMAT_V1;
+        }
+        return QUERY_FORMAT_V1;
     }
 
     private Object getAppName() {
@@ -335,6 +355,11 @@ public class PhysicalConnection implements Connection {
         return getCurrentError() != null;
     }
 
+    @Override
+    public int queryFormatVersion() {
+        return queryFormatVersion;
+    }
+
     private Exception getCurrentError() {
         lock.readLock().lock();
         try {
@@ -462,7 +487,7 @@ public class PhysicalConnection implements Connection {
                 int size = (int) deserializer.getUInt32();
                 int rseq = (int) deserializer.getUInt32();
                 version &= CPROTO_VERSION_MASK;
-                if (version < CPROTO_VERSION) {
+                if (version < CPROTO_MIN_COMPAT_VERSION) {
                     throw new InvalidProtocolException(String.format("Unsupported cproto version '%04X'. " +
                                                                      "This client expects reindexer server v1.9.8+", version));
                 }

@@ -147,6 +147,10 @@ public class ConnectionPool {
         return connection;
     }
 
+    public int queryFormatVersion() {
+        return getConnection().queryFormatVersion();
+    }
+
     private DataSource getDataSource(int connectionPoolSize) {
         Instant connectionDeadline = Instant.now().plus(timeout);
         for (; ; ) {

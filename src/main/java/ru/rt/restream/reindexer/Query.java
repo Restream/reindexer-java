@@ -34,6 +34,7 @@ import ru.rt.restream.reindexer.vector.params.KnnSearchParam;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
@@ -58,6 +59,8 @@ import static ru.rt.restream.reindexer.binding.Consts.LEFT_JOIN;
 import static ru.rt.restream.reindexer.binding.Consts.MERGE;
 import static ru.rt.restream.reindexer.binding.Consts.MODE_ACCURATE_TOTAL;
 import static ru.rt.restream.reindexer.binding.Consts.OR_INNER_JOIN;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V1;
+import static ru.rt.restream.reindexer.binding.Consts.QUERY_FORMAT_V2;
 import static ru.rt.restream.reindexer.binding.Consts.VALUE_STRING;
 
 /**
@@ -210,11 +213,15 @@ public class Query<T> {
 
     private Query<?> root;
 
+    private final int queryFormatVersion;
+
     Query(Reindexer reindexer, ReindexerNamespace<T> namespace, TransactionContext transactionContext) {
         logBuilder.namespace(namespace.getName());
         this.reindexer = reindexer;
         this.namespace = namespace;
         this.transactionContext = transactionContext;
+        this.queryFormatVersion = reindexer.getBinding().queryFormatVersion();
+        buffer.putUInt8(0);
         buffer.putVString(namespace.getName());
     }
 
@@ -437,7 +444,7 @@ public class Query<T> {
         logBuilder.where(nextOperation, subquery, condition.code, values);
         buffer.putVarUInt32(QUERY_SUB_QUERY_CONDITION)
                 .putVarUInt32(nextOperation)
-                .putVBytes(subquery.buffer.bytes())
+                .putVBytes(subquery.bytes())
                 .putVarUInt32(condition.code);
 
         this.nextOperation = OP_AND;
@@ -465,7 +472,7 @@ public class Query<T> {
                 .putVarUInt32(nextOperation)
                 .putVString(indexName)
                 .putVarUInt32(condition.code)
-                .putVBytes(subquery.buffer.bytes());
+                .putVBytes(subquery.bytes());
 
         this.nextOperation = OP_AND;
         this.queryCount++;
@@ -967,11 +974,12 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public <S> ResultIterator<S> execute(Class<S> itemClass) {
-        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
+        byte[] queryData = buildSelectQueryBytes();
+        long[] payloadTypeVersions = getPayloadTypeVersions();
 
         RequestContext requestContext = transactionContext != null
-                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, false)
-                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, false);
+                ? transactionContext.selectQuery(queryData, fetchCount, payloadTypeVersions, false)
+                : reindexer.getBinding().selectQuery(queryData, fetchCount, payloadTypeVersions, false);
 
         updatePayloadTypes(requestContext.getQueryResult());
 
@@ -984,11 +992,12 @@ public class Query<T> {
      * @return an iterator over a query result
      */
     public QueryResultJsonIterator executeToJson() {
-        long[] ptVersions = prepareQueryAndGetPayloadTypesVersions();
+        byte[] queryData = buildSelectQueryBytes();
+        long[] payloadTypeVersions = getPayloadTypeVersions();
 
         RequestContext requestContext = transactionContext != null
-                ? transactionContext.selectQuery(buffer.bytes(), fetchCount, ptVersions, true)
-                : reindexer.getBinding().selectQuery(buffer.bytes(), fetchCount, ptVersions, true);
+                ? transactionContext.selectQuery(queryData, fetchCount, payloadTypeVersions, true)
+                : reindexer.getBinding().selectQuery(queryData, fetchCount, payloadTypeVersions, true);
 
         QueryResult queryResult = requestContext.getQueryResult();
 
@@ -1026,49 +1035,35 @@ public class Query<T> {
         }
     }
 
-    private long[] prepareQueryAndGetPayloadTypesVersions() {
+    private byte[] buildSelectQueryBytes() {
         logBuilder.type(SELECT);
         if (LOGGER.isDebugEnabled()) {
             debug();
             LOGGER.debug(logBuilder.getSql());
         }
 
+        namespaces.clear();
         namespaces.add(namespace);
 
         for (Query<?> mergeQuery : mergeQueries) {
             namespaces.add(mergeQuery.namespace);
         }
 
-        for (Query<?> joinQuery : joinQueries) {
-            namespaces.add(joinQuery.namespace);
+        int formatVersion = reindexer.getBinding().queryFormatVersion();
+        ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
+        queryBuffer.putVarUInt32(QUERY_END);
+        if (formatVersion == QUERY_FORMAT_V2) {
+            appendJoinQueries(queryBuffer, namespaces, formatVersion);
+            appendMergeQueries(queryBuffer, namespaces, formatVersion);
+        } else {
+            appendJoinQueriesV1(queryBuffer, true);
+            appendMergeQueriesV1(queryBuffer);
         }
 
-        for (Query<?> mergeQuery : mergeQueries) {
-            for (Query<?> joinQuery : mergeQuery.joinQueries) {
-                namespaces.add(joinQuery.namespace);
-            }
-        }
+        return queryBuffer.bytes();
+    }
 
-        buffer.putVarUInt32(QUERY_END);
-
-        for (Query<?> joinQuery : joinQueries) {
-            buffer.putVarUInt32(joinQuery.joinType);
-            buffer.writeBytes(joinQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-        }
-
-        for (Query<?> mergeQuery : mergeQueries) {
-            buffer.putVarUInt32(MERGE);
-            buffer.writeBytes(mergeQuery.buffer.bytes());
-            buffer.putVarUInt32(QUERY_END);
-            List<Query<?>> joinQueries = mergeQuery.getJoinQueries();
-            for (Query<?> joinQuery : joinQueries) {
-                buffer.putVarUInt32(joinQuery.joinType);
-                buffer.writeBytes(joinQuery.buffer.bytes());
-                buffer.putVarUInt32(QUERY_END);
-            }
-        }
-
+    private long[] getPayloadTypeVersions() {
         return namespaces.stream()
                 .map(ReindexerNamespace::getPayloadType)
                 .mapToLong(pt -> pt == null ? 0 : (pt.getVersion() ^ pt.getStateToken()))
@@ -1085,9 +1080,9 @@ public class Query<T> {
             LOGGER.debug(logBuilder.getSql());
         }
         if (transactionContext != null) {
-            transactionContext.deleteQuery(buffer.bytes());
+            transactionContext.deleteQuery(toExecutableBytes());
         } else {
-            reindexer.getBinding().deleteQuery(buffer.bytes());
+            reindexer.getBinding().deleteQuery(toExecutableBytes());
         }
     }
 
@@ -1263,13 +1258,13 @@ public class Query<T> {
             LOGGER.debug(logBuilder.getSql());
         }
         if (transactionContext != null) {
-            transactionContext.updateQuery(buffer.bytes());
+            transactionContext.updateQuery(toExecutableBytes());
         } else {
             // There are no support for inner joins for update-queries in Java binding,
             // so we are using single pt version
             PayloadType pt = namespace.getPayloadType();
             long tmVersion = pt == null ? 0 : (pt.getVersion() ^ pt.getStateToken());
-            reindexer.getBinding().updateQuery(buffer.bytes(), new long[]{tmVersion});
+            reindexer.getBinding().updateQuery(toExecutableBytes(), new long[]{tmVersion});
         }
     }
 
@@ -1285,6 +1280,13 @@ public class Query<T> {
      */
     public List<Query<?>> getMergeQueries() {
         return mergeQueries;
+    }
+
+    /**
+     * Return query namespace.
+     */
+    ReindexerNamespace<T> getNamespace() {
+        return namespace;
     }
 
     /**
@@ -1310,13 +1312,116 @@ public class Query<T> {
         return logBuilder.getSql();
     }
 
-    /**
-     * Returns all used bytes from the {@link ByteBuffer}.
-     *
-     * @return all used bytes from the {@code ByteBuffer}
-     */
     public byte[] bytes() {
-        return buffer.bytes();
+        return toSubQueryBytes(queryFormatVersion);
+    }
+
+    private byte[] toSubQueryBytes(int formatVersion) {
+        byte[] queryBytes = getQueryBytes(formatVersion);
+        if (formatVersion == QUERY_FORMAT_V2 || hasNestedJoins()) {
+            ByteBuffer copy = new ByteBuffer(queryBytes);
+            copy.putVarUInt32(QUERY_END);
+            copy.putVarUInt32(0);
+            copy.putVarUInt32(0);
+            return copy.bytes();
+        }
+        return queryBytes;
+    }
+
+    private byte[] toExecutableBytes() {
+        int formatVersion = reindexer.getBinding().queryFormatVersion();
+        ByteBuffer queryBuffer = new ByteBuffer(getQueryBytes(formatVersion));
+        queryBuffer.putVarUInt32(QUERY_END);
+        if (formatVersion == QUERY_FORMAT_V2) {
+            appendJoinQueries(queryBuffer, new ArrayList<>(), formatVersion);
+            appendMergeQueries(queryBuffer, new ArrayList<>(), formatVersion);
+        } else {
+            appendJoinQueriesV1(queryBuffer, false);
+        }
+        return queryBuffer.bytes();
+    }
+
+    private byte[] getQueryBytes(int formatVersion) {
+        byte[] queryBytes = buffer.bytes();
+        if (queryBytes.length == 0) {
+            return queryBytes;
+        }
+        if (formatVersion == QUERY_FORMAT_V2) {
+            queryBytes[0] = (byte) QUERY_FORMAT_V2;
+            return queryBytes;
+        }
+        return Arrays.copyOfRange(queryBytes, 1, queryBytes.length);
+    }
+
+    private void appendJoinQueries(ByteBuffer target, List<ReindexerNamespace<?>> targetNamespaces, int formatVersion) {
+        target.putVarUInt32(joinQueries.size());
+        for (Query<?> joinQuery : joinQueries) {
+            appendQuery(target, joinQuery, joinQuery.joinType, targetNamespaces, formatVersion);
+        }
+    }
+
+    private void appendMergeQueries(ByteBuffer target, List<ReindexerNamespace<?>> targetNamespaces, int formatVersion) {
+        target.putVarUInt32(mergeQueries.size());
+        for (Query<?> mergeQuery : mergeQueries) {
+            appendQuery(target, mergeQuery, MERGE, targetNamespaces, formatVersion);
+        }
+    }
+
+    private void appendQuery(ByteBuffer target, Query<?> query, int queryJoinType,
+                             List<ReindexerNamespace<?>> targetNamespaces, int formatVersion) {
+        if (queryJoinType != MERGE) {
+            targetNamespaces.add(query.namespace);
+        }
+
+        target.putVarUInt32(queryJoinType);
+        target.writeBytes(query.getQueryBytes(formatVersion));
+        target.putVarUInt32(QUERY_END);
+
+        query.appendJoinQueries(target, targetNamespaces, formatVersion);
+        query.appendMergeQueries(target, targetNamespaces, formatVersion);
+    }
+
+    private void appendJoinQueriesV1(ByteBuffer target, boolean appendNamespaces) {
+        if (hasNestedJoins()) {
+            throw new IllegalStateException("Nested joins are not supported by QueryFormatV1");
+        }
+        for (Query<?> joinQuery : joinQueries) {
+            if (appendNamespaces) {
+                namespaces.add(joinQuery.namespace);
+            }
+            target.putVarUInt32(joinQuery.joinType);
+            target.writeBytes(joinQuery.getQueryBytes(QUERY_FORMAT_V1));
+            target.putVarUInt32(QUERY_END);
+        }
+    }
+
+    private void appendMergeQueriesV1(ByteBuffer target) {
+        for (Query<?> mergeQuery : mergeQueries) {
+            target.putVarUInt32(MERGE);
+            target.writeBytes(mergeQuery.getQueryBytes(QUERY_FORMAT_V1));
+            target.putVarUInt32(QUERY_END);
+
+            for (Query<?> joinQuery : mergeQuery.joinQueries) {
+                namespaces.add(joinQuery.namespace);
+                target.putVarUInt32(joinQuery.joinType);
+                target.writeBytes(joinQuery.getQueryBytes(QUERY_FORMAT_V1));
+                target.putVarUInt32(QUERY_END);
+            }
+        }
+    }
+
+    private boolean hasNestedJoins() {
+        for (Query<?> joinQuery : joinQueries) {
+            if (!joinQuery.joinQueries.isEmpty() || joinQuery.hasNestedJoins()) {
+                return true;
+            }
+        }
+        for (Query<?> mergeQuery : mergeQueries) {
+            if (mergeQuery.hasNestedJoins()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -33,7 +33,10 @@ import ru.rt.restream.reindexer.db.DbBaseTest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -81,6 +84,51 @@ public abstract class JoinTest extends DbBaseTest {
         assertThat(resultActor.getId(), is(actor.id));
         assertThat(resultActor.getName(), is(actor.name));
         assertThat(resultActor.isVisible(), is(actor.visible));
+    }
+
+    @Test
+    public void testJoinToManyIntoSet() {
+        db.openNamespace("items_with_join_set", NamespaceOptions.defaultOptions(), ItemWithJoinSet.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        ItemWithJoinSet itemWithJoin = new ItemWithJoinSet();
+        itemWithJoin.id = 1;
+        itemWithJoin.name = "name";
+        itemWithJoin.actorsIds = Arrays.asList(1, 2);
+
+        Actor actor1 = new Actor();
+        actor1.id = 1;
+        actor1.name = "Test1";
+        actor1.visible = true;
+
+        Actor actor2 = new Actor();
+        actor2.id = 2;
+        actor2.name = "Test2";
+        actor2.visible = true;
+
+        db.upsert("items_with_join_set", itemWithJoin);
+        db.upsert("actors", actor1);
+        db.upsert("actors", actor2);
+
+        ResultIterator<ItemWithJoinSet> items = db.query("items_with_join_set", ItemWithJoinSet.class)
+                .join(db.query("actors", Actor.class)
+                        .on("actorsIds", Query.Condition.SET, "id"), "joinedActors")
+                .execute();
+
+        assertThat(items.hasNext(), is(true));
+
+        ItemWithJoinSet result = items.next();
+        Set<Actor> joinedActors = result.getJoinedActors();
+        assertThat(joinedActors.size(), is(2));
+
+        Map<Integer, Actor> joinedActorsById = new HashMap<>();
+        for (Actor joinedActor : joinedActors) {
+            joinedActorsById.put(joinedActor.getId(), joinedActor);
+        }
+        assertThat(joinedActorsById.get(1).getName(), is(actor1.name));
+        assertThat(joinedActorsById.get(1).isVisible(), is(actor1.visible));
+        assertThat(joinedActorsById.get(2).getName(), is(actor2.name));
+        assertThat(joinedActorsById.get(2).isVisible(), is(actor2.visible));
     }
 
     @Test
@@ -787,6 +835,57 @@ public abstract class JoinTest extends DbBaseTest {
     }
 
     @Test
+    public void testMultipleJoinsSameFieldAccumulateResults() {
+        db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
+        db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
+
+        ItemWithJoin item = new ItemWithJoin();
+        item.id = 1;
+        item.name = "item";
+        item.actorsIds = Arrays.asList(10, 30);
+        db.upsert("items_with_join", item);
+
+        Actor first = new Actor();
+        first.id = 10;
+        first.name = "first";
+        first.visible = true;
+        db.upsert("actors", first);
+
+        Actor second = new Actor();
+        second.id = 30;
+        second.name = "second";
+        second.visible = true;
+        db.upsert("actors", second);
+
+        Actor unmatched = new Actor();
+        unmatched.id = 20;
+        unmatched.name = "unmatched";
+        unmatched.visible = true;
+        db.upsert("actors", unmatched);
+
+        ResultIterator<ItemWithJoin> items = db.query("items_with_join", ItemWithJoin.class)
+                .where("id", EQ, 1)
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 10)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 30)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .leftJoin(db.query("actors", Actor.class)
+                        .where("id", EQ, 20)
+                        .on("actorsIds", SET, "id"), "joinedActors")
+                .execute();
+
+        assertThat(items.hasNext(), is(true));
+        ItemWithJoin result = items.next();
+        assertThat(result.joinedActors.size(), is(2));
+        assertThat(result.joinedActors.get(0).id, is(10));
+        assertThat(result.joinedActors.get(0).name, is("first"));
+        assertThat(result.joinedActors.get(1).id, is(30));
+        assertThat(result.joinedActors.get(1).name, is("second"));
+    }
+
+    @Test
     public void testJoinInWherePartWithBrackets() {
         db.openNamespace("items_with_join", NamespaceOptions.defaultOptions(), ItemWithJoin.class);
         db.openNamespace("actors", NamespaceOptions.defaultOptions(), Actor.class);
@@ -1010,6 +1109,22 @@ public abstract class JoinTest extends DbBaseTest {
 
         @Transient
         private Actor joinedActor;
+    }
+
+    @Setter
+    @Getter
+    public static class ItemWithJoinSet {
+
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "name")
+        private String name;
+
+        private List<Integer> actorsIds;
+
+        @Transient
+        private Set<Actor> joinedActors;
     }
 
 }
