@@ -26,7 +26,7 @@ public class AggregationResult {
 
     private String type;
 
-    private double value;
+    private Double value;
 
     private List<Facet> facets;
 
@@ -114,19 +114,20 @@ public class AggregationResult {
 
     /**
      * Get the current aggregation result value.
+     * {@code null} when there were no items to aggregate over (e.g. empty namespace or query results).
      *
-     * @return the current aggregation result value
+     * @return the current aggregation result value, or {@code null} if absent
      */
-    public double getValue() {
+    public Double getValue() {
         return value;
     }
 
     /**
      * Set the current aggregation result value.
      *
-     * @param value aggregation result value
+     * @param value aggregation result value, or {@code null} if absent
      */
-    public void setValue(double value) {
+    public void setValue(Double value) {
         this.value = value;
     }
 

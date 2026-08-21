@@ -33,6 +33,7 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 /**
  * Base Aggregation Test.
@@ -132,6 +133,59 @@ public abstract class AggregationTest extends DbBaseTest {
         ResultIterator<Item> result = query.execute();
         AggregationResult minResult = result.aggResults().get(0);
         assertThat(minResult.getValue(), is(0D));
+    }
+
+    @Test
+    public void testAggregationsOnEmptyNamespace() {
+        Namespace<Item> itemNamespace = db.openNamespace("items", NamespaceOptions.defaultOptions(), Item.class);
+
+        ResultIterator<Item> result = itemNamespace.query()
+                .aggregateSum("price")
+                .aggregateAvg("price")
+                .aggregateMin("price")
+                .aggregateMax("price")
+                .execute();
+
+        List<AggregationResult> aggResults = result.aggResults();
+        assertThat(aggResults.size(), is(4));
+        assertThat(aggResults.get(0).getType(), is("sum"));
+        assertThat(aggResults.get(0).getValue(), is(nullValue()));
+        assertThat(aggResults.get(1).getType(), is("avg"));
+        assertThat(aggResults.get(1).getValue(), is(nullValue()));
+        assertThat(aggResults.get(2).getType(), is("min"));
+        assertThat(aggResults.get(2).getValue(), is(nullValue()));
+        assertThat(aggResults.get(3).getType(), is("max"));
+        assertThat(aggResults.get(3).getValue(), is(nullValue()));
+    }
+
+    @Test
+    public void testAggregationsWithZeroValue() {
+        Namespace<Item> itemNamespace = db.openNamespace("items", NamespaceOptions.defaultOptions(), Item.class);
+
+        for (int i = 0; i < 10; i++) {
+            Item item = new Item();
+            item.setId(i);
+            item.setPrice(0);
+            itemNamespace.insert(item);
+        }
+
+        ResultIterator<Item> result = itemNamespace.query()
+                .aggregateSum("price")
+                .aggregateAvg("price")
+                .aggregateMin("price")
+                .aggregateMax("price")
+                .execute();
+
+        List<AggregationResult> aggResults = result.aggResults();
+        assertThat(aggResults.size(), is(4));
+        assertThat(aggResults.get(0).getType(), is("sum"));
+        assertThat(aggResults.get(0).getValue(), is(0D));
+        assertThat(aggResults.get(1).getType(), is("avg"));
+        assertThat(aggResults.get(1).getValue(), is(0D));
+        assertThat(aggResults.get(2).getType(), is("min"));
+        assertThat(aggResults.get(2).getValue(), is(0D));
+        assertThat(aggResults.get(3).getType(), is("max"));
+        assertThat(aggResults.get(3).getValue(), is(0D));
     }
 
     @Test
