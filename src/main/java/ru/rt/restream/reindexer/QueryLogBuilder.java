@@ -627,11 +627,14 @@ class QueryLogBuilder {
     private String getSingleJoinPart(JoinEntry joinEntry) {
         QueryLogBuilder joinQueryLogBuilder = joinEntry.joinQueryLogBuilder;
         JoinType type = joinEntry.type;
+        String joinedSql = joinQueryLogBuilder.getSql();
+        String joinedSource = isBareSelect(joinQueryLogBuilder, joinedSql)
+                ? joinQueryLogBuilder.namespace
+                : "(" + joinedSql + ")";
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(type.name)
                 .append(" ")
-                .append(joinQueryLogBuilder.whereEntries.isEmpty() ? joinQueryLogBuilder.namespace
-                        : "(" + joinQueryLogBuilder.getSql() + ")")
+                .append(joinedSource)
                 .append(" ON ");
         if (joinQueryLogBuilder.onEntries.size() > 1) {
             stringBuilder.append("(");
@@ -649,6 +652,10 @@ class QueryLogBuilder {
             stringBuilder.append(")");
         }
         return stringBuilder.toString();
+    }
+
+    private static boolean isBareSelect(QueryLogBuilder joinQueryLogBuilder, String joinedSql) {
+        return joinedSql.equals(QueryType.SELECT.name() + " * FROM " + joinQueryLogBuilder.namespace);
     }
 
     private String getMergePart() {

@@ -56,9 +56,15 @@ public abstract class NestedJoinTest extends DbBaseTest {
                         .on("locationId", EQ, "id"), "locations")
                 .on("authorId", EQ, "id");
 
-        Map<Integer, Book> booksById = byId(db.query(BOOKS_NS, Book.class)
-                .innerJoin(authors, "authors")
-                .toList());
+        Query<Book> booksQuery = db.query(BOOKS_NS, Book.class)
+                .innerJoin(authors, "authors");
+        assertThat(booksQuery.toString(), is(
+                "SELECT * FROM nested_join_books WHERE INNER JOIN (SELECT * FROM nested_join_authors "
+                        + "WHERE INNER JOIN nested_join_locations "
+                        + "ON nested_join_locations.id = nested_join_authors.locationId) "
+                        + "ON nested_join_authors.id = nested_join_books.authorId"));
+
+        Map<Integer, Book> booksById = byId(booksQuery.toList());
 
         assertThat(booksById.size(), is(3));
         assertAuthorLocation(booksById.get(1000), 100, "Author1", "Moscow");
@@ -88,6 +94,36 @@ public abstract class NestedJoinTest extends DbBaseTest {
         assertAuthorLocation(booksById.get(1002), 100, "Author1", "Moscow");
         assertAuthorLocation(booksById.get(1003), 101, "Author2", "Paris");
         assertThat(booksById.get(1004).authors.size(), is(0));
+    }
+
+    @Test
+    public void testNestedLeftJoin() {
+        openNamespaces();
+        insertFixture();
+
+        Query<Author> authors = db.query(AUTHORS_NS, Author.class)
+                .leftJoin(db.query(LOCATIONS_NS, Location.class)
+                        .on("locationId", EQ, "id"), "locations")
+                .on("authorId", EQ, "id");
+
+        Query<Book> booksQuery = db.query(BOOKS_NS, Book.class)
+                .leftJoin(authors, "authors");
+        assertThat(booksQuery.toString(), is(
+                "SELECT * FROM nested_join_books LEFT JOIN (SELECT * FROM nested_join_authors "
+                        + "LEFT JOIN nested_join_locations "
+                        + "ON nested_join_locations.id = nested_join_authors.locationId) "
+                        + "ON nested_join_authors.id = nested_join_books.authorId"));
+
+        Map<Integer, Book> booksById = byId(booksQuery.toList());
+
+        assertThat(booksById.size(), is(5));
+        assertAuthorLocation(booksById.get(1000), 100, "Author1", "Moscow");
+        assertThat(booksById.get(1001).authors.size(), is(0));
+        assertAuthorLocation(booksById.get(1002), 100, "Author1", "Moscow");
+        assertAuthorLocation(booksById.get(1003), 101, "Author2", "Paris");
+        assertThat(booksById.get(1004).authors.size(), is(1));
+        assertThat(booksById.get(1004).authors.get(0).name, is("AuthorNoLoc"));
+        assertThat(booksById.get(1004).authors.get(0).locations.size(), is(0));
     }
 
     @Test
