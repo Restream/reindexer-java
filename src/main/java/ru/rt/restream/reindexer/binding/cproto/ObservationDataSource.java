@@ -54,20 +54,15 @@ final class ObservationDataSource implements DataSource {
         public ReindexerResponse rpcCall(int command, Object... args) {
             CommandObservationContext context = new CommandObservationContext(command, args);
             context.setRemoteServiceAddress(url);
-            Observation observation = Observation.createNotStarted(CONVENTION, () -> context, registry).start();
-            try (Observation.Scope scope = observation.openScope()) {
+            Observation observation = Observation.createNotStarted(CONVENTION, () -> context, registry);
+            return observation.observe(() -> {
                 ReindexerResponse response = delegate.rpcCall(command, args);
                 context.setResponse(response);
                 if (response.hasError()) {
                     observation.error(ReindexerExceptionFactory.fromResponse(response));
                 }
                 return response;
-            } catch (Throwable t) {
-                observation.error(t);
-                throw t;
-            } finally {
-                observation.stop();
-            }
+            });
         }
 
         @Override

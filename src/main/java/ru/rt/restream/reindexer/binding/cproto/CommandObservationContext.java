@@ -47,7 +47,7 @@ final class CommandObservationContext extends RequestReplySenderContext<Object, 
 
     private RemoteServerAddress remoteServerAddress;
 
-    CommandObservationContext(int command, Object[] arguments) {
+    CommandObservationContext(int command, Object... arguments) {
         super((carrier, key, value) -> {}, Kind.CLIENT);
         this.command = command;
         this.arguments = arguments;
