@@ -69,6 +69,60 @@ public abstract class NestedJoinTest extends DbBaseTest {
     }
 
     @Test
+    public void testInnerJoinWithSubQueryInJoin() {
+        openNamespaces();
+        insertFixture();
+
+        Query<Location> moscowLocationIds = db.query(LOCATIONS_NS, Location.class)
+                .select("id")
+                .where("city", EQ, "Moscow");
+
+        Query<Author> authors = db.query(AUTHORS_NS, Author.class)
+                .where("locationId", SET, moscowLocationIds)
+                .on("authorId", EQ, "id");
+
+        Map<Integer, Book> booksById = byId(db.query(BOOKS_NS, Book.class)
+                .innerJoin(authors, "authors")
+                .toList());
+
+        assertThat(booksById.size(), is(2));
+        assertBookAuthor(booksById.get(1000), 100, "Author1");
+        assertBookAuthor(booksById.get(1002), 100, "Author1");
+        assertThat(booksById.containsKey(1001), is(false));
+        assertThat(booksById.containsKey(1003), is(false));
+        assertThat(booksById.containsKey(1004), is(false));
+    }
+
+    @Test
+    public void testNestedInnerJoinWithSubQueryInNestedJoin() {
+        openNamespaces();
+        insertFixture();
+
+        Query<Country> northernCountryIds = db.query(COUNTRIES_NS, Country.class)
+                .select("id")
+                .where("name", EQ, "Northern");
+
+        Query<Location> locations = db.query(LOCATIONS_NS, Location.class)
+                .where("countryId", SET, northernCountryIds)
+                .on("locationId", EQ, "id");
+
+        Query<Author> authors = db.query(AUTHORS_NS, Author.class)
+                .innerJoin(locations, "locations")
+                .on("authorId", EQ, "id");
+
+        Map<Integer, Book> booksById = byId(db.query(BOOKS_NS, Book.class)
+                .innerJoin(authors, "authors")
+                .toList());
+
+        assertThat(booksById.size(), is(2));
+        assertAuthorLocation(booksById.get(1000), 100, "Author1", "Moscow");
+        assertAuthorLocation(booksById.get(1002), 100, "Author1", "Moscow");
+        assertThat(booksById.containsKey(1001), is(false));
+        assertThat(booksById.containsKey(1003), is(false));
+        assertThat(booksById.containsKey(1004), is(false));
+    }
+
+    @Test
     public void testLeftJoinWithNestedInnerJoin() {
         openNamespaces();
         insertFixture();
@@ -244,14 +298,19 @@ public abstract class NestedJoinTest extends DbBaseTest {
 
     private static void assertAuthorLocation(Book book, int expectedAuthorId, String expectedAuthorName,
                                              String expectedCity) {
+        assertBookAuthor(book, expectedAuthorId, expectedAuthorName);
+        Author author = book.authors.get(0);
+        assertThat(author.locations.size(), is(1));
+        assertThat(author.locations.get(0).id, is(author.locationId));
+        assertThat(author.locations.get(0).city, is(expectedCity));
+    }
+
+    private static void assertBookAuthor(Book book, int expectedAuthorId, String expectedAuthorName) {
         assertThat(book.authors.size(), is(1));
         Author author = book.authors.get(0);
         assertThat(author.id, is(expectedAuthorId));
         assertThat(author.id, is(book.authorId));
         assertThat(author.name, is(expectedAuthorName));
-        assertThat(author.locations.size(), is(1));
-        assertThat(author.locations.get(0).id, is(author.locationId));
-        assertThat(author.locations.get(0).city, is(expectedCity));
     }
 
     private static Map<Integer, Book> byId(List<Book> books) {
