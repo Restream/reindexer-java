@@ -21,10 +21,12 @@ import ru.rt.restream.reindexer.FieldType;
 import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.ReindexScanner;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.ReindexerPrecept;
 import ru.rt.restream.reindexer.convert.FieldConverter;
 import ru.rt.restream.reindexer.convert.util.ConversionUtils;
 import ru.rt.restream.reindexer.convert.FieldConverterRegistryFactory;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
+import ru.rt.restream.reindexer.expression.Expression;
 import ru.rt.restream.reindexer.fulltext.FullTextConfig;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 import ru.rt.restream.reindexer.convert.util.ResolvableType;
@@ -94,16 +96,20 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     @Override
     public List<ReindexerIndex> parseIndexes(Class<?> itemClass) {
-        return parseIndexes(itemClass, false, "", "", new HashMap<>());
+        return parseIndexes(itemClass, false, "", "", "", new HashMap<>());
     }
 
-    List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String reindexBasePath, String jsonBasePath,
+    List<ReindexerIndex> parseIndexes(Class<?> itemClass, boolean subArray, String fieldBasePath, String reindexBasePath, String jsonBasePath,
                                       Map<String, List<Integer>> joined) {
-        if (reindexBasePath.length() != 0 && !reindexBasePath.endsWith(".")) {
+        if (!fieldBasePath.isEmpty() && !fieldBasePath.endsWith(".")) {
+            fieldBasePath = fieldBasePath + ".";
+        }
+
+        if (!reindexBasePath.isEmpty() && !reindexBasePath.endsWith(".")) {
             reindexBasePath = reindexBasePath + ".";
         }
 
-        if (jsonBasePath.length() != 0 && !jsonBasePath.endsWith(".")) {
+        if (!jsonBasePath.isEmpty() && !jsonBasePath.endsWith(".")) {
             jsonBasePath = jsonBasePath + ".";
         }
 
@@ -118,6 +124,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 continue;
             }
 
+            String fieldPath = fieldBasePath + field.getName();
             String reindexPath = reindexBasePath + reindex.name();
             Json json = field.getAnnotation(Json.class);
             String jsonPath = jsonBasePath + (json == null ? field.getName() : json.value());
@@ -131,22 +138,28 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 fieldInfo.isArray = true;
             }
             if (COMPOSITE == fieldInfo.fieldType && !fieldInfo.isArray) {
-                List<ReindexerIndex> nested = parseIndexes(field.getType(), subArray, reindexPath, jsonPath, joined);
+                List<ReindexerIndex> nested = parseIndexes(field.getType(), subArray, fieldPath, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
             } else if ((fieldInfo.isArray) && fieldInfo.componentType != null
                     && getFieldTypeByClass(fieldInfo.componentType) == COMPOSITE) {
-                List<ReindexerIndex> nested = parseIndexes(fieldInfo.componentType, true, reindexPath, jsonPath, joined);
+                List<ReindexerIndex> nested = parseIndexes(fieldInfo.componentType, true, fieldPath, reindexPath, jsonPath, joined);
                 indexes.addAll(nested);
             } else {
                 String collate = reindex.collate();
                 CollateMode collateMode = getCollateMode(collate);
                 String sortOrder = getSortOrder(collateMode, collate);
-                String precept = null;
-                if (field.isAnnotationPresent(Serial.class)) {
+                ReindexerPrecept precept = null;
+                Serial serial = field.getAnnotation(Serial.class);
+                if (serial != null) {
                     if (!fieldInfo.isInt()) {
                         throw new IllegalStateException("@Serial is allowed only for int types (i.e INT, INT64)");
                     }
-                    precept = field.getName() + "=serial()";
+                    precept = ReindexerPrecept.builder()
+                            .fieldPath(fieldPath)
+                            .jsonPath(jsonPath)
+                            .expression(Expression.serial())
+                            .strategy(serial.strategy())
+                            .build();
                 }
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
                 validateUuidIndexHasTypeUuidOrString(reindex, fieldInfo);
@@ -317,7 +330,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
     private ReindexerIndex createIndex(String reindexPath, List<String> jsonPath, IndexType indexType,
                                        FieldType fieldType, boolean isDense, boolean isSparse, boolean isPk,
-                                       boolean isArray, CollateMode collateMode, String sortOrder, String precept,
+                                       boolean isArray, CollateMode collateMode, String sortOrder, ReindexerPrecept precept,
                                        FullTextConfig textConfig, boolean isUuid, boolean isAppendable,
                                        boolean isNoColumn, HnswConfig hnswConfig, IvfConfig ivfConfig, VecBfConfig vecBfConfig) {
         ReindexerIndex index = new ReindexerIndex();

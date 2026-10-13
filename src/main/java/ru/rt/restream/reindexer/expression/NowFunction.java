@@ -26,7 +26,7 @@ import java.util.Objects;
  * @see Expression#now(String)
  * @see Expression#now(TimeUnit)
  */
-public final class NowFunction extends FunctionExpression {
+public final class NowFunction extends FunctionExpression implements PreceptFunction {
 
     private static final int FUNCTION_TYPE = 1;
 

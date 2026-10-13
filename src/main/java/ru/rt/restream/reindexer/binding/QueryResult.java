@@ -127,4 +127,54 @@ public class QueryResult {
      */
     private int queryFormatVersion = Consts.QUERY_FORMAT_V1;
 
+    /**
+     * Query result item params.
+     */
+    private ItemParams itemParams;
+
+    /**
+     * Reads an {@link ItemParams} from the query result buffer.
+     *
+     * @return the {@link ItemParams} to use
+     */
+    public ItemParams readItemParams() {
+        ItemParams itemParams = new ItemParams();
+        if (withItemId) {
+            itemParams.id = buffer.getVarUInt();
+            itemParams.version = buffer.getVarUInt();
+        }
+        if (withNsId) {
+            itemParams.nsId = (int) buffer.getVarUInt();
+        }
+        if (withRank) {
+            // used for full-text search
+            if (rankFormat == 0) {
+                itemParams.rank = buffer.getFloat();
+            } else {
+                itemParams.rank = buffer.getVarUInt();
+            }
+        }
+        if (withShardId) {
+            if (shardId != Consts.SHARDING_PROXY_OFF) {
+                itemParams.shardId = shardId;
+            } else {
+                itemParams.shardId = (int) buffer.getVarUInt();
+            }
+        }
+        if (withResultsPtr) {
+            itemParams.cptr = buffer.getUInt64();
+        }
+        return itemParams;
+    }
+
+    @Getter
+    public static final class ItemParams {
+        private float rank = -1;
+        private long id = -1;
+        private int shardId = Consts.SHARDING_PROXY_OFF;
+        private long version = -1;
+        private long cptr;
+        private int nsId = 0;
+    }
+
 }

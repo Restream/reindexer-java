@@ -23,12 +23,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -121,18 +123,20 @@ public class Builtin implements Binding {
     }
 
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    public QueryResult modifyItem(String namespaceName, byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         ByteBuffer args = new ByteBuffer()
                 .putVString(namespaceName)
                 .putVarUInt32(format)
                 .putVarUInt32(mode)
                 .putVarInt32(stateToken);
         args.putVarUInt32(precepts.length);
-        for (String precept : precepts) {
-            args.putVString(precept);
+        for (PreceptExpression precept : precepts) {
+            precept.serializePrecept(args);
         }
         ReindexerResponse response = adapter.modifyItem(rx, next.getAndIncrement(), timeout.toMillis(), args.bytes(), data);
         checkResponse(response);
+        BuiltinRequestContext context = new BuiltinRequestContext(response);
+        return context.getQueryResult();
     }
 
     @Override

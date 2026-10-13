@@ -15,17 +15,26 @@
  */
 package ru.rt.restream.reindexer.annotations;
 
+import ru.rt.restream.reindexer.PreceptApplyStrategy;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Sequence of integer, useful for uniq ID generation.
- * This always updates the index value, so use a separate DTO for the update
- * if the index is used as the primary key.
+ * Sequence of integer, useful for unique ID generation.
+ * When used on primary-key index, consider using {@link PreceptApplyStrategy#WHEN_NULL} to generate ID value only once.
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Serial {
+
+    /**
+     * A precept apply strategy. Default is {@link PreceptApplyStrategy#ALWAYS}.
+     *
+     * @return the precept apply strategy to use, defaults to {@link PreceptApplyStrategy#ALWAYS}
+     */
+    PreceptApplyStrategy strategy() default PreceptApplyStrategy.ALWAYS;
+
 }

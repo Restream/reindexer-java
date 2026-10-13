@@ -26,6 +26,7 @@ import ru.rt.restream.reindexer.TimeUnit;
  * @see StringExpression
  * @see NowFunction
  * @see FlatArrayLengthFunction
+ * @see SerialFunction
  * @see SubQueryExpression
  */
 public interface Expression {
@@ -101,6 +102,15 @@ public interface Expression {
      */
     static FlatArrayLengthFunction flatArrayLength(String fieldName) {
         return new FlatArrayLengthFunction(fieldName);
+    }
+
+    /**
+     * Creates a {@link SerialFunction} to use for unique id generation.
+     *
+     * @return the {@link SerialFunction} to use
+     */
+    static SerialFunction serial() {
+        return SerialFunction.INSTANCE;
     }
 
     /**

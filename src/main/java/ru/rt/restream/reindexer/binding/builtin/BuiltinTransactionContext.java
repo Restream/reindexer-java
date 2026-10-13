@@ -19,11 +19,11 @@ package ru.rt.restream.reindexer.binding.builtin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
-import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -65,24 +65,24 @@ public class BuiltinTransactionContext implements TransactionContext {
     }
 
     @Override
-    public void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    public void modifyItem(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         ReindexerResponse response = modifyItemInternal(data, format, mode, precepts, stateToken);
         checkResponse(response);
     }
 
     @Override
-    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         return CompletableFuture.supplyAsync(() -> modifyItemInternal(data, format, mode, precepts, stateToken));
     }
 
-    private ReindexerResponse modifyItemInternal(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    private ReindexerResponse modifyItemInternal(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         ByteBuffer args = new ByteBuffer()
                 .putVarUInt32(format)
                 .putVarUInt32(mode)
                 .putVarInt32(stateToken);
         args.putVarUInt32(precepts.length);
-        for (String precept : precepts) {
-            args.putVString(precept);
+        for (PreceptExpression precept : precepts) {
+            precept.serializePrecept(args);
         }
         return adapter.modifyItemTx(rx, transactionId, args.bytes(), data);
     }

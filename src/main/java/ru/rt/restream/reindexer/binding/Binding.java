@@ -17,6 +17,7 @@ package ru.rt.restream.reindexer.binding;
 
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 /**
  * Binding to Reindexer instance.
@@ -133,8 +134,9 @@ public interface Binding {
      * @param mode          modify mode (UPDATE, INSERT, UPSERT, DELETE)
      * @param precepts      precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken    state token
+     * @return the {@link QueryResult} to use
      */
-    void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken);
+    QueryResult modifyItem(String namespaceName, byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken);
 
     /**
      * Drop a namespace by name.

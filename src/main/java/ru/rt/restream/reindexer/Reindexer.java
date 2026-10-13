@@ -22,15 +22,21 @@ import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
+import ru.rt.restream.reindexer.binding.cproto.ByteBuffer;
 import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CjsonItemReader;
+import ru.rt.restream.reindexer.binding.cproto.cjson.CtagMatcher;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.IndexConflictException;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
+import ru.rt.restream.reindexer.util.NativeUtils;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Reindexer implements AutoCloseable {
@@ -105,6 +111,8 @@ public class Reindexer implements AutoCloseable {
                 .indexes(reindexScanner.parseIndexes(itemClass))
                 .reindexer(this)
                 .build();
+        // Initialize the namespace instance.
+        namespace.initialize();
 
         try {
             binding.openNamespace(NamespaceDefinition.fromNamespace(namespace));
@@ -142,19 +150,23 @@ public class Reindexer implements AutoCloseable {
      * @param <T>           the item type
      * @param namespaceName the namespace name
      * @param item          the item data
+     * @return the inserted {@link T} item
      */
-    public <T> void insert(String namespaceName, T item) {
-        modifyItem(namespaceName, item, MODE_INSERT, Consts.FORMAT_C_JSON);
+    public <T> T insert(String namespaceName, T item) {
+        return modifyItem(namespaceName, item, MODE_INSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
      * Inserts the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
      * @param namespaceName the namespace name
      * @param json          the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    public void insert(String namespaceName, String json) {
-        modifyItem(namespaceName, json, MODE_INSERT, Consts.FORMAT_JSON);
+    public <T> Optional<T> insert(String namespaceName, String json) {
+        return Optional.ofNullable(modifyItem(namespaceName, json, MODE_INSERT, Consts.FORMAT_JSON));
     }
 
     /**
@@ -163,19 +175,23 @@ public class Reindexer implements AutoCloseable {
      * @param <T>           the item type
      * @param namespaceName the namespace name
      * @param item          the item data
+     * @return the updated {@link T} item
      */
-    public <T> void update(String namespaceName, T item) {
-        modifyItem(namespaceName, item, MODE_UPDATE, Consts.FORMAT_C_JSON);
+    public <T> T update(String namespaceName, T item) {
+        return modifyItem(namespaceName, item, MODE_UPDATE, Consts.FORMAT_C_JSON);
     }
 
     /**
      * Updates the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
      * @param namespaceName the namespace name
      * @param json          the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    public void update(String namespaceName, String json) {
-        modifyItem(namespaceName, json, MODE_UPDATE, Consts.FORMAT_JSON);
+    public <T> Optional<T> update(String namespaceName, String json) {
+        return Optional.ofNullable(modifyItem(namespaceName, json, MODE_UPDATE, Consts.FORMAT_JSON));
     }
 
     /**
@@ -184,19 +200,23 @@ public class Reindexer implements AutoCloseable {
      * @param <T>           the item type
      * @param namespaceName the namespace name
      * @param item          the item data
+     * @return the upserted {@link T} item
      */
-    public <T> void upsert(String namespaceName, T item) {
-        modifyItem(namespaceName, item, MODE_UPSERT, Consts.FORMAT_C_JSON);
+    public <T> T upsert(String namespaceName, T item) {
+        return modifyItem(namespaceName, item, MODE_UPSERT, Consts.FORMAT_C_JSON);
     }
 
     /**
      * Inserts or updates the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
      * @param namespaceName the namespace name
      * @param json          the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    public void upsert(String namespaceName, String json) {
-        modifyItem(namespaceName, json, MODE_UPSERT, Consts.FORMAT_JSON);
+    public <T> Optional<T> upsert(String namespaceName, String json) {
+        return Optional.ofNullable(modifyItem(namespaceName, json, MODE_UPSERT, Consts.FORMAT_JSON));
     }
 
     /**
@@ -253,14 +273,7 @@ public class Reindexer implements AutoCloseable {
         PayloadType pt = namespace.getPayloadType();
         long[] ptVersions = pt == null ? new long[]{0} : new long[]{pt.getVersion() ^ pt.getStateToken()};
         RequestContext ctx = binding.select(query, false, Integer.MAX_VALUE, ptVersions);
-        QueryResult queryResult = ctx.getQueryResult();
-        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
-            PayloadType currentPayloadType = namespace.getPayloadType();
-            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()
-                || currentPayloadType.getStateToken() != payloadType.getStateToken()) {
-                namespace.updatePayloadType(payloadType);
-            }
-        }
+        updatePayloadType(ctx.getQueryResult(), namespace);
         return new QueryResultIterator<>(namespace, itemClass, ctx, null, Integer.MAX_VALUE);
     }
 
@@ -296,6 +309,17 @@ public class Reindexer implements AutoCloseable {
         binding.dropIndex(namespaceName, indexName);
     }
 
+    /**
+     * Registers a {@link ReindexerPrecept} to the namespace to apply to all items persisted in the namespace.
+     *
+     * @param namespaceName the namespace name, cannot be {@literal null}
+     * @param precept       the {@link ReindexerPrecept} to register, cannot be {@literal null}
+     */
+    public void registerPrecept(String namespaceName, ReindexerPrecept precept) {
+        ReindexerNamespace<?> namespace = getNamespace(namespaceName);
+        namespace.registerPrecept(precept);
+    }
+
     private <T> ReindexerNamespace<T> getNamespace(String namespaceName, Class<T> itemClass) {
         ReindexerNamespace<?> namespace = namespaceMap.get(namespaceName);
         if (namespace == null) {
@@ -320,21 +344,75 @@ public class Reindexer implements AutoCloseable {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> void modifyItem(String namespaceName, T item, int mode, int format) {
-        ReindexerNamespace<?> namespace = getNamespace(namespaceName);
-        String[] percepts = namespace.getPrecepts();
+    private <T, E> E modifyItem(String namespaceName, T item, int mode, int format) {
+        ReindexerNamespace<E> namespace = getNamespace(namespaceName);
+        PreceptExpression[] precepts = namespace.getPrecepts(item, format);
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();
                 int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
                 ItemSerializer<T> serializer = ItemSerializer.getInstance(item.getClass(), payloadType);
                 byte[] data = serializer.serialize(item);
-                binding.modifyItem(namespace.getName(), data, format, mode, percepts, stateToken);
+                QueryResult queryResult = binding.modifyItem(namespace.getName(), data, format, mode, precepts, stateToken);
+                updatePayloadType(queryResult, namespace);
+                if (precepts.length > 0 && queryResult.getCount() > 0) {
+                    return unpackItem(item, queryResult, format, namespace);
+                }
                 break;
             } catch (StateInvalidatedException e) {
                 updatePayloadType(namespace);
             }
         }
+        if (format == Consts.FORMAT_C_JSON) {
+            return (E) item;
+        }
+        // No server-generated item was returned for JSON-formatted item.
+        return null;
+    }
+
+    private void updatePayloadType(QueryResult queryResult, ReindexerNamespace<?> namespace) {
+        for (PayloadType payloadType : queryResult.getPayloadTypes()) {
+            PayloadType currentPayloadType = namespace.getPayloadType();
+            if (currentPayloadType == null || currentPayloadType.getVersion() < payloadType.getVersion()
+                    || currentPayloadType.getStateToken() != payloadType.getStateToken()) {
+                namespace.updatePayloadType(payloadType);
+            }
+        }
+    }
+
+    private <T> T unpackItem(Object item, QueryResult queryResult, int format, ReindexerNamespace<T> namespace) {
+        QueryResult.ItemParams itemParams = queryResult.readItemParams();
+        CjsonItemReader<T> reader = createItemReader(item, format, namespace);
+        if (queryResult.isWithResultsPtr()) {
+            ByteBuffer buffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), itemParams.getCptr(), itemParams.getNsId());
+            try {
+                return reader.readItem(buffer);
+            } finally {
+                NativeUtils.freeNativeBuffer(queryResult.getResultsPtr());
+            }
+        }
+        ByteBuffer buffer = queryResult.getBuffer();
+        int length = (int) buffer.getUInt32();
+        return reader.readItem(new ByteBuffer(buffer.getBytes(length)).rewind());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> CjsonItemReader<T> createItemReader(Object item, int format, ReindexerNamespace<T> namespace) {
+        CtagMatcher ctagMatcher = new CtagMatcher();
+        PayloadType payloadType = namespace.getPayloadType();
+        if (payloadType == null && format == Consts.FORMAT_JSON) {
+            // When using JSON, Reindexer does not include payloadType in the response
+            // or validate stateToken. Therefore, StateInvalidatedException is never thrown,
+            // and payloadType must be explicitly requested to correctly unpack the result.
+            updatePayloadType(namespace);
+            payloadType = namespace.getPayloadType();
+        }
+        if (payloadType != null) {
+            ctagMatcher.read(payloadType);
+        }
+        return format == Consts.FORMAT_JSON
+                ? new CjsonItemReader<>(namespace.getItemClass(), ctagMatcher)
+                : new CjsonItemReader<>(() -> (T) item, namespace.getItemClass(), ctagMatcher);
     }
 
     private void updatePayloadType(ReindexerNamespace<?> namespace) {
