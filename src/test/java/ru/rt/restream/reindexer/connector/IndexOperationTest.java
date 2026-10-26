@@ -28,10 +28,13 @@ import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.db.DbBaseTest;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
@@ -112,6 +115,65 @@ public abstract class IndexOperationTest extends DbBaseTest {
         assertThat(afterUpdated.get(0).getFieldType(), equalToIgnoringCase("string"));
     }
 
+    @Test
+    public void testCollateMode() {
+        String nameSpaceName = "collate_mode_items";
+        Namespace<CollateItem> namespace = db.openNamespace(nameSpaceName, NamespaceOptions.defaultOptions(),
+                CollateItem.class);
+
+        List<IndexResponse> indexes = getNameSpaceIndexes(nameSpaceName);
+        assertThat(indexes.size(), is(6));
+        assertThat(indexNamed(indexes, "id").getCollateMode(), is("none"));
+        assertThat(indexNamed(indexes, "plain").getCollateMode(), is("none"));
+        assertThat(indexNamed(indexes, "ascii_name").getCollateMode(), is("ascii"));
+        assertThat(indexNamed(indexes, "utf8_name").getCollateMode(), is("utf8"));
+        assertThat(indexNamed(indexes, "numeric_name").getCollateMode(), is("numeric"));
+        assertThat(indexNamed(indexes, "custom_name").getCollateMode(), is("custom"));
+        assertThat(indexNamed(indexes, "custom_name").getSortOrderLetters(), is("cba"));
+        assertThat(indexNamed(indexes, "ascii_name").getSortOrderLetters(), is(""));
+
+        namespace.insert(collateItem(1, "B", "B", "Б", "10", "a"));
+        namespace.insert(collateItem(2, "a", "a", "Я", "2", "b"));
+        namespace.insert(collateItem(3, "C", "C", "а", "1", "c"));
+
+        assertThat(sortedBy(namespace, "plain", CollateItem::getPlain), is(Arrays.asList("B", "C", "a")));
+        assertThat(sortedBy(namespace, "ascii_name", CollateItem::getAsciiName), is(Arrays.asList("a", "B", "C")));
+        assertThat(sortedBy(namespace, "utf8_name", CollateItem::getUtf8Name), is(Arrays.asList("а", "Б", "Я")));
+        assertThat(sortedBy(namespace, "numeric_name", CollateItem::getNumericName), is(Arrays.asList("1", "2", "10")));
+        assertThat(sortedBy(namespace, "custom_name", CollateItem::getCustomName), is(Arrays.asList("c", "b", "a")));
+    }
+
+    private static IndexResponse indexNamed(List<IndexResponse> indexes, String name) {
+        for (IndexResponse index : indexes) {
+            if (name.equals(index.getName())) {
+                return index;
+            }
+        }
+        throw new AssertionError("Index not found: " + name);
+    }
+
+    private static List<String> sortedBy(Namespace<CollateItem> namespace, String index,
+                                          Function<CollateItem, String> field) {
+        List<String> values = new ArrayList<>();
+        Iterator<CollateItem> iterator = namespace.query().sort(index, false).execute();
+        while (iterator.hasNext()) {
+            values.add(field.apply(iterator.next()));
+        }
+        return values;
+    }
+
+    private static CollateItem collateItem(int id, String plain, String asciiName, String utf8Name,
+                                            String numericName, String customName) {
+        CollateItem item = new CollateItem();
+        item.setId(id);
+        item.setPlain(plain);
+        item.setAsciiName(asciiName);
+        item.setUtf8Name(utf8Name);
+        item.setNumericName(numericName);
+        item.setCustomName(customName);
+        return item;
+    }
+
     private ReindexerIndex createIndex(String name, String jsonPath, IndexType indexType, FieldType fieldType) {
         return ReindexerIndex.builder()
                 .name(name)
@@ -153,6 +215,23 @@ public abstract class IndexOperationTest extends DbBaseTest {
         @Reindex(name = "description1", type = IndexType.HASH)
         private String description1;
         private String description2;
+    }
+
+    @Getter
+    @Setter
+    public static class CollateItem {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private int id;
+        @Reindex(name = "plain", type = IndexType.TREE)
+        private String plain;
+        @Reindex(name = "ascii_name", type = IndexType.TREE, collate = "ascii")
+        private String asciiName;
+        @Reindex(name = "utf8_name", type = IndexType.TREE, collate = "utf8")
+        private String utf8Name;
+        @Reindex(name = "numeric_name", type = IndexType.TREE, collate = "numeric")
+        private String numericName;
+        @Reindex(name = "custom_name", type = IndexType.TREE, collate = "cba")
+        private String customName;
     }
 
     @Getter

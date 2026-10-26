@@ -52,7 +52,7 @@ public class IndexDefinition {
 
     private String collateMode;
 
-    private String sortOrder;
+    private String sortOrderLetters;
 
     private IndexConfig config;
 
@@ -68,7 +68,7 @@ public class IndexDefinition {
         IndexDefinition indexDefinition = new IndexDefinition();
         indexDefinition.setName(index.getName());
         indexDefinition.setCollateMode(index.getCollateMode().getName());
-        indexDefinition.setSortOrder(index.getSortOrder());
+        indexDefinition.setSortOrderLetters(index.getSortOrder());
         indexDefinition.setDense(index.isDense());
         indexDefinition.setNoColumn(index.isNoColumn());
         indexDefinition.setFieldType(index.getFieldType().getName());
