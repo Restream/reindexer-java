@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
+import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.builtin.Builtin;
@@ -28,6 +29,7 @@ import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
 import ru.rt.restream.reindexer.exceptions.ReindexerException;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -142,8 +144,8 @@ public class BuiltinServer implements Binding {
     }
 
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts, int stateToken) {
-        builtin.modifyItem(namespaceName, data, format, mode, precepts, stateToken);
+    public QueryResult modifyItem(String namespaceName, byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
+        return builtin.modifyItem(namespaceName, data, format, mode, precepts, stateToken);
     }
 
     @Override

@@ -15,18 +15,41 @@
  */
 package ru.rt.restream.reindexer;
 
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
+import ru.rt.restream.reindexer.expression.Expression;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
+import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Predicate;
 
 /**
  * Contains the reindexer namespace configuration and methods for manipulating the linked reindexer namespace data.
  */
+@Slf4j
 @Getter
 public class ReindexerNamespace<T> implements Namespace<T> {
+
+    /**
+     * Read/Write lock.
+     */
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     @Getter(value = AccessLevel.NONE)
     private final Reindexer reindexer;
@@ -81,7 +104,8 @@ public class ReindexerNamespace<T> implements Namespace<T> {
      *
      * <p>Precept is a special reindexer embedded function, such as serial(), now().
      */
-    private final String[] precepts;
+    @Getter(AccessLevel.NONE)
+    private final Map<String, ReindexerPrecept> precepts = new HashMap<>();
 
     /**
      * Current namespace payload type.
@@ -111,11 +135,17 @@ public class ReindexerNamespace<T> implements Namespace<T> {
         this.disableObjCache = builder.disableObjCache;
         this.objCacheItemsCount = builder.objCacheItemsCount;
         this.indexes = builder.indexes;
-        this.precepts = indexes.stream()
-                .map(ReindexerIndex::getPrecept)
-                .filter(Objects::nonNull)
-                .toArray(String[]::new);
         this.reindexer = builder.reindexer;
+    }
+
+    void initialize() {
+        // Initialize precepts.
+        for (ReindexerIndex index : indexes) {
+            ReindexerPrecept precept = index.getPrecept();
+            if (precept != null) {
+                registerPrecept(precept);
+            }
+        }
     }
 
     /**
@@ -137,33 +167,33 @@ public class ReindexerNamespace<T> implements Namespace<T> {
     }
 
     @Override
-    public void insert(T item) {
-        reindexer.insert(name, item);
+    public T insert(T item) {
+        return reindexer.insert(name, item);
     }
 
     @Override
-    public void insert(String item) {
-        reindexer.insert(name, item);
+    public Optional<T> insert(String item) {
+        return reindexer.insert(name, item);
     }
 
     @Override
-    public void upsert(T item) {
-        reindexer.upsert(name, item);
+    public T upsert(T item) {
+        return reindexer.upsert(name, item);
     }
 
     @Override
-    public void upsert(String item) {
-        reindexer.upsert(name, item);
+    public Optional<T> upsert(String item) {
+        return reindexer.upsert(name, item);
     }
 
     @Override
-    public void update(T item) {
-        reindexer.update(name, item);
+    public T update(T item) {
+        return reindexer.update(name, item);
     }
 
     @Override
-    public void update(String item) {
-        reindexer.update(name, item);
+    public Optional<T> update(String item) {
+        return reindexer.update(name, item);
     }
 
     @Override
@@ -199,6 +229,74 @@ public class ReindexerNamespace<T> implements Namespace<T> {
     @Override
     public void updateSql(String query) {
         reindexer.updateSql(query);
+    }
+
+    void registerPrecept(ReindexerPrecept precept) {
+        Objects.requireNonNull(precept, "precept cannot be null");
+        lock.writeLock().lock();
+        try {
+            ReindexerPrecept existing = precepts.put(precept.getJsonPath(), precept);
+            if (existing == null) {
+                log.trace("Registered precept {} to namespace {}", precept, name);
+            } else {
+                log.trace("Precept {} was overridden to {} for namespace {}", existing, precept, name);
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    PreceptExpression[] getPrecepts(Object item, int format) {
+        Predicate<ReindexerPrecept> isNullPredicate = getIsNullPredicate(item, format);
+        List<PreceptExpression> precepts = new ArrayList<>();
+        for (ReindexerPrecept precept : getPrecepts()) {
+            applyPrecept(precept, isNullPredicate, precepts);
+        }
+        return precepts.toArray(new PreceptExpression[0]);
+    }
+
+    private Predicate<ReindexerPrecept> getIsNullPredicate(Object item, int format) {
+        if (format == Consts.FORMAT_JSON) {
+            Configuration configuration = Configuration.defaultConfiguration()
+                    .addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
+            DocumentContext document = JsonPath.using(configuration).parse((String) item);
+            // Lookup for a field value using json-path e.g., "$.id".
+            return it -> document.read("$." + it.getJsonPath()) == null;
+        }
+        // Lookup for a field value using a field name.
+        return it -> BeanPropertyUtils.getProperty(item, it.getFieldPath()) == null;
+    }
+
+    private Collection<ReindexerPrecept> getPrecepts() {
+        lock.readLock().lock();
+        try {
+            return precepts.values();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    private void applyPrecept(ReindexerPrecept precept, Predicate<ReindexerPrecept> isNullPredicate,
+                              List<PreceptExpression> precepts) {
+        // Apply precept according to the strategy.
+        switch (precept.getStrategy()) {
+            case ALWAYS:
+                // Apply precept to all items.
+                precepts.add(toPreceptExpression(precept));
+                break;
+            case WHEN_NULL:
+                // Apply precept only to items that have null value for the specified field.
+                if (isNullPredicate.test(precept)) {
+                    precepts.add(toPreceptExpression(precept));
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown apply strategy: " + precept.getStrategy());
+        }
+    }
+
+    private PreceptExpression toPreceptExpression(ReindexerPrecept precept) {
+        return Expression.string(precept.getJsonPath() + '=' + precept.getExpression());
     }
 
     /**

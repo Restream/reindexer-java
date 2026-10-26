@@ -129,10 +129,10 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
     }
 
     private <S> S readItem(ItemReader<S> reader, Query<?> queryContext) {
-        ItemParams params = readItemParams();
-        Query<?> itemQueryContext = getItemQueryContext(queryContext, params.nsId);
+        QueryResult.ItemParams params = readItemParams();
+        Query<?> itemQueryContext = getItemQueryContext(queryContext, params.getNsId());
         S item = readItemData(params, reader);
-        readJoinedItems(item, itemQueryContext, params.nsId);
+        readJoinedItems(item, itemQueryContext, params.getNsId());
         return item;
     }
 
@@ -149,10 +149,10 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         return defaultQueryContext;
     }
 
-    private <S> S readItemData(ItemParams params, ItemReader<S> reader) {
-        if (params.cptr != 0) {
-            ByteBuffer nativeBuffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), params.cptr,
-                    params.nsId);
+    private <S> S readItemData(QueryResult.ItemParams params, ItemReader<S> reader) {
+        if (params.getCptr() != 0) {
+            ByteBuffer nativeBuffer = NativeUtils.getNativeBuffer(queryResult.getResultsPtr(), params.getCptr(),
+                    params.getNsId());
             return reader.readItem(nativeBuffer);
         }
 
@@ -210,7 +210,7 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
             CjsonItemReader<?> joinedItemReader = newItemReader(joinedNamespace.getItemClass(), joinedNamespace);
             List<Object> subItems = new ArrayList<>(itemsCount);
             for (int j = 0; j < itemsCount; j++) {
-                ItemParams subItemParams = readItemParams();
+                QueryResult.ItemParams subItemParams = readItemParams();
                 subItems.add(readItemData(subItemParams, joinedItemReader));
             }
 
@@ -230,19 +230,19 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
 
     private void skipJoinedItems(int itemsCount) {
         for (int i = 0; i < itemsCount; i++) {
-            ItemParams itemParams = readItemParams();
-            if (itemParams.cptr == 0) {
+            QueryResult.ItemParams itemParams = readItemParams();
+            if (itemParams.getCptr() == 0) {
                 int length = (int) buffer.getUInt32();
                 buffer.skip(length);
             }
-            readJoinedItems(null, null, itemParams.nsId);
+            readJoinedItems(null, null, itemParams.getNsId());
         }
     }
 
     private void skipJoinedItemsV1(int itemsCount) {
         for (int i = 0; i < itemsCount; i++) {
-            ItemParams itemParams = readItemParams();
-            if (itemParams.cptr == 0) {
+            QueryResult.ItemParams itemParams = readItemParams();
+            if (itemParams.getCptr() == 0) {
                 int length = (int) buffer.getUInt32();
                 buffer.skip(length);
             }
@@ -312,42 +312,12 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         }
     }
 
-    private ItemParams readItemParams() {
-        ItemParams params = new ItemParams();
-
-        if (queryResult.isWithItemId()) {
-            params.id = buffer.getVarUInt();
-            params.version = buffer.getVarUInt();
-        }
-
-        if (queryResult.isWithNsId()) {
-            params.nsId = (int) buffer.getVarUInt();
-        }
-
+    private QueryResult.ItemParams readItemParams() {
+        QueryResult.ItemParams itemParams = queryResult.readItemParams();
         if (queryResult.isWithRank()) {
-            //used for full-text search
-            if (queryResult.getRankFormat() == 0) {
-                params.rank = buffer.getFloat();
-                currentRank = params.rank;
-            } else {
-                params.rank = buffer.getVarUInt();
-            }
+            currentRank = itemParams.getRank();
         }
-
-        if (queryResult.isWithShardId()) {
-            if (queryResult.getShardId() != Consts.SHARDING_PROXY_OFF) {
-                params.shardId = queryResult.getShardId();
-            } else {
-                params.shardId = (int) buffer.getVarUInt();
-            }
-
-        }
-
-        if (queryResult.isWithResultsPtr()) {
-            params.cptr = buffer.getUInt64();
-        }
-
-        return params;
+        return itemParams;
     }
 
     private boolean needFetch() {
@@ -393,39 +363,6 @@ public class QueryResultIterator<T> implements ResultIterator<T> {
         }
         requestContext.closeResults();
         closed = true;
-    }
-
-    private static class ItemParams {
-        private float rank = -1;
-        private long id = -1;
-        private int shardId = Consts.SHARDING_PROXY_OFF;
-        private long version = -1;
-        private long cptr;
-        private int nsId = 0;
-
-        public float getRank() {
-            return rank;
-        }
-
-        public long getId() {
-            return id;
-        }
-
-        public int getShardId() {
-            return shardId;
-        }
-
-        public long getVersion() {
-            return version;
-        }
-
-        public long getCptr() {
-            return cptr;
-        }
-
-        public int getNsId() {
-            return nsId;
-        }
     }
 
 }

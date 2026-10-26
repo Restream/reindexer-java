@@ -365,6 +365,55 @@ db.query("items", Item.class)
         .update();
 ```
 
+##### serial()
+The `serial()` function returns a unique identifier from the sequence of integer for each document in the namespace.
+This function can be used in both `INSERT` and `UPDATE` queries.
+To use this function, specify the `@Serial` annotation on the field.
+
+```java
+public class Item {
+
+    @Reindex(name = "id", isPrimaryKey = true)
+    @Serial(strategy = PreceptApplyStrategy.WHEN_NULL)
+    private Integer id;
+
+    @Reindex(name = "version")
+    @Serial(strategy = PreceptApplyStrategy.ALWAYS)
+    private Integer version;
+
+}
+```
+
+The `@Serial` annotation has the following strategies to apply the function:
+- `WHEN_NULL` - when the field is null, use this strategy when the value must be generated only once (recommended).
+- `ALWAYS` - always generates a new value for the field (default if no strategy is specified due to compatibility reasons).
+
+##### Apply precept functions using programmatic precepts API:
+
+```java
+ReindexerPrecept idPrecept = ReindexerPrecept.builder()
+        .fieldPath("id")
+        .jsonPath("id")
+        .expression(Expression.serial())
+        .strategy(PreceptApplyStrategy.WHEN_NULL)
+        .build();
+ReindexerPrecept createdAtPrecept = ReindexerPrecept.builder()
+        .fieldPath("createdAt")
+        .jsonPath("createdAt")
+        .expression(Expression.now())
+        .strategy(PreceptApplyStrategy.WHEN_NULL)
+        .build();
+ReindexerPrecept updatedAtPrecept = ReindexerPrecept.builder()
+        .fieldPath("updatedAt")
+        .jsonPath("updatedAt")
+        .expression(Expression.now())
+        .strategy(PreceptApplyStrategy.ALWAYS)
+        .build();
+reindexer.registerPrecept("items", idPrecept);
+reindexer.registerPrecept("items", createdAtPrecept);
+reindexer.registerPrecept("items", updatedAtPrecept);
+```
+
 Notes:
 - The returned timestamp represents seconds (or subunits) since the Unix epoch (January 1, 1970)
 - Time resolution depends on the specified unit - use `nsec` for maximum precision

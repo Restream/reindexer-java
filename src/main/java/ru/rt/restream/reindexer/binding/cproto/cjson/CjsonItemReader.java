@@ -35,17 +35,25 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Reads items from a {@link ByteBuffer}, that contains cjson-encoded data.
  */
 public class CjsonItemReader<T> implements ItemReader<T> {
 
+    private final Supplier<T> instanceSupplier;
+
     private final Class<T> itemClass;
 
     private final CtagMatcher ctagMatcher;
 
     public CjsonItemReader(Class<T> itemClass, CtagMatcher ctagMatcher) {
+        this(() -> createInstance(itemClass), itemClass, ctagMatcher);
+    }
+
+    public CjsonItemReader(Supplier<T> instanceSupplier, Class<T> itemClass, CtagMatcher ctagMatcher) {
+        this.instanceSupplier = instanceSupplier;
         this.itemClass = itemClass;
         this.ctagMatcher = ctagMatcher;
     }
@@ -57,11 +65,15 @@ public class CjsonItemReader<T> implements ItemReader<T> {
         if (!element.isObject()) {
             throw new IllegalArgumentException("Read object is not an item");
         }
-        return readObject(element.getAsCjsonObject(), itemClass);
+        return readObject(instanceSupplier, element.getAsCjsonObject(), itemClass);
     }
 
     private <V> V readObject(CjsonObject cjsonObject, Class<V> itemClass) {
-        V instance = createInstance(itemClass);
+        return readObject(() -> createInstance(itemClass), cjsonObject, itemClass);
+    }
+
+    private <V> V readObject(Supplier<V> instanceSupplier, CjsonObject cjsonObject, Class<V> itemClass) {
+        V instance = instanceSupplier.get();
         List<Field> fields = BeanPropertyUtils.getInheritedFields(itemClass);
         for (Field field : fields) {
             Json json = field.getAnnotation(Json.class);

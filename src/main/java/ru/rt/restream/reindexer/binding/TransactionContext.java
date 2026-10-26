@@ -16,6 +16,7 @@
 package ru.rt.restream.reindexer.binding;
 
 import ru.rt.restream.reindexer.ReindexerResponse;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -33,7 +34,7 @@ public interface TransactionContext {
      * @param precepts   precepts (i.e. "id=serial()", "updated_at=now()")
      * @param stateToken state token
      */
-    void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken);
+    void modifyItem(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken);
 
     /**
      * Modifies the item data in the transaction that is associated with the context asynchronously.
@@ -45,7 +46,7 @@ public interface TransactionContext {
      * @param stateToken state token
      * @return the {@link CompletableFuture}
      */
-    CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken);
+    CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken);
 
     /**
      * Invoke select query in the transaction that is associated with the context.

@@ -15,6 +15,8 @@
  */
 package ru.rt.restream.reindexer;
 
+import java.util.Optional;
+
 /**
  * Provides methods for manipulating Reindexer namespace data.
  *
@@ -32,44 +34,56 @@ public interface Namespace<T> {
     /**
      * Inserts the given item data.
      *
-     * @param item          the item data
+     * @param item the item data
+     * @return the inserted {@link T} item
      */
-    void insert(T item);
+    T insert(T item);
 
     /**
-     * Inserts the given json-formatted item data
+     * Inserts the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
-     * @param item          the json-formatted item data
+     * @param item the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    void insert(String item);
+    Optional<T> insert(String item);
 
     /**
      * Inserts or updates the given item data.
      *
-     * @param item          the item data
+     * @param item the item data
+     * @return the upserted {@link T} item
      */
-    void upsert(T item);
+    T upsert(T item);
 
     /**
      * Inserts or updates the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
-     * @param item          the json-formatted item data
+     * @param item the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    void upsert(String item);
+    Optional<T> upsert(String item);
 
     /**
      * Updates the given item data.
      *
-     * @param item          the item data
+     * @param item the item data
+     * @return the updated {@link T} item
      */
-    void update(T item);
+    T update(T item);
 
     /**
      * Updates the given json-formatted item data.
+     * Returns the server-generated {@link T} item, which may contain fields not present
+     * in the input JSON, or {@link Optional#empty()} if the server returns no data.
      *
-     * @param item          the json-formatted item data
+     * @param item the json-formatted item data
+     * @return the server-generated {@link T} item, or {@link Optional#empty()} if no data was returned
      */
-    void update(String item);
+    Optional<T> update(String item);
 
     /**
      * Deletes the given item data.

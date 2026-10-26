@@ -23,6 +23,7 @@ import ru.rt.restream.reindexer.binding.cproto.ItemSerializer;
 import ru.rt.restream.reindexer.binding.cproto.cjson.PayloadType;
 import ru.rt.restream.reindexer.exceptions.ReindexerExceptionFactory;
 import ru.rt.restream.reindexer.exceptions.StateInvalidatedException;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -339,7 +340,7 @@ public class Transaction<T> {
 
     private <E> CompletableFuture<E> modifyItemAsyncInternal(E item, int mode, int format, int retryCount) {
         LOGGER.debug("rx: transaction modifyItemAsync, params=[{}, {}], retryCount={}", item, mode, retryCount);
-        String[] precepts = namespace.getPrecepts();
+        PreceptExpression[] precepts = namespace.getPrecepts(item, format);
         PayloadType payloadType = namespace.getPayloadType();
         int stateToken = payloadType == null ? 0 : payloadType.getStateToken();
         ItemSerializer<E> serializer = ItemSerializer.getInstance(item.getClass(), payloadType);
@@ -370,7 +371,7 @@ public class Transaction<T> {
 
     private <E> void modifyItem(E item, int mode, int format) {
         LOGGER.debug("rx: transaction modifyItem, params=[{}, {}]", item, mode);
-        String[] precepts = namespace.getPrecepts();
+        PreceptExpression[] precepts = namespace.getPrecepts(item, format);
         for (int i = 0; i < 2; i++) {
             try {
                 PayloadType payloadType = namespace.getPayloadType();

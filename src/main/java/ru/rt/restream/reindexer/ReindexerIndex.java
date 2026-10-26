@@ -88,7 +88,7 @@ public class ReindexerIndex {
      * Precept is a special reindexer embedded function, such as serial(), now().
      * {@link ru.rt.restream.reindexer.annotations.Serial}
      */
-    private String precept;
+    private ReindexerPrecept precept;
 
     private boolean isArray;
 
@@ -155,4 +155,5 @@ public class ReindexerIndex {
                 return null;
         }
     }
+
 }

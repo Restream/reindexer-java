@@ -21,11 +21,13 @@ import com.google.gson.GsonBuilder;
 import ru.rt.restream.reindexer.ReindexerResponse;
 import ru.rt.restream.reindexer.binding.Binding;
 import ru.rt.restream.reindexer.binding.Consts;
+import ru.rt.restream.reindexer.binding.QueryResult;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
 import ru.rt.restream.reindexer.binding.definition.IndexDefinition;
 import ru.rt.restream.reindexer.binding.definition.NamespaceDefinition;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -99,21 +101,24 @@ public class Cproto implements Binding {
      * {@inheritDoc}
      */
     @Override
-    public void modifyItem(String namespaceName, byte[] data, int format, int mode, String[] precepts,
-                           int stateToken) {
+    public QueryResult modifyItem(String namespaceName, byte[] data, int format, int mode, PreceptExpression[] precepts,
+                                  int stateToken) {
         byte[] packedPercepts = packPrecepts(precepts);
-        rpcCallNoResults(MODIFY_ITEM, namespaceName, format, data, mode,
+        Connection connection = pool.getConnection();
+        ReindexerResponse rpcResponse = ConnectionUtils.rpcCall(connection, MODIFY_ITEM, namespaceName, format, data, mode,
                 packedPercepts, stateToken, 0);
+        CprotoRequestContext context = new CprotoRequestContext(rpcResponse, connection, false, connection.queryFormatVersion());
+        return context.getQueryResult();
     }
 
-    private byte[] packPrecepts(String[] precepts) {
+    private byte[] packPrecepts(PreceptExpression[] precepts) {
         if (precepts.length == 0) {
             return EMPTY_BYTE_ARRAY;
         }
         ByteBuffer buffer = new ByteBuffer();
         buffer.putVarUInt32(precepts.length);
-        for (String precept : precepts) {
-            buffer.putVString(precept);
+        for (PreceptExpression precept : precepts) {
+            precept.serializePrecept(buffer);
         }
         return buffer.bytes();
     }

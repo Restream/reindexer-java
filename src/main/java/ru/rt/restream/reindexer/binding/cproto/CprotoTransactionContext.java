@@ -23,6 +23,7 @@ import ru.rt.restream.reindexer.binding.Consts;
 import ru.rt.restream.reindexer.binding.RequestContext;
 import ru.rt.restream.reindexer.binding.TransactionContext;
 import ru.rt.restream.reindexer.binding.cproto.util.ConnectionUtils;
+import ru.rt.restream.reindexer.expression.PreceptExpression;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -51,25 +52,25 @@ public class CprotoTransactionContext implements TransactionContext {
     }
 
     @Override
-    public void modifyItem(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    public void modifyItem(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
         ConnectionUtils.rpcCallNoResults(connection, Binding.ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken,
                 transactionId);
     }
 
     @Override
-    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, String[] precepts, int stateToken) {
+    public CompletableFuture<ReindexerResponse> modifyItemAsync(byte[] data, int format, int mode, PreceptExpression[] precepts, int stateToken) {
         byte[] packedPrecepts = packPrecepts(precepts);
         return connection.rpcCallAsync(Binding.ADD_TX_ITEM, format, data, mode, packedPrecepts, stateToken, transactionId);
     }
 
-    private byte[] packPrecepts(String[] precepts) {
+    private byte[] packPrecepts(PreceptExpression[] precepts) {
         byte[] packedPrecepts = new byte[0];
         if (precepts.length > 0) {
             ByteBuffer buffer = new ByteBuffer();
             buffer.putVarUInt32(precepts.length);
-            for (String precept : precepts) {
-                buffer.putVString(precept);
+            for (PreceptExpression precept : precepts) {
+                precept.serializePrecept(buffer);
             }
             packedPrecepts = buffer.bytes();
         }

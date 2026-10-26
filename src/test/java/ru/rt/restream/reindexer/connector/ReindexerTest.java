@@ -21,15 +21,18 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import ru.rt.restream.reindexer.PreceptApplyStrategy;
 import ru.rt.restream.reindexer.EnumType;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.Query;
 import ru.rt.restream.reindexer.QueryResultJsonIterator;
+import ru.rt.restream.reindexer.ReindexerPrecept;
 import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.TimeUnit;
 import ru.rt.restream.reindexer.Transaction;
@@ -73,11 +76,13 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -138,7 +143,7 @@ public abstract class ReindexerTest extends DbBaseTest {
     @Test
     public void testInsertJsonItem() {
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         TestItem testItem = new TestItem();
         testItem.setId(123);
@@ -147,9 +152,10 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.insert(namespaceName, jsonItem);
+        Optional<TestItem> inserted = ns.insert(jsonItem);
+        assertThat(inserted.isPresent(), is(false));
 
-        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+        Iterator<TestItem> iterator = ns.query()
                 .where("id", EQ, 123)
                 .execute();
 
@@ -191,21 +197,22 @@ public abstract class ReindexerTest extends DbBaseTest {
     @Test
     public void testUpdateJsonItem() {
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         TestItem testItem = new TestItem();
         testItem.setId(123);
         testItem.setName("TestName");
         testItem.setNonIndex("testNonIndex");
 
-        db.insert(namespaceName, testItem);
+        ns.insert(testItem);
 
         testItem.setName("TestNameUpdated");
         String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.update(namespaceName, jsonItem);
+        Optional<TestItem> updated = ns.update(jsonItem);
+        assertThat(updated.isPresent(), is(false));
 
-        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+        Iterator<TestItem> iterator = ns.query()
                 .where("id", EQ, 123)
                 .execute();
         assertThat(iterator.hasNext(), is(true));
@@ -240,7 +247,7 @@ public abstract class ReindexerTest extends DbBaseTest {
     @Test
     public void testUpsertJsonItem() {
         String namespaceName = "items";
-        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
+        Namespace<TestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
 
         TestItem testItem = new TestItem();
         testItem.setId(123);
@@ -249,9 +256,10 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         String jsonItem = JsonSerializer.toJson(testItem);
 
-        db.upsert(namespaceName, jsonItem);
+        Optional<TestItem> upserted = ns.upsert(jsonItem);
+        assertThat(upserted.isPresent(), is(false));
 
-        Iterator<TestItem> iterator = db.query(namespaceName, TestItem.class)
+        Iterator<TestItem> iterator = ns.query()
                 .where("id", EQ, 123)
                 .execute();
         assertThat(iterator.hasNext(), is(true));
@@ -1128,6 +1136,24 @@ public abstract class ReindexerTest extends DbBaseTest {
     }
 
     @Test
+    public void testUpdateItemVersionFieldToSerialExpression() {
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemVersion.class);
+        TestItemVersion testItem = new TestItemVersion();
+        testItem.id = 1;
+        db.upsert(namespaceName, testItem);
+        db.query(namespaceName, TestItemVersion.class)
+                .where("id", EQ, 1)
+                .setExpression("version", Expression.serial())
+                .update();
+        TestItemVersion found = db.query(namespaceName, TestItemVersion.class)
+                .where("id", EQ, 1)
+                .getOne();
+        assertThat(found.id, is(1));
+        assertThat(found.version, is(1));
+    }
+
+    @Test
     public void testInsertItemWithDoubleValue() {
         String namespaceName = "items";
         db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItem.class);
@@ -1814,6 +1840,146 @@ public abstract class ReindexerTest extends DbBaseTest {
             ids.add(item.id);
         }
         assertThat(ids, contains(1, 2, 3));
+    }
+
+    @Test
+    public void testInsertWithSerialIdReturnsGeneratedId() {
+        String namespaceName = "items";
+        Namespace<SerialIdTestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        int currentVersion = 0;
+        for (int i = 0; i < 3; i++) {
+            SerialIdTestItem inserted = ns.insert(new SerialIdTestItem());
+            assertThat(inserted, notNullValue());
+            assertThat(inserted.id, is(i + 1));
+            assertThat(inserted.version, is(++currentVersion));
+            SerialIdTestItem updated = ns.update(inserted);
+            assertThat(updated, sameInstance(inserted));
+            assertThat(inserted.id, is(i + 1));
+            assertThat(inserted.version, is(++currentVersion));
+        }
+    }
+
+    @Test
+    public void testInsertJsonWithSerialIdReturnsGeneratedId() {
+        String namespaceName = "items";
+        Namespace<SerialIdTestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        int currentVersion = 0;
+        for (int i = 0; i < 3; i++) {
+            SerialIdTestItem inserted = ns.insert(JsonSerializer.toJson(new SerialIdTestItem()))
+                    .orElse(null);
+            assertThat(inserted, notNullValue());
+            assertThat(inserted.id, is(i + 1));
+            assertThat(inserted.version, is(++currentVersion));
+            SerialIdTestItem updated = ns.update(JsonSerializer.toJson(inserted))
+                    .orElse(null);
+            assertThat(updated, notNullValue());
+            assertThat(updated.id, is(i + 1));
+            assertThat(updated.version, is(++currentVersion));
+        }
+    }
+
+    @Test
+    public void testUpsertWithSerialIdReturnsGeneratedId() {
+        String namespaceName = "items";
+        Namespace<SerialIdTestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        int currentVersion = 0;
+        for (int i = 0; i < 3; i++) {
+            SerialIdTestItem upserted1 = ns.upsert(new SerialIdTestItem());
+            assertThat(upserted1, notNullValue());
+            assertThat(upserted1.id, is(i + 1));
+            assertThat(upserted1.version, is(++currentVersion));
+            SerialIdTestItem upserted2 = ns.upsert(upserted1);
+            assertThat(upserted2, sameInstance(upserted1));
+            assertThat(upserted2.id, is(i + 1));
+            assertThat(upserted2.version, is(++currentVersion));
+        }
+    }
+
+    @Test
+    public void testUpsertJsonWithSerialIdReturnsGeneratedId() {
+        String namespaceName = "items";
+        Namespace<SerialIdTestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+
+        int currentVersion = 0;
+        for (int i = 0; i < 3; i++) {
+            SerialIdTestItem upserted1 = ns.upsert(JsonSerializer.toJson(new SerialIdTestItem()))
+                    .orElse(null);
+            assertThat(upserted1, notNullValue());
+            assertThat(upserted1.id, is(i + 1));
+            assertThat(upserted1.version, is(++currentVersion));
+            SerialIdTestItem upserted2 = ns.upsert(JsonSerializer.toJson(upserted1))
+                    .orElse(null);
+            assertThat(upserted2, notNullValue());
+            assertThat(upserted2.id, is(i + 1));
+            assertThat(upserted2.version, is(++currentVersion));
+        }
+    }
+
+    @Test
+    public void testOverridingPreceptApplyStrategyToWhenNullGeneratesVersionOnlyOnce() {
+        String namespaceName = "items";
+        Namespace<SerialIdTestItem> ns = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), SerialIdTestItem.class);
+        ReindexerPrecept precept = ReindexerPrecept.builder()
+                .fieldPath("version")
+                .jsonPath("version")
+                .expression(Expression.serial())
+                .strategy(PreceptApplyStrategy.WHEN_NULL)
+                .build();
+        db.registerPrecept(namespaceName, precept);
+
+        for (int i = 0; i < 3; i++) {
+            SerialIdTestItem inserted = ns.insert(new SerialIdTestItem());
+            assertThat(inserted, notNullValue());
+            assertThat(inserted.id, is(i + 1));
+            assertThat(inserted.version, is(i + 1));
+            SerialIdTestItem updated = ns.update(inserted);
+            assertThat(updated, sameInstance(inserted));
+            assertThat(inserted.id, is(i + 1));
+            assertThat(inserted.version, is(i + 1));
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    public void testWithNowPreceptReturnsGeneratedTimestamp() {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemAuditingFields.class, "createdAt", new LocalDateTimeUnitFieldConverter(TimeUnit.MILLIS));
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(TestItemAuditingFields.class, "updatedAt", new LocalDateTimeUnitFieldConverter(TimeUnit.MILLIS));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), TestItemAuditingFields.class);
+        ReindexerPrecept createdAtPrecept = ReindexerPrecept.builder()
+                .fieldPath("createdAt")
+                .jsonPath("createdAt")
+                .expression(Expression.now(TimeUnit.MILLIS))
+                .strategy(PreceptApplyStrategy.WHEN_NULL)
+                .build();
+        db.registerPrecept(namespaceName, createdAtPrecept);
+        ReindexerPrecept updatedAtPrecept = ReindexerPrecept.builder()
+                .fieldPath("updatedAt")
+                .jsonPath("updatedAt")
+                .expression(Expression.now(TimeUnit.MILLIS))
+                .strategy(PreceptApplyStrategy.ALWAYS)
+                .build();
+        db.registerPrecept(namespaceName, updatedAtPrecept);
+
+        TestItemAuditingFields item = new TestItemAuditingFields(1, null, null);
+        TestItemAuditingFields inserted = db.insert(namespaceName, item);
+        assertThat(inserted, sameInstance(item));
+        assertThat(inserted.id, is(1));
+        LocalDateTime createdAt = inserted.createdAt;
+        LocalDateTime updatedAt = inserted.updatedAt;
+        assertThat(createdAt, notNullValue());
+        assertThat(updatedAt, notNullValue());
+
+        // Small delay to shift the updatedAt precept.
+        Thread.sleep(1000);
+        TestItemAuditingFields updated = db.update(namespaceName, inserted);
+        assertThat(updated, sameInstance(inserted));
+        assertThat(updated.id, is(1));
+        assertThat(updated.createdAt, is(createdAt));
+        assertThat(updated.updatedAt, greaterThan(updatedAt));
     }
 
     @Test
@@ -3114,9 +3280,12 @@ public abstract class ReindexerTest extends DbBaseTest {
     @Getter
     @Setter
     public static class SerialIdTestItem {
-        @Serial
+        @Serial(strategy = PreceptApplyStrategy.WHEN_NULL)
         @Reindex(name = "id", isPrimaryKey = true)
-        private int id;
+        private Integer id;
+        @Serial
+        @Reindex(name = "version")
+        private Integer version;
     }
 
     @Getter
@@ -3369,6 +3538,33 @@ public abstract class ReindexerTest extends DbBaseTest {
 
         @Reindex(name = "createdAt")
         private LocalDateTime createdAt;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemAuditingFields {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "createdAt")
+        private LocalDateTime createdAt;
+
+        @Reindex(name = "updatedAt")
+        private LocalDateTime updatedAt;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestItemVersion {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+
+        @Reindex(name = "version")
+        private Integer version;
     }
 
     @Getter

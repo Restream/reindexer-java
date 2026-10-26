@@ -23,7 +23,7 @@ import java.util.Objects;
 /**
  * Represents a string expression e.g., {@code now() - 1 * 24 * 60 * 60}.
  */
-public final class StringExpression implements SetExpression {
+public final class StringExpression implements SetExpression, PreceptExpression {
 
     private final String expressionString;
 
@@ -41,6 +41,11 @@ public final class StringExpression implements SetExpression {
         buffer.putVarUInt32(1); // size.
         buffer.putVarUInt32(1); // is expression.
         buffer.putVarUInt32(Consts.VALUE_STRING);
+        buffer.putVString(expressionString);
+    }
+
+    @Override
+    public void serializePrecept(ByteBuffer buffer) {
         buffer.putVString(expressionString);
     }
 
