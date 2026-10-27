@@ -29,7 +29,6 @@ import ru.rt.restream.reindexer.expression.PreceptExpression;
 import ru.rt.restream.reindexer.util.BeanPropertyUtils;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -248,11 +247,16 @@ public class ReindexerNamespace<T> implements Namespace<T> {
 
     PreceptExpression[] getPrecepts(Object item, int format) {
         Predicate<ReindexerPrecept> isNullPredicate = getIsNullPredicate(item, format);
-        List<PreceptExpression> precepts = new ArrayList<>();
-        for (ReindexerPrecept precept : getPrecepts()) {
-            applyPrecept(precept, isNullPredicate, precepts);
+        List<PreceptExpression> result = new ArrayList<>();
+        lock.readLock().lock();
+        try {
+            for (ReindexerPrecept precept : precepts.values()) {
+                applyPrecept(precept, isNullPredicate, result);
+            }
+        } finally {
+            lock.readLock().unlock();
         }
-        return precepts.toArray(new PreceptExpression[0]);
+        return result.toArray(new PreceptExpression[0]);
     }
 
     private Predicate<ReindexerPrecept> getIsNullPredicate(Object item, int format) {
@@ -265,15 +269,6 @@ public class ReindexerNamespace<T> implements Namespace<T> {
         }
         // Lookup for a field value using a field name.
         return it -> BeanPropertyUtils.getProperty(item, it.getFieldPath()) == null;
-    }
-
-    private Collection<ReindexerPrecept> getPrecepts() {
-        lock.readLock().lock();
-        try {
-            return precepts.values();
-        } finally {
-            lock.readLock().unlock();
-        }
     }
 
     private void applyPrecept(ReindexerPrecept precept, Predicate<ReindexerPrecept> isNullPredicate,
