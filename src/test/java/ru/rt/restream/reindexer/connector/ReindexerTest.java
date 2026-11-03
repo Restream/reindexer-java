@@ -37,6 +37,7 @@ import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.TimeUnit;
 import ru.rt.restream.reindexer.Transaction;
 import ru.rt.restream.reindexer.annotations.Convert;
+import ru.rt.restream.reindexer.annotations.CurrentTimestamp;
 import ru.rt.restream.reindexer.annotations.Enumerated;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.annotations.Serial;
@@ -1982,6 +1983,32 @@ public abstract class ReindexerTest extends DbBaseTest {
         assertThat(updated.updatedAt, greaterThan(updatedAt));
     }
 
+    @SneakyThrows
+    @Test
+    public void testWithCurrentTimestampReturnsGeneratedTimestamp() {
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(CurrentTimestampTestItem.class, "createdAt", new LocalDateTimeUnitFieldConverter(TimeUnit.MILLIS));
+        FieldConverterRegistryFactory.INSTANCE.registerFieldConverter(CurrentTimestampTestItem.class, "updatedAt", new LocalDateTimeUnitFieldConverter(TimeUnit.MILLIS));
+        String namespaceName = "items";
+        db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), CurrentTimestampTestItem.class);
+
+        CurrentTimestampTestItem item = new CurrentTimestampTestItem(1, null, null);
+        CurrentTimestampTestItem inserted = db.insert(namespaceName, item);
+        assertThat(inserted, sameInstance(item));
+        assertThat(inserted.id, is(1));
+        LocalDateTime createdAt = inserted.createdAt;
+        LocalDateTime updatedAt = inserted.updatedAt;
+        assertThat(createdAt, notNullValue());
+        assertThat(updatedAt, notNullValue());
+
+        // Small delay to shift the updatedAt precept.
+        Thread.sleep(1000);
+        CurrentTimestampTestItem updated = db.update(namespaceName, inserted);
+        assertThat(updated, sameInstance(inserted));
+        assertThat(updated.id, is(1));
+        assertThat(updated.createdAt, is(createdAt));
+        assertThat(updated.updatedAt, greaterThan(updatedAt));
+    }
+
     @Test
     public void testTransactionUpsertWithSerialId() {
         String namespaceName = "items";
@@ -3286,6 +3313,21 @@ public abstract class ReindexerTest extends DbBaseTest {
         @Serial
         @Reindex(name = "version")
         private Integer version;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CurrentTimestampTestItem {
+        @Reindex(name = "id", isPrimaryKey = true)
+        private Integer id;
+        @CurrentTimestamp(unit = TimeUnit.MILLIS, strategy = PreceptApplyStrategy.WHEN_NULL)
+        @Reindex(name = "createdAt")
+        private LocalDateTime createdAt;
+        @CurrentTimestamp(unit = TimeUnit.MILLIS)
+        @Reindex(name = "updatedAt")
+        private LocalDateTime updatedAt;
     }
 
     @Getter

@@ -148,19 +148,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
                 String collate = reindex.collate();
                 CollateMode collateMode = getCollateMode(collate);
                 String sortOrder = getSortOrder(collateMode, collate);
-                ReindexerPrecept precept = null;
-                Serial serial = field.getAnnotation(Serial.class);
-                if (serial != null) {
-                    if (!fieldInfo.isInt()) {
-                        throw new IllegalStateException("@Serial is allowed only for int types (i.e INT, INT64)");
-                    }
-                    precept = ReindexerPrecept.builder()
-                            .fieldPath(fieldPath)
-                            .jsonPath(jsonPath)
-                            .expression(Expression.serial())
-                            .strategy(serial.strategy())
-                            .build();
-                }
+                ReindexerPrecept precept = getReindexerPrecept(field, fieldInfo, fieldPath, jsonPath);
                 FullTextConfig fullTextConfig = getFullTextConfig(field, reindex.type());
                 validateUuidIndexHasTypeUuidOrString(reindex, fieldInfo);
                 boolean isUuid = reindex.isUuid() || fieldInfo.fieldType == UUID;
@@ -219,6 +207,37 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
 
         return indexes;
+    }
+
+    private ReindexerPrecept getReindexerPrecept(Field field, FieldInfo fieldInfo, String fieldPath, String jsonPath) {
+        Serial serial = field.getAnnotation(Serial.class);
+        CurrentTimestamp currentTimestamp = field.getAnnotation(CurrentTimestamp.class);
+        if (serial != null && currentTimestamp != null) {
+            throw new IllegalStateException("@Serial and @CurrentTimestamp are mutually exclusive");
+        }
+        if (serial != null) {
+            if (!fieldInfo.isInt() && !fieldInfo.isText()) {
+                throw new IllegalStateException("@Serial is allowed only for int types (i.e., INT, INT64) or string types");
+            }
+            return ReindexerPrecept.builder()
+                    .fieldPath(fieldPath)
+                    .jsonPath(jsonPath)
+                    .expression(Expression.serial())
+                    .strategy(serial.strategy())
+                    .build();
+        }
+        if (currentTimestamp != null) {
+            if (!fieldInfo.isInt() && !fieldInfo.isText()) {
+                throw new IllegalStateException("@CurrentTimestamp is allowed only for int types (i.e., INT, INT64)");
+            }
+            return ReindexerPrecept.builder()
+                    .fieldPath(fieldPath)
+                    .jsonPath(jsonPath)
+                    .expression(Expression.now(currentTimestamp.unit()))
+                    .strategy(currentTimestamp.strategy())
+                    .build();
+        }
+        return null;
     }
 
     private IndexType specifyDefaultIndexType(Reindex reindex, Field field, FieldInfo fieldInfo) {
@@ -404,6 +423,10 @@ public class ReindexAnnotationScanner implements ReindexScanner {
 
         private boolean isInt() {
             return fieldType == INT || fieldType == INT64;
+        }
+
+        private boolean isText() {
+            return fieldType == STRING;
         }
     }
 

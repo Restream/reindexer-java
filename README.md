@@ -365,6 +365,21 @@ db.query("items", Item.class)
         .update();
 ```
 
+The `now()` function can also be applied using the `@CurrentTimestamp` annotation:
+
+```java
+
+@CurrentTimestamp(unit = TimeUnit.SECONDS, strategy = PreceptApplyStrategy.WHEN_NULL)
+@Reindex(name = "created_at")
+LocalDateTime createdAt;
+
+@CurrentTimestamp(unit = TimeUnit.SECONDS, strategy = PreceptApplyStrategy.ALWAYS)
+@Reindex(name = "updated_at")
+LocalDateTime updatedAt;
+```
+
+See Javadoc for `@CurrentTimestamp` for more information.
+
 ##### serial()
 The `serial()` function returns a unique identifier from the sequence of integer for each document in the namespace.
 This function can be used in both `INSERT` and `UPDATE` queries.
