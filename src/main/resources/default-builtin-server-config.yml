@@ -11,7 +11,14 @@ logger:
   serverlog: "stdout"
   corelog: "stdout"
   httplog: "stdout"
+  rpclog: ""
+  grpclog: ""
   loglevel: "error"
+  server_loglevel: ""
+  core_loglevel: ""
+  http_loglevel: ""
+  rpc_loglevel: ""
+  grpc_loglevel: ""
 system:
 debug:
   pprof: false
