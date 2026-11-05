@@ -97,6 +97,11 @@ final class ObservationDataSource implements DataSource {
         }
 
         @Override
+        public int queryFormatVersion() {
+            return delegate.queryFormatVersion();
+        }
+
+        @Override
         public void close() {
             delegate.close();
         }
