@@ -51,17 +51,23 @@ public class BuiltinAdapter {
 
     private static void loadLibrary(String fileName) throws IOException {
         Path tempFile = Files.createTempFile("rx-connector-", fileName);
+        boolean loaded = false;
         LOGGER.debug("rx: loading {}", tempFile);
         try (InputStream is = BuiltinAdapter.class.getClassLoader().getResourceAsStream(fileName)) {
             if (is == null) {
                 throw new IllegalArgumentException("File: '" + fileName + "' is not found");
             }
             Files.copy(is, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            // Native backtrace resolution needs the ELF file after the library is loaded.
+            tempFile.toFile().deleteOnExit();
             System.load(tempFile.toAbsolutePath().toString());
+            loaded = true;
             LOGGER.debug("rx: loaded {}", tempFile);
         } finally {
-            Files.delete(tempFile);
-            LOGGER.debug("rx: deleted {}", tempFile);
+            if (!loaded) {
+                Files.deleteIfExists(tempFile);
+                LOGGER.debug("rx: deleted {}", tempFile);
+            }
         }
     }
 

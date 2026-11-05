@@ -1,0 +1,7 @@
+{
+  global:
+    Java_ru_rt_restream_reindexer_binding_builtin_BuiltinAdapter_*;
+    Java_ru_rt_restream_reindexer_util_NativeUtils_*;
+  local:
+    *;
+};
