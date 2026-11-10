@@ -108,6 +108,25 @@ public class ReindexerIndex {
     private boolean isAppendable;
 
     /**
+     * SQL WHERE expression without the WHERE keyword, used to select documents for a text index.
+     * Null or an empty string removes the condition when updating the index.
+     */
+    private String indexingCondition;
+
+    /**
+     * Constructs an index without an indexing condition.
+     */
+    public ReindexerIndex(String name, List<String> jsonPaths, IndexType indexType, FieldType fieldType,
+                          CollateMode collateMode, String sortOrder, FullTextConfig fullTextConfig,
+                          HnswConfig hnswConfig, IvfConfig ivfConfig, VecBfConfig vecBfConfig,
+                          ReindexerPrecept precept, boolean isArray, boolean isPk, boolean isDense,
+                          boolean isNoColumn, boolean isSparse, boolean isUuid, boolean isAppendable) {
+        this(name, jsonPaths, indexType, fieldType, collateMode, sortOrder, fullTextConfig, hnswConfig,
+                ivfConfig, vecBfConfig, precept, isArray, isPk, isDense, isNoColumn, isSparse, isUuid,
+                isAppendable, null);
+    }
+
+    /**
      * Set full text search config for current index, if the index is text index.
      *
      * @param fullTextConfig full text search configuration of text index

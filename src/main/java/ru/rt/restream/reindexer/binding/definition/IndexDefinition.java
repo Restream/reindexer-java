@@ -58,6 +58,17 @@ public class IndexDefinition {
 
     private boolean isNoColumn;
 
+    private String indexingCondition;
+
+    /**
+     * Sets the indexing condition. Empty conditions are omitted from the serialized definition.
+     *
+     * @param indexingCondition SQL WHERE expression without the WHERE keyword, or null to remove it
+     */
+    public void setIndexingCondition(String indexingCondition) {
+        this.indexingCondition = "".equals(indexingCondition) ? null : indexingCondition;
+    }
+
     /**
      * Construct a new IndexDefinition from a {@link ReindexerIndex} object.
      *
@@ -81,6 +92,7 @@ public class IndexDefinition {
         indexDefinition.setAppendable(index.isAppendable());
         indexDefinition.setConfig(index.getConfig());
         indexDefinition.setUuid(index.isUuid());
+        indexDefinition.setIndexingCondition(index.getIndexingCondition());
         return indexDefinition;
     }
 }
