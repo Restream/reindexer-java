@@ -24,6 +24,7 @@ import ru.rt.restream.reindexer.IndexType;
 import ru.rt.restream.reindexer.Namespace;
 import ru.rt.restream.reindexer.NamespaceOptions;
 import ru.rt.restream.reindexer.ReindexerIndex;
+import ru.rt.restream.reindexer.ResultIterator;
 import ru.rt.restream.reindexer.annotations.Json;
 import ru.rt.restream.reindexer.annotations.Reindex;
 import ru.rt.restream.reindexer.db.DbBaseTest;
@@ -39,6 +40,7 @@ import java.util.function.Function;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
 import static org.hamcrest.Matchers.is;
+import static ru.rt.restream.reindexer.Query.Condition.EQ;
 
 /**
  * Base index operation Test.
@@ -113,6 +115,50 @@ public abstract class IndexOperationTest extends DbBaseTest {
         assertThat(afterUpdated.get(0).getJsonPaths().get(0), is("description2"));
         assertThat(afterUpdated.get(0).getIndexType(), equalToIgnoringCase("text"));
         assertThat(afterUpdated.get(0).getFieldType(), equalToIgnoringCase("string"));
+    }
+
+    @Test
+    public void testIndexingCondition() {
+        String namespaceName = "conditional_fulltext_items";
+        Namespace<Item> namespace = db.openNamespace(namespaceName, NamespaceOptions.defaultOptions(), Item.class);
+        ReindexerIndex index = ReindexerIndex.builder()
+                .name("description2")
+                .jsonPaths(Collections.singletonList("description2"))
+                .indexType(IndexType.TEXT)
+                .fieldType(FieldType.STRING)
+                .collateMode(CollateMode.NONE)
+                .indexingCondition("id = 1")
+                .build();
+        db.addIndex(namespaceName, index);
+        for (int id = 1; id <= 2; id++) {
+            Item item = new Item();
+            item.setId(id);
+            item.setDescription1("description");
+            item.setDescription2("token");
+            namespace.insert(item);
+        }
+        assertIndexingCondition(namespaceName, namespace, "id = 1", 1);
+
+        for (String emptyCondition : Arrays.asList("", null)) {
+            index.setIndexingCondition("id = 2");
+            db.updateIndex(namespaceName, index);
+            assertIndexingCondition(namespaceName, namespace, "id = 2", 2);
+
+            index.setIndexingCondition(emptyCondition);
+            db.updateIndex(namespaceName, index);
+            assertIndexingCondition(namespaceName, namespace, null, 1, 2);
+        }
+    }
+
+    private void assertIndexingCondition(String namespaceName, Namespace<Item> namespace, String condition,
+                                         Integer... expectedIds) {
+        IndexResponse index = indexNamed(getNameSpaceIndexes(namespaceName), "description2");
+        assertThat(index.getIndexingCondition(), is(condition));
+        List<Integer> ids = new ArrayList<>();
+        for (Item item : namespace.query().where("description2", EQ, "token").sort("id", false).toList()) {
+            ids.add(item.getId());
+        }
+        assertThat(ids, is(Arrays.asList(expectedIds)));
     }
 
     @Test
@@ -198,11 +244,12 @@ public abstract class IndexOperationTest extends DbBaseTest {
     private List<IndexResponse> getNameSpaceIndexes(String nameSpaceName) {
         Namespace<NamespaceResponse> serviceNamespace = db.openNamespace("#namespaces", NamespaceOptions.defaultOptions(), NamespaceResponse.class);
         String query = String.format("select * from #namespaces where name = '%s'", nameSpaceName);
-        Iterator<NamespaceResponse> iterator = serviceNamespace.execSql(query);
-        if (iterator.hasNext()) {
-            List<IndexResponse> indexes = iterator.next().getIndexes();
-            indexes.sort(Comparator.comparing(IndexResponse::getName));
-            return indexes;
+        try (ResultIterator<NamespaceResponse> iterator = serviceNamespace.execSql(query)) {
+            if (iterator.hasNext()) {
+                List<IndexResponse> indexes = iterator.next().getIndexes();
+                indexes.sort(Comparator.comparing(IndexResponse::getName));
+                return indexes;
+            }
         }
         return Collections.emptyList();
     }
@@ -276,5 +323,7 @@ public abstract class IndexOperationTest extends DbBaseTest {
         private String collateMode;
         @Json("sort_order_letters")
         private String sortOrderLetters;
+        @Json("indexing_condition")
+        private String indexingCondition;
     }
 }

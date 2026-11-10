@@ -198,6 +198,35 @@ db.query("items", Item.class)
 
 Full text search usage documentation and examples are [here](https://github.com/Restream/reindexer/blob/master/fulltext.md).
 
+#### Conditional indexing
+
+The optional `indexingCondition` selects which documents are included in a text
+index. It uses a SQL `WHERE` expression without the `WHERE` keyword; excluded
+documents remain in the namespace.
+
+```java
+ReindexerIndex titleIndex = ReindexerIndex.builder()
+        .name("title")
+        .jsonPaths(Collections.singletonList("title"))
+        .indexType(IndexType.TEXT)
+        .fieldType(FieldType.STRING)
+        .collateMode(CollateMode.NONE)
+        .indexingCondition("type = 'series'")
+        .build();
+db.addIndex("items", titleIndex);
+
+titleIndex.setIndexingCondition("type = 'movie'");
+db.updateIndex("items", titleIndex);
+
+// Remove the condition and index all documents with text values again.
+titleIndex.setIndexingCondition(null);
+db.updateIndex("items", titleIndex);
+```
+
+Changing or removing the condition rebuilds the index for existing documents.
+An empty string also removes the condition. Pass the complete index definition
+to `updateIndex`, preserving its other settings.
+
 ### Joins
 Reindexer can join documents from multiple namespaces into a single result:
 
