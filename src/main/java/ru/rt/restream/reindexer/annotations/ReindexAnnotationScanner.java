@@ -228,7 +228,7 @@ public class ReindexAnnotationScanner implements ReindexScanner {
         }
         if (currentTimestamp != null) {
             if (!fieldInfo.isInt() && !fieldInfo.isText()) {
-                throw new IllegalStateException("@CurrentTimestamp is allowed only for int types (i.e., INT, INT64)");
+                throw new IllegalStateException("@CurrentTimestamp is allowed only for int types (i.e., INT, INT64) or string types");
             }
             return ReindexerPrecept.builder()
                     .fieldPath(fieldPath)
